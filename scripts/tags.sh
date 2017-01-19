@@ -145,9 +145,17 @@ docscope()
 	cscope -b -f cscope.out
 }
 
+doexportfiles()
+{
+	(all_target_sources) > cscope_full.files
+	(all_kconfigs) > kconfigs.files
+	(all_defconfigs) > defconfigs.files
+}
+
 dogtags()
 {
 	all_target_sources | gtags -i -f -
+	#all_target_sources
 }
 
 exuberant()
@@ -328,6 +336,10 @@ case "$1" in
 		rm -f tags
 		xtags ctags
 		remove_structs=y
+		;;
+
+	"files")
+    doexportfiles
 		;;
 
 	"TAGS")

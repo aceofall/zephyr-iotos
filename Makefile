@@ -482,7 +482,7 @@ endif
 version_h := include/generated/version.h
 
 no-dot-config-targets := pristine distclean clean mrproper help kconfig-help \
-			 cscope gtags TAGS tags help% %docs check% \
+			 cscope gtags TAGS tags files help% %docs check% \
 			 $(version_h) headers_% kernelversion %src-pkg
 
 config-targets := 0
@@ -1212,7 +1212,7 @@ clean: clean-dirs-target
 quiet_cmd_tags = GEN     $@
       cmd_tags = $(CONFIG_SHELL) $(srctree)/scripts/tags.sh $@
 
-tags TAGS cscope gtags: FORCE
+tags TAGS cscope gtags files: FORCE
 	$(call cmd,tags)
 
 endif #ifeq ($(config-targets),1)
