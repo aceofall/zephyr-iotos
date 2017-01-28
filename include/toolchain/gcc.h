@@ -124,6 +124,7 @@ A##a:
 #if defined(_ASMLANGUAGE) && !defined(_LINKER)
 
 #if defined(CONFIG_ARM) || defined(CONFIG_NIOS2) || defined(CONFIG_RISCV32)
+// KID 20170128
 #define GTEXT(sym) .global sym; .type sym, %function
 #define GDATA(sym) .global sym; .type sym, %object
 #define WTEXT(sym) .weak sym; .type sym, %function

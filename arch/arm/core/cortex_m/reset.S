@@ -22,6 +22,8 @@
 
 _ASM_FILE_PROLOGUE
 
+// KID 20170128
+// GTEXT(__reset) .global __reset; .type __reset, %function
 GTEXT(__reset)
 GTEXT(memset)
 GDATA(_interrupt_stack)
