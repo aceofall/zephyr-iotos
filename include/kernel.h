@@ -13,6 +13,7 @@
 #ifndef _kernel__h_
 #define _kernel__h_
 
+#if !defined(_ASMLANGUAGE)
 #include <stddef.h>
 #include <stdint.h>
 #include <limits.h>
@@ -171,6 +172,35 @@ extern void k_call_stacks_analyze(void);
  * @return N/A
  */
 typedef void (*k_thread_entry_t)(void *p1, void *p2, void *p3);
+
+#endif /* !_ASMLANGUAGE */
+
+
+/*
+ * Thread user options. May be needed by assembly code. Common part uses low
+ * bits, arch-specific use high bits.
+ */
+
+/* system thread that must not abort */
+#define K_ESSENTIAL (1 << 0)
+
+#if defined(CONFIG_FP_SHARING)
+/* thread uses floating point registers */
+#define K_FP_REGS (1 << 1)
+#endif
+
+#ifdef CONFIG_X86
+/* x86 Bitmask definitions for threads user options */
+
+#if defined(CONFIG_FP_SHARING) && defined(CONFIG_SSE)
+/* thread uses SSEx (and also FP) registers */
+#define K_SSE_REGS (1 << 7)
+#endif
+#endif
+
+/* end - thread options */
+
+#if !defined(_ASMLANGUAGE)
 
 /**
  * @brief Spawn a thread.
@@ -3065,6 +3095,8 @@ extern void k_cpu_idle(void);
  */
 extern void k_cpu_atomic_idle(unsigned int key);
 
+extern void _sys_power_save_idle_exit(int32_t ticks);
+
 /* Include legacy APIs */
 #if defined(CONFIG_LEGACY_KERNEL)
 #include <legacy.h>
@@ -3142,5 +3174,7 @@ inline void *operator new[](size_t size, void *ptr)
 }
 
 #endif /* defined(CONFIG_CPLUSPLUS) && defined(__cplusplus) */
+
+#endif /* !_ASMLANGUAGE */
 
 #endif /* _kernel__h_ */

@@ -422,8 +422,8 @@ static inline void dbg_update_neighbor_lladdr(struct net_linkaddr *new_lladdr,
 {
 	char out[sizeof("xx:xx:xx:xx:xx:xx:xx:xx")];
 
-	snprintf(out, sizeof(out), net_sprint_ll_addr(old_lladdr->addr,
-						      old_lladdr->len));
+	snprintk(out, sizeof(out), "%s",
+		 net_sprint_ll_addr(old_lladdr->addr, old_lladdr->len));
 
 	NET_DBG("Updating neighbor %s lladdr %s (was %s)",
 		net_sprint_ipv6_addr(addr),
@@ -459,7 +459,7 @@ static void ns_reply_timeout(struct k_work *work)
 
 	struct net_nbr *nbr = get_nbr_from_data(data);
 
-	if (!data) {
+	if (!nbr) {
 		NET_DBG("NS timeout but no nbr data");
 		return;
 	}
@@ -709,8 +709,8 @@ static inline void handle_ns_neighbor(struct net_buf *buf,
 						   cached_lladdr,
 						   &NET_IPV6_BUF(buf)->src);
 
-			cached_lladdr->len = lladdr.len;
-			memcpy(cached_lladdr->addr, lladdr.addr, lladdr.len);
+			net_linkaddr_set(cached_lladdr, lladdr.addr,
+					 lladdr.len);
 
 			net_ipv6_nbr_data(nbr)->state = NET_NBR_STALE;
 		} else {
@@ -727,7 +727,8 @@ static inline void handle_ns_neighbor(struct net_buf *buf,
 	do {								\
 		char out[NET_IPV6_ADDR_LEN];				\
 									\
-		snprintf(out, sizeof(out), net_sprint_ipv6_addr(dst));	\
+		snprintk(out, sizeof(out), "%s",			\
+			 net_sprint_ipv6_addr(dst));			\
 									\
 		NET_DBG("%s %s from %s to %s", action,			\
 			pkt_str, net_sprint_ipv6_addr(src), out);	\
@@ -745,8 +746,10 @@ static inline void handle_ns_neighbor(struct net_buf *buf,
 		char out[NET_IPV6_ADDR_LEN];				\
 		char tgt[NET_IPV6_ADDR_LEN];				\
 									\
-		snprintf(out, sizeof(out), net_sprint_ipv6_addr(dst));	\
-		snprintf(tgt, sizeof(tgt), net_sprint_ipv6_addr(target)); \
+		snprintk(out, sizeof(out), "%s",			\
+			 net_sprint_ipv6_addr(dst));			\
+		snprintk(tgt, sizeof(tgt), "%s",			\
+			 net_sprint_ipv6_addr(target));			\
 									\
 		NET_DBG("%s %s from %s to %s, target %s", action,	\
 			pkt_str, net_sprint_ipv6_addr(src), out, tgt);	\
@@ -1173,9 +1176,9 @@ static inline bool handle_na_neighbor(struct net_buf *buf,
 				cached_lladdr,
 				&NET_ICMPV6_NS_BUF(buf)->tgt);
 
-			memcpy(cached_lladdr->addr,
-			       &tllao[NET_ICMPV6_OPT_DATA_OFFSET],
-			       cached_lladdr->len);
+			net_linkaddr_set(cached_lladdr,
+					 &tllao[NET_ICMPV6_OPT_DATA_OFFSET],
+					 cached_lladdr->len);
 		}
 
 		if (net_is_solicited(buf)) {
@@ -1213,9 +1216,9 @@ static inline bool handle_na_neighbor(struct net_buf *buf,
 				cached_lladdr,
 				&NET_ICMPV6_NS_BUF(buf)->tgt);
 
-			memcpy(cached_lladdr->addr,
-			       &tllao[NET_ICMPV6_OPT_DATA_OFFSET],
-			       cached_lladdr->len);
+			net_linkaddr_set(cached_lladdr,
+					 &tllao[NET_ICMPV6_OPT_DATA_OFFSET],
+					 cached_lladdr->len);
 		}
 
 		if (net_is_solicited(buf)) {
@@ -1589,12 +1592,16 @@ static inline struct net_buf *handle_ra_neighbor(struct net_buf *buf,
 
 {
 	struct net_linkaddr lladdr;
+	struct net_linkaddr_storage llstorage;
 	uint8_t padding;
 
 	if (!nbr) {
 		return NULL;
 	}
 
+	llstorage.len = NET_LINK_ADDR_MAX_LENGTH;
+	lladdr.len = NET_LINK_ADDR_MAX_LENGTH;
+	lladdr.addr = llstorage.addr;
 	if (net_nbuf_ll_src(buf)->len < lladdr.len) {
 		lladdr.len = net_nbuf_ll_src(buf)->len;
 	}
@@ -1644,8 +1651,8 @@ static inline struct net_buf *handle_ra_neighbor(struct net_buf *buf,
 						   cached_lladdr,
 						   &NET_IPV6_BUF(buf)->src);
 
-			cached_lladdr->len = lladdr.len;
-			memcpy(cached_lladdr->addr, lladdr.addr, lladdr.len);
+			net_linkaddr_set(cached_lladdr, lladdr.addr,
+					 lladdr.len);
 
 			net_ipv6_nbr_data(*nbr)->state = NET_NBR_STALE;
 		} else {

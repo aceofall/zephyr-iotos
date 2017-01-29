@@ -7,14 +7,15 @@
 #ifndef _kernel_structs__h_
 #define _kernel_structs__h_
 
-#if !defined(_ASMLANGUAGE)
 #include <kernel.h>
+
+#if !defined(_ASMLANGUAGE)
 #include <atomic.h>
 #include <misc/dlist.h>
 #endif
 
 /*
- * bitmask definitions for the execution_flags and state
+ * Bitmask definitions for the struct k_thread.thread_state field.
  *
  * Must be before kerneL_arch_data.h because it might need them to be already
  * defined.
@@ -23,37 +24,23 @@
 
 /* states: common uses low bits, arch-specific use high bits */
 
-/* system thread that must not abort */
-#define K_ESSENTIAL (1 << 0)
+/* Not a real thread */
+#define _THREAD_DUMMY (1 << 0)
 
 /* Thread is waiting on an object */
-#define K_PENDING (1 << 1)
+#define _THREAD_PENDING (1 << 1)
 
 /* Thread has not yet started */
-#define K_PRESTART (1 << 2)
+#define _THREAD_PRESTART (1 << 2)
 
 /* Thread has terminated */
-#define K_DEAD (1 << 3)
+#define _THREAD_DEAD (1 << 3)
 
 /* Thread is suspended */
-#define K_SUSPENDED (1 << 4)
-
-/* Not a real thread */
-#define K_DUMMY (1 << 5)
+#define _THREAD_SUSPENDED (1 << 4)
 
 /* end - states */
 
-
-/* execution flags: common uses low bits, arch-specific use high bits */
-
-/* thread is defined statically */
-#define K_STATIC (1 << 0)
-
-#if defined(CONFIG_FP_SHARING)
-/* thread uses floating point registers */
-#define K_FP_REGS (1 << 1)
-#endif
-/* end - execution flags */
 
 /* lowest value of _thread_base.preempt at which a thread is non-preemptible */
 #define _NON_PREEMPT_THRESHOLD 0x0080
@@ -80,8 +67,8 @@ struct _thread_base {
 	/* this thread's entry in a ready/wait queue */
 	sys_dnode_t k_q_node;
 
-	/* execution flags */
-	uint8_t execution_flags;
+	/* user facing 'thread options'; values defined in include/kernel.h */
+	uint8_t user_options;
 
 	/* thread state */
 	uint8_t thread_state;
@@ -103,11 +90,11 @@ struct _thread_base {
 	union {
 		struct {
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-			uint8_t sched_locked;
-			volatile int8_t prio;
+			volatile uint8_t sched_locked;
+			int8_t prio;
 #else /* LITTLE and PDP */
-			volatile int8_t prio;
-			uint8_t sched_locked;
+			int8_t prio;
+			volatile uint8_t sched_locked;
 #endif
 		};
 		uint16_t preempt;

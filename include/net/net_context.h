@@ -106,11 +106,27 @@ typedef void (*net_context_send_cb_t)(struct net_context *context,
  * @param status The status code, 0 on success, < 0 otherwise
  * @param user_data The user data given in net_context_accept() call.
  */
-typedef void (*net_context_accept_cb_t)(struct net_context *new_context,
-					struct sockaddr *addr,
-					socklen_t addrlen,
-					int status,
-					void *user_data);
+typedef void (*net_tcp_accept_cb_t)(struct net_context *new_context,
+				    struct sockaddr *addr,
+				    socklen_t addrlen,
+				    int status,
+				    void *user_data);
+
+/**
+ * @brief Connection callback.
+ *
+ * @details The connect callback is called after a connection is being
+ * established.
+ *
+ * @param context The context to use.
+ * @param status Status of the connection establishment. This is 0
+ * if the connection was established successfully, <0 if there was an
+ * error.
+ * @param user_data The user data given in net_context_connect() call.
+ */
+typedef void (*net_context_connect_cb_t)(struct net_context *context,
+					 int status,
+					 void *user_data);
 
 struct net_tcp;
 
@@ -144,13 +160,18 @@ struct net_context {
 	 */
 	net_context_send_cb_t send_cb;
 
+	/** Connect callback to be called when a connection has been
+	 *  established.
+	 */
+	net_context_connect_cb_t connect_cb;
+
 	/** User data.
 	 */
 	void *user_data;
 
 #if defined(CONFIG_NET_CONTEXT_SYNC_RECV)
 	/**
-	 * Mutex for synchronous recv API call.
+	 * Semaphore to signal synchronous recv call completion.
 	 */
 	struct k_sem recv_data_wait;
 #endif /* CONFIG_NET_CONTEXT_SYNC_RECV */
@@ -164,11 +185,6 @@ struct net_context {
 #if defined(CONFIG_NET_TCP)
 	/** TCP connection information */
 	struct net_tcp *tcp;
-
-	/** Accept callback to be called when the connection has been
-	 * established.
-	 */
-	net_context_accept_cb_t accept_cb;
 #endif /* CONFIG_NET_TCP */
 };
 
@@ -445,18 +461,6 @@ int net_context_listen(struct net_context *context,
 		       int backlog);
 
 /**
- * @brief Connection callback.
- *
- * @details The connect callback is called after a connection is being
- * established.
- *
- * @param context The context to use.
- * @param user_data The user data given in net_context_connect() call.
- */
-typedef void (*net_context_connect_cb_t)(struct net_context *context,
-					 void *user_data);
-
-/**
  * @brief            Create a network connection.
  *
  * @details          The net_context_connect function creates a network
@@ -482,6 +486,7 @@ typedef void (*net_context_connect_cb_t)(struct net_context *context,
  * @return           0 on success.
  * @return           -EINVAL if an invalid parameter is passed as an argument.
  * @return           -ENOTSUP if the operation is not supported or implemented.
+ * @return           -ETIMEDOUT if the connect operation times out.
  */
 int net_context_connect(struct net_context *context,
 			const struct sockaddr *addr,
@@ -516,7 +521,7 @@ int net_context_connect(struct net_context *context,
  * @return 0 if ok, < 0 if error
  */
 int net_context_accept(struct net_context *context,
-		       net_context_accept_cb_t cb,
+		       net_tcp_accept_cb_t cb,
 		       int32_t timeout,
 		       void *user_data);
 

@@ -209,6 +209,15 @@ M:	Kinder, David <david.b.kinder@intel.com>
 M:	Perez-Gonzalez, Inaky <inaky.perez-gonzalez@intel.com>
 S:	Supported
 F:	doc/
+F:	*.rst
+F:	*/*.rst
+F:	*/*/*.rst
+F:	*/*/*/*.rst
+F:	*/*/*/*/*.rst
+F:	*/*/*/*/*/*.rst
+F:	*/*/*/*/*/*/*.rst
+F:	*/*/*/*/*/*/*/*.rst
+F:	*/*/*/*/*/*/*/*/*.rst
 
 FILE SYSTEM
 M:	Ramesh Thomas <ramesh.thomas@intel.com>
@@ -303,6 +312,13 @@ MCUXPRESSO SOFTWARE DEVELOPMENT KIT (MCUX)
 M:	Maureen Helm <maureen.helm@nxp.com>
 S:	Supported
 F:	ext/hal/nxp/mcux/
+
+MPS2 - ARM LTD CORTEX-M PROTOTYPING SYSTEM
+M:	Jon Medhurst (Tixy) <tixy@linaro.org>
+M:	Vincenzo Frascino <vincenzo.frascino@linaro.org>
+S:	Supported
+F:	arch/arm/soc/arm/mps2/
+F:	boards/arm/mps2/
 
 NETWORKING
 M:	Jukka Rissanen <jukka.rissanen@linux.intel.com>
@@ -448,10 +464,18 @@ F:	samples/usb
 X86 ARCH
 M:	Benjamin Walsh <benjamin.walsh@windriver.com>
 M:	Allan Stephens <allan.stephens@windriver.com>
+M:	Andrew Boie <andrew.p.boie@intel.com>
 S:	Supported
 F:	arch/x86/
 F:	include/arch/x86/
 F:	boards/x86/
+
+XTENSA ARCH
+M:	Andrew Boie <andrew.p.boie@intel.com>
+S:	Supported
+F:	arch/xtensa
+F:	include/arch/xtensa/
+F:	boards/xtensa/
 
 ZOAP
 M:	Vinicius Costa Gomes <vinicius.gomes@intel.com>

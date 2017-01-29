@@ -160,6 +160,7 @@ struct net_addr {
 #define NET_IPV4_ADDR_LEN sizeof("xxx.xxx.xxx.xxx")
 
 #define INADDR_ANY 0
+#define INADDR_ANY_INIT { { { INADDR_ANY } } }
 
 #define NET_IPV6_MTU 1280
 
@@ -360,27 +361,36 @@ static inline bool net_is_my_ipv6_maddr(struct in6_addr *maddr)
  * @param addr2 Second IPv6 address.
  * @param length Prefix length (max length is 128).
  *
- * @return True if addresses are the same, False otherwise.
+ * @return True if IPv6 prefixes are the same, False otherwise.
  */
 static inline bool net_is_ipv6_prefix(const uint8_t *addr1,
 				      const uint8_t *addr2,
 				      uint8_t length)
 {
 	uint8_t bits = 128 - length;
-	uint8_t bytes = bits / 8;
+	uint8_t bytes = length / 8;
 	uint8_t remain = bits % 8;
+	uint8_t mask;
 
 	if (length > 128) {
 		return false;
 	}
 
-	if (memcmp(addr1, addr2, 16 - bytes)) {
+	if (memcmp(addr1, addr2, bytes)) {
 		return false;
 	}
 
-	return ((addr1[16 - bytes] & ((8 - remain) << 8))
-		==
-		(addr2[16 - bytes] & ((8 - remain) << 8)));
+	if (!remain) {
+		/* No remaining bits, the prefixes are the same as first
+		 * bytes are the same.
+		 */
+		return true;
+	}
+
+	/* Create a mask that has remaining most significant bits set */
+	mask = ((0xff << (8 - remain)) ^ 0xff) << remain;
+
+	return (addr1[bytes] & mask) == (addr2[bytes] & mask);
 }
 
 /**
@@ -679,6 +689,10 @@ static inline void net_ipv6_addr_create_iid(struct in6_addr *addr,
 static inline bool net_ipv6_addr_based_on_ll(const struct in6_addr *addr,
 					     const struct net_linkaddr *lladdr)
 {
+	if (!addr || !lladdr) {
+		return false;
+	}
+
 	switch (lladdr->len) {
 	case 2:
 		if (!memcmp(&addr->s6_addr[14], lladdr->addr, lladdr->len) &&

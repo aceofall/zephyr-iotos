@@ -2,23 +2,17 @@
 #
 # Copyright (c) 2016, Freescale Semiconductor, Inc.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 #
 
 # Translate the SoC name and part number into the mcux device and cpu name
 # respectively.
 MCUX_DEVICE = $(shell echo $(CONFIG_SOC) | tr '[:lower:]' '[:upper:]')
 MCUX_CPU = CPU_$(subst $(DQUOTE),,$(CONFIG_SOC_PART_NUMBER))
+
+ifdef CONFIG_NXP_MCR20A
+ZEPHYRINCLUDE += -I$(srctree)/ext/hal/nxp/mcux/components/mcr20a
+endif
 
 ifdef CONFIG_HAS_MCUX
 ifdef CONFIG_ETH_MCUX

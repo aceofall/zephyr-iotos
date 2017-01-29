@@ -5,7 +5,7 @@ Supported Boards
 
 
 X86 Boards
-==========
+**********
 
 .. toctree::
    :maxdepth: 1
@@ -14,7 +14,7 @@ X86 Boards
    x86/**/*
 
 ARM Boards
-==========
+**********
 
 .. toctree::
    :maxdepth: 1
@@ -23,13 +23,22 @@ ARM Boards
    arm/**/*
 
 ARC Boards
-==========
+**********
 
 .. toctree::
    :maxdepth: 1
    :glob:
 
    arc/**/*
+
+NIOS II Boards
+**************
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   nios2/**/*
 
 A list of additional supported boards can be found on the `Zephyr project wiki`_.
 

@@ -15,7 +15,6 @@
 #include <zephyr.h>
 #include <sections.h>
 #include <errno.h>
-#include <stdio.h>
 
 #include <net/nbuf.h>
 #include <net/net_if.h>
@@ -268,6 +267,10 @@ static struct net_buf *build_reply_buf(const char *name,
 	NET_INFO("%s received %d bytes", name,
 	      net_nbuf_appdatalen(buf));
 
+	if (net_nbuf_appdatalen(buf) == 0) {
+		return NULL;
+	}
+
 	reply_buf = net_nbuf_get_tx(context);
 
 	NET_ASSERT(reply_buf);
@@ -315,9 +318,7 @@ static struct net_buf *build_reply_buf(const char *name,
 
 		net_buf_frag_add(reply_buf, frag);
 
-		net_buf_frag_del(buf, tmp);
-
-		tmp = buf->frags;
+		tmp = net_buf_frag_del(buf, tmp);
 	}
 
 	reply_len = net_buf_frags_len(reply_buf->frags);
@@ -374,7 +375,7 @@ static void udp_received(struct net_context *context,
 	static char dbg[MAX_DBG_PRINT + 1];
 	int ret;
 
-	snprintf(dbg, MAX_DBG_PRINT, "UDP IPv%c",
+	snprintk(dbg, MAX_DBG_PRINT, "UDP IPv%c",
 		 family == AF_INET6 ? '6' : '4');
 
 	set_dst_addr(family, buf, &dst_addr);
@@ -382,6 +383,10 @@ static void udp_received(struct net_context *context,
 	reply_buf = build_reply_buf(dbg, context, buf);
 
 	net_nbuf_unref(buf);
+
+	if (!reply_buf) {
+		return;
+	}
 
 	ret = net_context_sendto(reply_buf, &dst_addr,
 				 family == AF_INET6 ?
@@ -433,12 +438,16 @@ static void tcp_received(struct net_context *context,
 		return;
 	}
 
-	snprintf(dbg, MAX_DBG_PRINT, "TCP IPv%c",
+	snprintk(dbg, MAX_DBG_PRINT, "TCP IPv%c",
 		 family == AF_INET6 ? '6' : '4');
 
 	reply_buf = build_reply_buf(dbg, context, buf);
 
 	net_buf_unref(buf);
+
+	if (!reply_buf) {
+		return;
+	}
 
 	ret = net_context_send(reply_buf, pkt_sent, K_NO_WAIT,
 			       UINT_TO_POINTER(net_buf_frags_len(reply_buf)),

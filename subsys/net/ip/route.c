@@ -243,7 +243,7 @@ static int nbr_nexthop_put(struct net_nbr *nbr)
 									\
 		NET_ASSERT_INFO(naddr, "Unknown nexthop address");	\
 									\
-		snprintf(out, sizeof(out),				\
+		snprintk(out, sizeof(out), "%s",			\
 			 net_sprint_ipv6_addr(dst));			\
 		NET_DBG("%s route to %s via %s (iface %p)", str, out,	\
 			net_sprint_ipv6_addr(naddr), route->iface);	\
@@ -306,7 +306,6 @@ struct net_route_entry *net_route_add(struct net_if *iface,
 	struct net_nbr *nbr, *nbr_nexthop, *tmp;
 	struct net_route_nexthop *nexthop_route;
 	struct net_route_entry *route;
-	struct net_linkaddr lladdr;
 
 	NET_ASSERT(addr);
 	NET_ASSERT(iface);
@@ -328,11 +327,8 @@ struct net_route_entry *net_route_add(struct net_if *iface,
 
 	NET_ASSERT(nexthop_lladdr);
 
-	lladdr.addr = nexthop_lladdr->addr;
-	lladdr.len = nexthop_lladdr->len;
-
 	NET_DBG("Nexthop %s lladdr is %s", net_sprint_ipv6_addr(nexthop),
-		net_sprint_ll_addr(lladdr.addr, lladdr.len));
+		net_sprint_ll_addr(nexthop_lladdr->addr, nexthop_lladdr->len));
 
 	route = net_route_lookup(iface, addr);
 	if (route) {
@@ -367,7 +363,7 @@ struct net_route_entry *net_route_add(struct net_if *iface,
 			struct in6_addr *tmp;
 			struct net_linkaddr_storage *llstorage;
 
-			snprintf(out, sizeof(out),
+			snprintk(out, sizeof(out), "%s",
 				 net_sprint_ipv6_addr(&route->addr));
 
 			tmp = net_route_get_nexthop(route);
