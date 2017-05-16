@@ -37,6 +37,7 @@ static struct k_thread my_thread;
 
 /* The _idt_base_address symbol is generated via a linker script */
 
+// KID 20170516
 extern unsigned char _idt_base_address[];
 
 extern void *int_stub;

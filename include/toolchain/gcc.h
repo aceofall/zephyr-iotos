@@ -98,7 +98,7 @@ do {                                                                    \
 
 #if defined(_ASMLANGUAGE) && !defined(_LINKER)
 
-#ifdef CONFIG_ARM
+#ifdef CONFIG_ARM // CONFIG_ARM=n
 
 #if defined(CONFIG_ISA_THUMB)
 
@@ -130,7 +130,9 @@ A##a:
 
 #else
 
+// KID 20170516
 #define FUNC_CODE()
+// KID 20170516
 #define FUNC_INSTR(a)
 
 #endif /* !CONFIG_ARM */
@@ -192,7 +194,7 @@ A##a:
  *   if all functions in the sub-section are not referenced.
  */
 
-#if defined(CONFIG_ARC)
+#if defined(CONFIG_ARC) // CONFIG_ARC=n
 /*
  * Need to use assembly macros because ';' is interpreted as the start of
  * a single line comment in the ARC assembler.
@@ -227,6 +229,10 @@ A##a:
 #else /* !CONFIG_ARC */
 
 #define SECTION_VAR(sect, sym)  .section .sect.##sym; sym :
+// KID 20170516
+// FUNC_CODE()
+// PERFOPT_ALIGN: .balign  1
+// FUNC_INSTR(a):
 #define SECTION_FUNC(sect, sym)						\
 	.section .sect.sym, "ax";					\
 				FUNC_CODE()				\

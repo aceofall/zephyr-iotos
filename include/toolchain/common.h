@@ -52,11 +52,12 @@
 
 #ifdef _ASMLANGUAGE
 
-  #ifdef CONFIG_X86
+  #ifdef CONFIG_X86 // CONFIG_X86=y
 
     #ifdef PERF_OPT
       #define PERFOPT_ALIGN .balign 16
     #else
+// KID 20170516
       #define PERFOPT_ALIGN .balign  1
     #endif
 

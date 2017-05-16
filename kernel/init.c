@@ -98,6 +98,7 @@ k_tid_t const _idle_thread = (k_tid_t)&_idle_thread_s;
 #if CONFIG_ISR_STACK_SIZE & (STACK_ALIGN - 1)
     #error "ISR_STACK_SIZE must be a multiple of the stack alignment"
 #endif
+// KID 20170516
 char __noinit __stack _interrupt_stack[CONFIG_ISR_STACK_SIZE];
 
 #ifdef CONFIG_SYS_CLOCK_EXISTS
@@ -326,6 +327,7 @@ extern void *__stack_chk_guard;
  *
  * @return Does not return
  */
+// KID 20170516
 FUNC_NORETURN void _Cstart(void)
 {
 #ifdef CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN

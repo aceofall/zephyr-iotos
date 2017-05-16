@@ -27,7 +27,9 @@
 
 /* Various text section names */
 #define TEXT text
-#if defined(CONFIG_X86)
+#if defined(CONFIG_X86) // CONFIG_X86=y
+// KID 20170516
+// TEXT_START: text_start
 #define TEXT_START text_start /* beginning of TEXT section */
 #else
 #define TEXT_START text /* beginning of TEXT section */

@@ -15,6 +15,7 @@
 
 	/* exports (private APIs) */
 
+// KID 20170516
 	GTEXT(__start)
 
 	/* externs */
@@ -23,20 +24,20 @@
 	GDATA(_idt_base_address)
 	GDATA(_interrupt_stack)
 	GDATA(_Idt)
-#ifndef CONFIG_GDT_DYNAMIC
+#ifndef CONFIG_GDT_DYNAMIC // CONFIG_GDT_DYNAMIC=n
 	GDATA(_gdt)
 #endif
 
 
-#if defined(CONFIG_SSE)
+#if defined(CONFIG_SSE) // CONFIG_SSE=n
 	GDATA(_sse_mxcsr_default_value)
 #endif
 
-#if defined(CONFIG_BOOT_TIME_MEASUREMENT)
+#if defined(CONFIG_BOOT_TIME_MEASUREMENT) // CONFIG_BOOT_TIME_MEASUREMENT=n
 	GDATA(__start_tsc)
 #endif
 
-#ifdef CONFIG_SYS_POWER_DEEP_SLEEP
+#ifdef CONFIG_SYS_POWER_DEEP_SLEEP // CONFIG_SYS_POWER_DEEP_SLEEP=n
 	GTEXT(_sys_soc_resume_from_deep_sleep)
 #endif
 
@@ -45,9 +46,17 @@
 
 	.balign 16,0x90
 
+// KID 20170516
+// TEXT_START: text_start
+// FUNC_CODE()
+// PERFOPT_ALIGN: .balign  1
+// FUNC_INSTR(a):
+// #define SECTION_FUNC(text_start, __start):
+// .section .text_start.__start, "ax";
+// .balign  1; __start :
 SECTION_FUNC(TEXT_START, __start)
 
-#ifdef CONFIG_BOOT_TIME_MEASUREMENT
+#ifdef CONFIG_BOOT_TIME_MEASUREMENT // CONFIG_BOOT_TIME_MEASUREMENT=n
 	/*
 	 * Record BootTime from start of Kernel.
 	 * Store value temporarily in Register edi & esi and
