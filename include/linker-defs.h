@@ -125,11 +125,21 @@
 #elif defined(_ASMLANGUAGE)
 
 /* Assembly FILES: declaration defined by the linker script */
+// KID 20170517
+// GDATA(__bss_start): glbl_data __bss_start
 GDATA(__bss_start)
+// KID 20170517
+// GDATA(__bss_num_words): glbl_data __bss_num_words
 GDATA(__bss_num_words)
-#ifdef CONFIG_XIP
+#ifdef CONFIG_XIP // CONFIG_XIP=y
+// KID 20170517
+// GDATA(__data_rom_start): glbl_data __data_rom_start
 GDATA(__data_rom_start)
+// KID 20170517
+// GDATA(__data_ram_start): glbl_data __data_ram_start
 GDATA(__data_ram_start)
+// KID 20170517
+// GDATA(__data_num_words): glbl_data __data_num_words
 GDATA(__data_num_words)
 #endif
 

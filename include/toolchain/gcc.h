@@ -175,7 +175,9 @@ A##a:
 	.type \symbol, %object
 .endm
 
+// KID 20170517
 #define GTEXT(sym) glbl_text sym
+// KID 20170517
 #define GDATA(sym) glbl_data sym
 #define WDATA(sym) weak_data sym
 

@@ -16,14 +16,26 @@
 	/* exports (private APIs) */
 
 // KID 20170516
+// GTEXT(__start): glbl_text __start
 	GTEXT(__start)
 
 	/* externs */
+// KID 20170517
+// GTEXT(_Cstart): glbl_text _Cstart
 	GTEXT(_Cstart)
 
+// KID 20170517
+// GDATA(_idt_base_address): glbl_data _idt_base_address
 	GDATA(_idt_base_address)
+
+// KID 20170517
+// GDATA(_interrupt_stack): glbl_data _interrupt_stack
 	GDATA(_interrupt_stack)
+
+// KID 20170517
+// GDATA(_Idt): glbl_data _Idt
 	GDATA(_Idt)
+
 #ifndef CONFIG_GDT_DYNAMIC // CONFIG_GDT_DYNAMIC=n
 	GDATA(_gdt)
 #endif
@@ -51,7 +63,7 @@
 // FUNC_CODE()
 // PERFOPT_ALIGN: .balign  1
 // FUNC_INSTR(a):
-// #define SECTION_FUNC(text_start, __start):
+// SECTION_FUNC(text_start, __start):
 // .section .text_start.__start, "ax";
 // .balign  1; __start :
 SECTION_FUNC(TEXT_START, __start)
@@ -86,13 +98,13 @@ SECTION_FUNC(TEXT_START, __start)
 	 * and a Global Descriptor Table (GDT), the specification encourages
 	 * booted operating systems to setup their own IDT and GDT.
 	 */
-#if CONFIG_SET_GDT
+#if CONFIG_SET_GDT // CONFIG_SET_GDT=y
 	lgdt	_gdt_rom		/* load 32-bit operand size GDT */
 #endif
 	lidt	_Idt		/* load 32-bit operand size IDT */
 
 
-#ifdef CONFIG_SET_GDT
+#ifdef CONFIG_SET_GDT // CONFIG_SET_GDT=y
 	/* If we set our own GDT, update the segment registers as well.
 	 */
 	movw	$0x10, %ax	/* data segment selector (entry = 3) */
@@ -104,11 +116,12 @@ SECTION_FUNC(TEXT_START, __start)
 
 	ljmp	$0x08, $__csSet	/* set CS = 0x08 */
 
+// KID 20170517
 __csSet:
 #endif /* CONFIG_SET_GDT */
 
 
-#ifdef CONFIG_BOOT_TIME_MEASUREMENT
+#ifdef CONFIG_BOOT_TIME_MEASUREMENT // CONFIG_BOOT_TIME_MEASUREMENT=n
 	/*
 	 * Store rdtsc result from temporary regiter ESI & EDI into memory.
 	 */
@@ -116,13 +129,15 @@ __csSet:
         mov  %edi, __start_tsc+4    	/* high value */
 #endif
 
-#if !defined(CONFIG_FLOAT)
+#if !defined(CONFIG_FLOAT) // CONFIG_FLOAT=n
 	/*
 	 * Force an #NM exception for floating point instructions
 	 * since FP support hasn't been configured
 	 */
 
 	movl	%cr0, %eax		/* move CR0 to EAX */
+
+	// NE: Numeric error, TS: Task switched, EM: Emulationa, MP: Monitor co-processor
 	orl	$0x2e, %eax		/* CR0[NE+TS+EM+MP]=1 */
 	movl	%eax, %cr0		/* move EAX to CR0 */
 #else
@@ -179,7 +194,7 @@ __csSet:
 	 * If it is a cold boot then _sys_soc_resume_from_deep_sleep() should
 	 * not do anything and must return immediately.
 	 */
-#ifdef CONFIG_INIT_STACKS
+#ifdef CONFIG_INIT_STACKS // CONFIG_INIT_STACKS=n
 	movl $0xAAAAAAAA, %eax
 	leal _interrupt_stack, %edi
 	stack_size_dwords = (CONFIG_ISR_STACK_SIZE / 4)
@@ -188,10 +203,12 @@ __csSet:
 #endif
 
 	movl	$_interrupt_stack, %esp
+
+	// CONFIG_ISR_STACK_SIZE: 2048
 	addl	$CONFIG_ISR_STACK_SIZE, %esp
 
 #if defined(CONFIG_SYS_POWER_DEEP_SLEEP) && \
-             !defined(CONFIG_BOOTLOADER_CONTEXT_RESTORE)
+             !defined(CONFIG_BOOTLOADER_CONTEXT_RESTORE) // CONFIG_SYS_POWER_DEEP_SLEEP=n, CONFIG_BOOTLOADER_CONTEXT_RESTORE=n
 	/*
 	 * Invoke _sys_soc_resume_from_deep_sleep() hook to handle resume from
 	 * deep sleep. It should first check whether system is recovering from
@@ -208,7 +225,7 @@ __csSet:
 
 #endif
 
-#ifdef CONFIG_XIP
+#ifdef CONFIG_XIP // CONFIG_XIP=y
 	/*
 	 * copy DATA section from ROM to RAM region
 	 *	 DATA is followed by BSS section.
@@ -218,7 +235,7 @@ __csSet:
 	movl	$__data_rom_start, %esi /* DATA in ROM (src) */
 	movl	$__data_num_words, %ecx /* Size of DATA in quad bytes */
 
-  #ifdef CONFIG_SSE
+  #ifdef CONFIG_SSE // CONFIG_SSE=n
 	/* copy 16 bytes at a time using XMM until < 16 bytes remain */
 
 	movl	%ecx ,%edx		/* save number of quad bytes */
@@ -249,7 +266,7 @@ dataWords:
 	 * and aligned on a double word (32-bit) boundary
 	 */
 
-#ifdef CONFIG_SSE
+#ifdef CONFIG_SSE // CONFIG_SSE=n
 
 	/* use XMM register to clear 16 bytes at a time */
 
@@ -287,7 +304,7 @@ bssWords:
 
 #endif /* CONFIG_SSE */
 
-#ifdef CONFIG_GDT_DYNAMIC
+#ifdef CONFIG_GDT_DYNAMIC // CONFIG_GDT_DYNAMIC=n
 	/* activate RAM-based Global Descriptor Table (GDT) */
 	lgdt	%ds:_gdt
 #endif
@@ -307,6 +324,8 @@ _sse_mxcsr_default_value:
 
 	 /* Interrupt Descriptor Table (IDT) definition */
 
+// KID 20170517
+// CONFIG_IDT_NUM_VECTORS: 256
 _Idt:
 	.word	(CONFIG_IDT_NUM_VECTORS * 8) - 1 /* limit: size of IDT-1 */
 
@@ -316,6 +335,7 @@ _Idt:
 	 * setup by the BIOS (or GRUB?).
 	 */
 
+// KID 20170517
 	.long	_idt_base_address		/* physical start address */
 
 
@@ -350,7 +370,7 @@ _Idt:
 	.long	-(0x1BADB002 + 0)
 #endif /* CONFIG_BOOTLOADER_UNKNOWN */
 
-#ifdef CONFIG_SET_GDT
+#ifdef CONFIG_SET_GDT // CONFIG_SET_GDT=y
 
 	/* GDT should be aligned on 8-byte boundary for best processor
 	 * performance, see Section 3.5.1 of IA architecture SW developer
@@ -378,6 +398,7 @@ _Idt:
 #ifndef CONFIG_GDT_DYNAMIC
 _gdt:
 #endif
+// KID 20170517
 _gdt_rom:
 
 	/* Entry 0 (selector=0x0000): The "NULL descriptor". The CPU never

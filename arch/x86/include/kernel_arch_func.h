@@ -75,6 +75,7 @@ static inline void _IntLibInit(void)
 }
 
 /* the _idt_base_address symbol is generated via a linker script */
+// KID 20170517
 extern unsigned char _idt_base_address[];
 
 #include <stddef.h> /* For size_t */
