@@ -99,6 +99,9 @@
 /* Indicate that an array will be used for stack space. */
 
 #if !defined(_ASMLANGUAGE)
+// KID 20170517
+// STACK_ALIGN: 4
+// __stack: __aligned(4)
   #define __stack __aligned(STACK_ALIGN)
 #endif
 

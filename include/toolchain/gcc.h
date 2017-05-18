@@ -273,7 +273,7 @@ A##a:
 
 #define GEN_ABS_SYM_END }
 
-#if defined(CONFIG_ARM)
+#if defined(CONFIG_ARM) // CONFIG_ARM=n
 
 /*
  * GNU/ARM backend does not have a proper operand modifier which does not
@@ -290,6 +290,7 @@ A##a:
 
 #elif defined(CONFIG_X86) || defined(CONFIG_ARC)
 
+// KID 20170517
 #define GEN_ABSOLUTE_SYM(name, value)               \
 	__asm__(".globl\t" #name "\n\t.equ\t" #name \
 		",%c0"                              \

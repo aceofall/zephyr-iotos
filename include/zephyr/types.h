@@ -18,6 +18,8 @@ typedef signed short        s16_t;
 typedef signed int          s32_t;
 typedef signed long long    s64_t;
 
+// KID 20170517
+// sizeof(u8_t): 1 bytes
 typedef unsigned char       u8_t;
 typedef unsigned short      u16_t;
 typedef unsigned int        u32_t;

@@ -126,8 +126,11 @@ struct k_poll_signal;
 /* timeouts */
 
 struct _timeout;
+// KID 20170517
 typedef void (*_timeout_func_t)(struct _timeout *t);
 
+// KID 20170517
+// sizeof(struct _timeout): 24 bytes
 struct _timeout {
 	sys_dnode_t node;
 	struct k_thread *thread;
@@ -151,6 +154,8 @@ struct __thread_entry {
 #endif
 
 /* can be used for creating 'dummy' threads, e.g. for pending on objects */
+// KID 20170517
+// sizeof(struct _thread_base): 40 bytes
 struct _thread_base {
 
 	/* this thread's entry in a ready/wait queue */
@@ -192,7 +197,7 @@ struct _thread_base {
 	/* data returned by APIs */
 	void *swap_data;
 
-#ifdef CONFIG_SYS_CLOCK_EXISTS
+#ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
 	/* this thread's entry in a timeout queue */
 	struct _timeout timeout;
 #endif
@@ -213,6 +218,9 @@ struct _thread_stack_info {
 typedef struct _thread_stack_info _thread_stack_info_t;
 #endif /* CONFIG_THREAD_STACK_INFO */
 
+// KID 20170517
+// sizeof(struct _thread_base): 40 bytes
+// sizeof(struct k_thread): 52 bytes
 struct k_thread {
 
 	struct _thread_base base;
@@ -227,7 +235,7 @@ struct k_thread {
 	/* abort function */
 	void (*fn_abort)(void);
 
-#if defined(CONFIG_THREAD_MONITOR)
+#if defined(CONFIG_THREAD_MONITOR) // CONFIG_THREAD_MONITOR=n
 	/* thread entry and parameters description */
 	struct __thread_entry *entry;
 
@@ -235,17 +243,17 @@ struct k_thread {
 	struct k_thread *next_thread;
 #endif
 
-#ifdef CONFIG_THREAD_CUSTOM_DATA
+#ifdef CONFIG_THREAD_CUSTOM_DATA // CONFIG_THREAD_CUSTOM_DATA=n
 	/* crude thread-local storage */
 	void *custom_data;
 #endif
 
-#ifdef CONFIG_ERRNO
+#ifdef CONFIG_ERRNO // CONFIG_ERRNO=y
 	/* per-thread errno variable */
 	int errno_var;
 #endif
 
-#if defined(CONFIG_THREAD_STACK_INFO)
+#if defined(CONFIG_THREAD_STACK_INFO) // CONFIG_THREAD_STACK_INFO=n
 	/* Stack Info */
 	struct _thread_stack_info stack_info;
 #endif /* CONFIG_THREAD_STACK_INFO */

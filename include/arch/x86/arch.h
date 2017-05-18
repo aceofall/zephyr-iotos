@@ -57,6 +57,9 @@ void _int_latency_stop(void);
  * later on.
  */
 
+// KID 20170517
+// FP_REG_SET_ALIGN: 4
+// STACK_ALIGN: 4
 #define STACK_ALIGN  FP_REG_SET_ALIGN
 
 typedef struct s_isrList {

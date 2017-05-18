@@ -28,9 +28,11 @@
  * cases a 4 byte boundary is sufficient.
  */
 
-#ifdef CONFIG_SSE
+#ifdef CONFIG_SSE // CONFIG_SSE=n
 #define FP_REG_SET_ALIGN  16
 #else
+// KID 20170517
+// FP_REG_SET_ALIGN: 4
 #define FP_REG_SET_ALIGN  4
 #endif
 
@@ -45,6 +47,9 @@
  * occurs.
  */
 
+// KID 20170517
+// empty struct 의 메모리는 사용되지 않음
+// https://dave.cheney.net/2014/03/25/the-empty-struct
 struct _caller_saved {
 
 	/*
@@ -191,9 +196,11 @@ typedef struct s_FpRegSetEx {
 
 /* empty floating point register definition */
 
+// KID 20170517
 typedef struct s_FpRegSet {
 } tFpRegSet;
 
+// KID 20170517
 typedef struct s_FpRegSetEx {
 } tFpRegSetEx;
 
@@ -206,6 +213,7 @@ typedef struct s_FpRegSetEx {
  * cooperative context switch occurs.
  */
 
+// KID 20170517
 typedef struct s_coopFloatReg {
 
 	/*
@@ -223,6 +231,8 @@ typedef struct s_coopFloatReg {
  * switch occurs.
  */
 
+// KID 20170517
+// sizeof(struct s_preempFloatReg): 0 bytes
 typedef struct s_preempFloatReg {
 	union {
 		/* threads with K_FP_REGS utilize this format */
@@ -239,14 +249,15 @@ typedef struct s_preempFloatReg {
  * _new_thread() call.
  */
 
+// KID 20170517
 struct _thread_arch {
 
-#ifdef CONFIG_GDB_INFO
+#ifdef CONFIG_GDB_INFO // CONFIG_GDB_INFO=n
 	 /* pointer to ESF saved by outermost exception wrapper */
 	void *esf;
 #endif
 
-#if (defined(CONFIG_FP_SHARING) || defined(CONFIG_GDB_INFO))
+#if (defined(CONFIG_FP_SHARING) || defined(CONFIG_GDB_INFO)) // CONFIG_FP_SHARING=n, CONFIG_GDB_INFO=n
 	/*
 	 * Nested exception count to maintain setting of EXC_ACTIVE flag across
 	 * outermost exception.  EXC_ACTIVE is used by _Swap() lazy FP

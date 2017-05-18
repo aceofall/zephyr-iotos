@@ -24,6 +24,8 @@
 extern "C" {
 #endif
 
+// KID 20170517
+// sizeof(struct _dnode): 8 bytes
 struct _dnode {
 	union {
 		struct _dnode *head; /* ptr to head of list (sys_dlist_t) */
@@ -35,7 +37,13 @@ struct _dnode {
 	};
 };
 
+// KID 20170517
+// sizeof(struct _dnode): 8 bytes
+// sizeof(sys_dlist_t): 8 bytes
 typedef struct _dnode sys_dlist_t;
+// KID 20170517
+// sizeof(struct _dnode): 8 bytes
+// sizeof(sys_dnode_t): 8 bytes
 typedef struct _dnode sys_dnode_t;
 
 /**

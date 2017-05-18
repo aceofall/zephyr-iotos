@@ -338,6 +338,7 @@ FUNC_NORETURN void _Cstart(void)
 #else
 	/* floating point is NOT used during kernel init */
 
+	// __stack: __aligned(4), _K_THREAD_NO_FLOAT_SIZEOF: 52
 	char __stack dummy_stack[_K_THREAD_NO_FLOAT_SIZEOF];
 	void *dummy_thread = dummy_stack;
 #endif
