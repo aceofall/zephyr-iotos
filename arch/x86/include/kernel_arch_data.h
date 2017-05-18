@@ -392,8 +392,9 @@ extern "C" {
 #endif
 
 
+// KID 20170518
 struct _kernel_arch {
-#if defined(CONFIG_DEBUG_INFO)
+#if defined(CONFIG_DEBUG_INFO) // CONFIG_DEBUG_INFO=n
 	NANO_ISF *isf;    /* ptr to interrupt stack frame */
 #endif
 };

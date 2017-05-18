@@ -288,7 +288,7 @@ A##a:
 		",%B0"                              \
 		"\n\t.type\t" #name ",%%object" :  : "n"(~(value)))
 
-#elif defined(CONFIG_X86) || defined(CONFIG_ARC)
+#elif defined(CONFIG_X86) || defined(CONFIG_ARC) // CONFIG_X86=y
 
 // KID 20170517
 #define GEN_ABSOLUTE_SYM(name, value)               \

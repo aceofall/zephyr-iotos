@@ -229,9 +229,11 @@ void __weak main(void)
  *
  * @return N/A
  */
+// KID 20170518
+// dummy_thread: dummy_stack
 static void prepare_multithreading(struct k_thread *dummy_thread)
 {
-#ifdef CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN
+#ifdef CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN // CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN=n
 	ARG_UNUSED(dummy_thread);
 #else
 	/*
@@ -242,7 +244,9 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	 * dummy thread.
 	 */
 
+	// _current: _kernel.current, dummy_thread: dummy_stack
 	_current = dummy_thread;
+	// _kernel.current: dummy_stack
 
 	dummy_thread->base.user_options = K_ESSENTIAL;
 	dummy_thread->base.thread_state = _THREAD_DUMMY;
@@ -341,6 +345,7 @@ FUNC_NORETURN void _Cstart(void)
 	// __stack: __aligned(4), _K_THREAD_NO_FLOAT_SIZEOF: 52
 	char __stack dummy_stack[_K_THREAD_NO_FLOAT_SIZEOF];
 	void *dummy_thread = dummy_stack;
+	// dummy_thread: dummy_stack
 #endif
 
 	/*
@@ -349,6 +354,7 @@ FUNC_NORETURN void _Cstart(void)
 	 * before the hardware initialization phase.
 	 */
 
+	// dummy_thread: dummy_stack
 	prepare_multithreading(dummy_thread);
 
 	/* perform basic hardware initialization */

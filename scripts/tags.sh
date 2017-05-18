@@ -70,6 +70,8 @@ find_include_sources()
 {
 	find ${tree}include $ignore -name config -prune -o -name "$1" \
 		-not -type l -print;
+	find ${tree}kernel/include $ignore -name config -prune -o -name "$1" \
+		-not -type l -print;
 }
 
 # find sources in rest of tree

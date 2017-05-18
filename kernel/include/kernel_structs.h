@@ -60,20 +60,26 @@
 
 #if !defined(_ASMLANGUAGE)
 
+// KID 20170518
+// sizeof(struct _ready_q): 264 bytes
 struct _ready_q {
 
 	/* always contains next thread to run: cannot be NULL */
 	struct k_thread *cache;
 
 	/* bitmap of priorities that contain at least one ready thread */
+	// K_NUM_PRIO_BITMAPS: 1
 	u32_t prio_bmap[K_NUM_PRIO_BITMAPS];
 
 	/* ready queues, one per priority */
+	// K_NUM_PRIORITIES: 32
 	sys_dlist_t q[K_NUM_PRIORITIES];
 };
 
 typedef struct _ready_q _ready_q_t;
 
+// KID 20170518
+// sizeof(struct _kernel): 284 bytes
 struct _kernel {
 
 	/* nested interrupt count */
@@ -85,12 +91,12 @@ struct _kernel {
 	/* currently scheduled thread */
 	struct k_thread *current;
 
-#ifdef CONFIG_SYS_CLOCK_EXISTS
+#ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
 	/* queue of timeouts */
 	sys_dlist_t timeout_q;
 #endif
 
-#ifdef CONFIG_SYS_POWER_MANAGEMENT
+#ifdef CONFIG_SYS_POWER_MANAGEMENT // CONFIG_SYS_POWER_MANAGEMENT=n
 	s32_t idle; /* Number of ticks for kernel idling */
 #endif
 
@@ -100,7 +106,7 @@ struct _kernel {
 	 */
 	struct _ready_q ready_q;
 
-#ifdef CONFIG_FP_SHARING
+#ifdef CONFIG_FP_SHARING // CONFIG_FP_SHARING=n
 	/*
 	 * A 'current_sse' field does not exist in addition to the 'current_fp'
 	 * field since it's not possible to divide the IA-32 non-integer
@@ -114,7 +120,7 @@ struct _kernel {
 	struct k_thread *current_fp;
 #endif
 
-#if defined(CONFIG_THREAD_MONITOR)
+#if defined(CONFIG_THREAD_MONITOR) // CONFIG_THREAD_MONITOR=n
 	struct k_thread *threads; /* singly linked list of ALL fiber+tasks */
 #endif
 
@@ -124,8 +130,11 @@ struct _kernel {
 
 typedef struct _kernel _kernel_t;
 
+// KID 20170518
 extern struct _kernel _kernel;
 
+// KID 20170518
+// _current: _kernel.current
 #define _current _kernel.current
 #define _ready_q _kernel.ready_q
 #define _timeout_q _kernel.timeout_q
