@@ -72,7 +72,7 @@
 #error "Invalid __ASSERT() level: must be between 0 and 2"
 #endif
 
-#if __ASSERT_ON
+#if __ASSERT_ON // undefined
 #include <misc/printk.h>
 #define __ASSERT(test, fmt, ...)                                   \
 	do {                                                       \
@@ -103,6 +103,7 @@
 #define __ASSERT_EVAL(expr1, expr2, test, fmt, ...) expr1
 #endif
 #else
+// KID 20170519
 #define __ASSERT(test, fmt, ...) \
 	do {/* nothing */        \
 	} while ((0))

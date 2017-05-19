@@ -161,19 +161,24 @@ extern void _init_thread_base(struct _thread_base *thread_base,
 			      int priority, u32_t initial_state,
 			      unsigned int options);
 
+// KID 20170519
+// thread: _main_thread_s, pStackMem: _main_stack, stackSize: 1024, options: 0x1
 static ALWAYS_INLINE void _new_thread_init(struct k_thread *thread,
 					    char *pStack, size_t stackSize,
 					    int prio, unsigned int options)
 {
-#if !defined(CONFIG_INIT_STACKS) && !defined(CONFIG_THREAD_STACK_INFO)
+#if !defined(CONFIG_INIT_STACKS) && !defined(CONFIG_THREAD_STACK_INFO) // CONFIG_INIT_STACKS=n, CONFIG_THREAD_STACK_INFO=n
+	// ARG_UNUSED(pStack): (void)(pStack)
 	ARG_UNUSED(pStack);
+
+	// ARG_UNUSED(stackSize): (void)(stackSize)
 	ARG_UNUSED(stackSize);
 #endif
 
-#ifdef CONFIG_INIT_STACKS
+#ifdef CONFIG_INIT_STACKS // CONFIG_INIT_STACKS=n
 	memset(pStack, 0xaa, stackSize);
 #endif
-#ifdef CONFIG_STACK_SENTINEL
+#ifdef CONFIG_STACK_SENTINEL // CONFIG_STACK_SENTINEL=n
 	/* Put the stack sentinel at the lowest 4 bytes of the stack area.
 	 * We periodically check that it's still present and kill the thread
 	 * if it isn't.

@@ -39,6 +39,8 @@
 #define BSS bss
 #define RODATA rodata
 #define DATA data
+// KID 20170519
+// NOINIT: noinit
 #define NOINIT noinit
 
 /* Interrupts */

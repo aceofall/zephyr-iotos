@@ -195,15 +195,25 @@ __asm__("\t.globl _thread_entry\n"
  *
  * @return opaque pointer to initialized k_thread structure
  */
+// KID 20170519
+// _main_thread: _main_thread_s, _main_stack, MAIN_STACK_SIZE: 1024,
+// _main, NULL, NULL, NULL, CONFIG_MAIN_THREAD_PRIORITY: 0, K_ESSENTIAL: 0x1
 void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 		 _thread_entry_t pEntry,
 		 void *parameter1, void *parameter2, void *parameter3,
 		 int priority, unsigned int options)
 {
+	// priority: 0, pEntry: _main
+	// _is_idle_thread(_main): 0, _is_prio_higher_or_equal((0), 14): 1, _is_prio_lower_or_equal((0), -16): 1
+	//
+	// _ASSERT_VALID_PRIO(0, _main):
+	// __ASSERT(((0) == 15 && _is_idle_thread(_main)) || (_is_prio_higher_or_equal((0), 14) && _is_prio_lower_or_equal((0), -16)),
+	//          "invalid priority (%d); allowed range: %d to %d", (0), 14, -16); // null function
 	_ASSERT_VALID_PRIO(priority, pEntry);
 
 	unsigned long *pInitialThread;
 
+	// thread: _main_thread_s, pStackMem: _main_stack, stackSize: 1024, options: 0x1
 	_new_thread_init(thread, pStackMem, stackSize, priority, options);
 
 	/* carve the thread entry struct from the "base" of the stack */

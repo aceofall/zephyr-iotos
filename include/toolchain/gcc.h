@@ -64,6 +64,12 @@ do {                                                                    \
 #define _GENERIC_SECTION(segment) __GENERIC_SECTION(segment)
 
 // KID 20170519
+// _STRINGIFY(noinit): "noinit"
+// _STRINGIFY(_FILE_PATH_HASH): "_FILE_PATH_HASH"
+// _STRINGIFY(__COUNTER__): "__COUNTER__"
+//
+// ___in_section(noinit, _FILE_PATH_HASH, __COUNTER__): 
+// __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
 #define ___in_section(a, b, c) \
 	__attribute__((section("." _STRINGIFY(a)			\
 				"." _STRINGIFY(b)			\
@@ -71,6 +77,12 @@ do {                                                                    \
 #define __in_section(a, b, c) ___in_section(a, b, c)
 
 // KID 20170519
+// NOINIT: noinit
+// ___in_section(noinit, _FILE_PATH_HASH, __COUNTER__): 
+// __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
+//
+// __in_section_unique(noinit):
+// __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
 #define __in_section_unique(seg) ___in_section(seg, _FILE_PATH_HASH, \
 						      __COUNTER__)
 
@@ -86,6 +98,7 @@ do {                                                                    \
 #endif
 #define __used		__attribute__((__used__))
 #define __deprecated	__attribute__((deprecated))
+// KID 20170519
 #define ARG_UNUSED(x) (void)(x)
 
 #define likely(x)   __builtin_expect((long)!!(x), 1L)

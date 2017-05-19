@@ -30,6 +30,7 @@ extern void _update_time_slice_before_swap(void);
 #ifdef _NON_OPTIMIZED_TICKS_PER_SEC
 extern s32_t _ms_to_ticks(s32_t ms);
 #endif
+// KID 20170519
 extern void idle(void *, void *, void *);
 #ifdef CONFIG_STACK_SENTINEL
 extern void _check_stack_sentinel(void);
@@ -42,9 +43,13 @@ static ALWAYS_INLINE struct k_thread *_get_next_ready_thread(void)
 	return _ready_q.cache;
 }
 
+// KID 20170519
+// _main
 static inline int _is_idle_thread(void *entry_point)
 {
+	// entry_point: _main
 	return entry_point == idle;
+	// return 0
 }
 
 static inline int _is_idle_thread_ptr(k_tid_t thread)
@@ -52,7 +57,18 @@ static inline int _is_idle_thread_ptr(k_tid_t thread)
 	return thread == _idle_thread;
 }
 
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+// KID 20170519
+// K_IDLE_PRIO: 15
+// K_LOWEST_APPLICATION_THREAD_PRIO: 14
+// K_HIGHEST_APPLICATION_THREAD_PRIO: -16
+//
+// _ASSERT_VALID_PRIO(0, _main):
+// do {
+// 	__ASSERT(((0) == 15 && _is_idle_thread(_main)) ||
+// 		 (_is_prio_higher_or_equal((0), 14) && _is_prio_lower_or_equal((0), -16)),
+// 		 "invalid priority (%d); allowed range: %d to %d", (0), 14, -16);
+// } while ((0))
 #define _ASSERT_VALID_PRIO(prio, entry_point) do { \
 	__ASSERT(((prio) == K_IDLE_PRIO && _is_idle_thread(entry_point)) || \
 		 (_is_prio_higher_or_equal((prio), \
@@ -81,14 +97,23 @@ static inline int _is_idle_thread_ptr(k_tid_t thread)
  * like overkill.
  */
 
+// KID 20170519
+// prio1: 0, prio2: 14
 static inline int _is_prio1_higher_than_or_equal_to_prio2(int prio1, int prio2)
 {
+	// prio1: 0, prio2: 14
 	return prio1 <= prio2;
+	// return: 1
 }
 
+// KID 20170519
+// _is_prio_higher_or_equal((0), 14)
 static inline int _is_prio_higher_or_equal(int prio1, int prio2)
 {
+	// prio1: 0, prio2: 14
+	// _is_prio1_higher_than_or_equal_to_prio2(0, 14): 1
 	return _is_prio1_higher_than_or_equal_to_prio2(prio1, prio2);
+	// return 1
 }
 
 static inline int _is_prio1_higher_than_prio2(int prio1, int prio2)
@@ -101,14 +126,23 @@ static inline int _is_prio_higher(int prio, int test_prio)
 	return _is_prio1_higher_than_prio2(prio, test_prio);
 }
 
+// KID 20170519
+// prio1: 0, prio2: -16
 static inline int _is_prio1_lower_than_or_equal_to_prio2(int prio1, int prio2)
 {
+	// prio1: 0, prio2: -16
 	return prio1 >= prio2;
+	// return 1
 }
 
+// KID 20170519
+// _is_prio_lower_or_equal((0), -16)
 static inline int _is_prio_lower_or_equal(int prio1, int prio2)
 {
+	// prio1: 0, prio2: -16
+	// _is_prio1_lower_than_or_equal_to_prio2(0, -16): 1
 	return _is_prio1_lower_than_or_equal_to_prio2(prio1, prio2);
+	// return 1
 }
 
 static inline int _is_prio1_lower_than_prio2(int prio1, int prio2)

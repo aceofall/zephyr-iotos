@@ -76,9 +76,15 @@ u64_t __noinit __end_tick_tsc;
     #error "IDLE_STACK_SIZE must be a multiple of the stack alignment"
 #endif
 
+// KID 20170519
+// CONFIG_MAIN_STACK_SIZE: 1024
+// MAIN_STACK_SIZE: 1024
 #define MAIN_STACK_SIZE CONFIG_MAIN_STACK_SIZE
 
 // KID 20170519
+// __noinit: __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
+// __stack: __aligned(4)
+// MAIN_STACK_SIZE: 1024
 char __noinit __stack _main_stack[MAIN_STACK_SIZE];
 char __noinit __stack _idle_stack[IDLE_STACK_SIZE];
 
@@ -179,6 +185,7 @@ void _data_copy(void)
  *
  * @return N/A
  */
+// KID 20170519
 static void _main(void *unused1, void *unused2, void *unused3)
 {
 	ARG_UNUSED(unused1);
@@ -308,7 +315,8 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	_ready_q.cache = _main_thread;
 	// _ready_q.cache: _kernel.ready_q.cache: _main_thread_s
 
-	// _main_thread: _main_thread_s
+	// _main_thread: _main_thread_s, MAIN_STACK_SIZE: 1024, CONFIG_MAIN_THREAD_PRIORITY: 0
+	// K_ESSENTIAL: 0x1
 	_new_thread(_main_thread, _main_stack,
 		    MAIN_STACK_SIZE, _main, NULL, NULL, NULL,
 		    CONFIG_MAIN_THREAD_PRIORITY, K_ESSENTIAL);

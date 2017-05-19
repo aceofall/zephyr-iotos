@@ -93,6 +93,7 @@
   #define ALWAYS_INLINE inline __attribute__((always_inline))
 #endif
 
+// KID 20170519
 #define _STRINGIFY(x) #x
 #define STRINGIFY(s) _STRINGIFY(s)
 
@@ -100,6 +101,7 @@
 
 #if !defined(_ASMLANGUAGE)
 // KID 20170517
+// KID 20170519
 // STACK_ALIGN: 4
 // __stack: __aligned(4)
   #define __stack __aligned(STACK_ALIGN)

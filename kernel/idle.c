@@ -150,6 +150,7 @@ void _sys_power_save_idle_exit(s32_t ticks)
 #define IDLE_YIELD_IF_COOP() do { } while ((0))
 #endif
 
+// KID 20170519
 void idle(void *unused1, void *unused2, void *unused3)
 {
 	ARG_UNUSED(unused1);
