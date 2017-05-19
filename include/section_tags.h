@@ -13,6 +13,7 @@
 
 #if !defined(_ASMLANGUAGE)
 
+// KID 20170519
 #define __noinit		__in_section_unique(NOINIT)
 #define __irq_vector_table	_GENERIC_SECTION(IRQ_VECTOR_TABLE)
 #define __sw_isr_table		_GENERIC_SECTION(SW_ISR_TABLE)

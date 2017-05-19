@@ -155,6 +155,7 @@ struct __thread_entry {
 
 /* can be used for creating 'dummy' threads, e.g. for pending on objects */
 // KID 20170517
+// KID 20170519
 // sizeof(struct _thread_base): 40 bytes
 struct _thread_base {
 
@@ -219,6 +220,7 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 #endif /* CONFIG_THREAD_STACK_INFO */
 
 // KID 20170517
+// KID 20170519
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct k_thread): 52 bytes
 struct k_thread {
@@ -263,6 +265,7 @@ struct k_thread {
 };
 
 typedef struct k_thread _thread_t;
+// KID 20170519
 typedef struct k_thread *k_tid_t;
 #define tcs k_thread
 
@@ -335,6 +338,8 @@ typedef void (*k_thread_entry_t)(void *p1, void *p2, void *p3);
  */
 
 /* system thread that must not abort */
+// KID 20170519
+// K_ESSENTIAL: 0x1
 #define K_ESSENTIAL (1 << 0)
 
 #if defined(CONFIG_FP_SHARING)

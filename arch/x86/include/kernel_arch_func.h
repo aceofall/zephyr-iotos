@@ -70,6 +70,7 @@ extern u64_t _MsrRead(unsigned int msr);
  * initialization of the interrupt subsystem. However, we still need to
  * provide an _IntLibInit() of some sort to prevent build errors.
  */
+// KID 20170519
 static inline void _IntLibInit(void)
 {
 }

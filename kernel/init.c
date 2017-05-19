@@ -78,12 +78,15 @@ u64_t __noinit __end_tick_tsc;
 
 #define MAIN_STACK_SIZE CONFIG_MAIN_STACK_SIZE
 
+// KID 20170519
 char __noinit __stack _main_stack[MAIN_STACK_SIZE];
 char __noinit __stack _idle_stack[IDLE_STACK_SIZE];
 
+// KID 20170519
 static struct k_thread _main_thread_s;
 static struct k_thread _idle_thread_s;
 
+// KID 20170519
 k_tid_t const _main_thread = (k_tid_t)&_main_thread_s;
 k_tid_t const _idle_thread = (k_tid_t)&_idle_thread_s;
 
@@ -248,8 +251,15 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	_current = dummy_thread;
 	// _kernel.current: dummy_stack
 
+	// dummy_thread->base.user_options: (struct k_thread* dummy_stack)->base.user_options,
+	// K_ESSENTIAL: 0x1
 	dummy_thread->base.user_options = K_ESSENTIAL;
+	// dummy_thread->base.user_options: (struct k_thread* dummy_stack)->base.user_options: 0x1
+
+	// dummy_thread->base.thread_state: (struct k_thread* dummy_stack)->base.thread_state,
+	// _THREAD_DUMMY: 0x1
 	dummy_thread->base.thread_state = _THREAD_DUMMY;
+	// dummy_thread->base.thread_state: (struct k_thread* dummy_stack)->base.thread_state: 0x1
 #endif
 
 	/* _kernel.ready_q is all zeroes */
@@ -263,13 +273,27 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	 * drivers are initialized.
 	 */
 
-	_IntLibInit();
+	_IntLibInit(); // null function
 
 	/* ready the init/main and idle threads */
 
+	// K_NUM_PRIORITIES: 32
 	for (int ii = 0; ii < K_NUM_PRIORITIES; ii++) {
+		// ii: 0, _ready_q.q[0]: _kernel.ready_q.q[0]
 		sys_dlist_init(&_ready_q.q[ii]);
+
+		// sys_dlist_init 에서 한일:
+		// (&_kernel.ready_q.q[0])->head: &_kernel.ready_q.q[0]
+		// (&_kernel.ready_q.q[0])->tail: &_kernel.ready_q.q[0]
+
+		// ii: 1...31 까지 루프 수행
 	}
+
+	// 위 루프 수행 결과:
+	// ready_q 의 list를 초기화함
+	//
+	// (&_kernel.ready_q.q[0...31])->head: &_kernel.ready_q.q[0...31]
+	// (&_kernel.ready_q.q[0...31])->tail: &_kernel.ready_q.q[0...31]
 
 	/*
 	 * prime the cache with the main thread since:
@@ -280,8 +304,11 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	 *   contain garbage, which would prevent the cache loading algorithm
 	 *   to work as intended
 	 */
+	// _ready_q.cache: _kernel.ready_q.cache, _main_thread: _main_thread_s
 	_ready_q.cache = _main_thread;
+	// _ready_q.cache: _kernel.ready_q.cache: _main_thread_s
 
+	// _main_thread: _main_thread_s
 	_new_thread(_main_thread, _main_stack,
 		    MAIN_STACK_SIZE, _main, NULL, NULL, NULL,
 		    CONFIG_MAIN_THREAD_PRIORITY, K_ESSENTIAL);

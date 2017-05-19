@@ -186,10 +186,17 @@ typedef struct _dnode sys_dnode_t;
  * @return N/A
  */
 
+// KID 20170519
+// &_kernel.ready_q.q[0]
 static inline void sys_dlist_init(sys_dlist_t *list)
 {
+	// list->head: (&_kernel.ready_q.q[0])->head, list: &_kernel.ready_q.q[0]
 	list->head = (sys_dnode_t *)list;
+	// list->head: (&_kernel.ready_q.q[0])->head: &_kernel.ready_q.q[0]
+
+	// list->tail: (&_kernel.ready_q.q[0])->tail, list: &_kernel.ready_q.q[0]
 	list->tail = (sys_dnode_t *)list;
+	// list->tail: (&_kernel.ready_q.q[0])->tail: &_kernel.ready_q.q[0]
 }
 
 #define SYS_DLIST_STATIC_INIT(ptr_to_list) {{(ptr_to_list)}, {(ptr_to_list)}}

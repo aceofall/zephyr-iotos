@@ -26,6 +26,8 @@
 /* states: common uses low bits, arch-specific use high bits */
 
 /* Not a real thread */
+// KID 20170519
+// _THREAD_DUMMY: 0x1
 #define _THREAD_DUMMY (1 << 0)
 
 /* Thread is waiting on an object */
@@ -61,6 +63,7 @@
 #if !defined(_ASMLANGUAGE)
 
 // KID 20170518
+// KID 20170519
 // sizeof(struct _ready_q): 264 bytes
 struct _ready_q {
 
@@ -79,6 +82,7 @@ struct _ready_q {
 typedef struct _ready_q _ready_q_t;
 
 // KID 20170518
+// KID 20170519
 // sizeof(struct _kernel): 284 bytes
 struct _kernel {
 
@@ -136,6 +140,8 @@ extern struct _kernel _kernel;
 // KID 20170518
 // _current: _kernel.current
 #define _current _kernel.current
+// KID 20170519
+// _ready_q: _kernel.ready_q
 #define _ready_q _kernel.ready_q
 #define _timeout_q _kernel.timeout_q
 #define _threads _kernel.threads

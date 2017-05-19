@@ -63,12 +63,14 @@ do {                                                                    \
 #define __GENERIC_SECTION(segment) __attribute__((section(STRINGIFY(segment))))
 #define _GENERIC_SECTION(segment) __GENERIC_SECTION(segment)
 
+// KID 20170519
 #define ___in_section(a, b, c) \
 	__attribute__((section("." _STRINGIFY(a)			\
 				"." _STRINGIFY(b)			\
 				"." _STRINGIFY(c))))
 #define __in_section(a, b, c) ___in_section(a, b, c)
 
+// KID 20170519
 #define __in_section_unique(seg) ___in_section(seg, _FILE_PATH_HASH, \
 						      __COUNTER__)
 
