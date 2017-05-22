@@ -41,6 +41,8 @@
 
 /* increase to 16 bytes (or more?) to support SSE/SSE2 instructions? */
 
+// KID 20170522
+// STACK_ALIGN_SIZE: 4
 #define STACK_ALIGN_SIZE 4
 
 /* x86 Bitmask definitions for struct k_thread.thread_state */
@@ -373,7 +375,11 @@
  *   All other "flags"          = Don't change state
  */
 
+// KID 20170522
+// EFLAGS_INITIAL: 0x00000200
 #define EFLAGS_INITIAL 0x00000200
+// KID 20170522
+// EFLAGS_MASK: 0x00003200
 #define EFLAGS_MASK 0x00003200
 
 #ifndef _ASMLANGUAGE

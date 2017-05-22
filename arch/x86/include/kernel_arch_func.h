@@ -18,6 +18,9 @@ extern "C" {
 /* stack alignment related macros: STACK_ALIGN_SIZE is defined above */
 
 #define STACK_ROUND_UP(x) ROUND_UP(x, STACK_ALIGN_SIZE)
+// KID 20170522
+// STACK_ALIGN_SIZE: 4
+// _main_stack + 1024
 #define STACK_ROUND_DOWN(x) ROUND_DOWN(x, STACK_ALIGN_SIZE)
 
 /**

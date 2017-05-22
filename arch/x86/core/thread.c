@@ -12,7 +12,7 @@
  * processor architecture.
  */
 
-#ifdef CONFIG_INIT_STACKS
+#ifdef CONFIG_INIT_STACKS // CONFIG_INIT_STACKS=n
 #include <string.h>
 #endif /* CONFIG_INIT_STACKS */
 
@@ -24,7 +24,7 @@
 /* forward declaration */
 
 #if defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) \
-	|| defined(CONFIG_X86_IAMCU)
+	|| defined(CONFIG_X86_IAMCU) // CONFIG_GDB_INFO=n, CONFIG_DEBUG_INFO=n, CONFIG_X86_IAMCU=y
 void _thread_entry_wrapper(_thread_entry_t, void *,
 			   void *, void *);
 #endif
@@ -47,6 +47,8 @@ void _thread_entry_wrapper(_thread_entry_t, void *,
  *
  * @return N/A
  */
+// KID 20170522
+// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: _main_thread_s
 static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 				 int priority,
 				 unsigned int options,
@@ -154,13 +156,14 @@ static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
  *
  * @return this routine does NOT return.
  */
+// KID 20170522
 __asm__("\t.globl _thread_entry\n"
 	"\t.section .text\n"
 	"_thread_entry_wrapper:\n" /* should place this func .S file and use
 				    * SECTION_FUNC
 				    */
 
-#ifdef CONFIG_X86_IAMCU
+#ifdef CONFIG_X86_IAMCU // CONFIG_X86_IAMCU=y
 	/* IAMCU calling convention has first 3 arguments supplied in
 	 * registers not the stack
 	 */
@@ -168,7 +171,7 @@ __asm__("\t.globl _thread_entry\n"
 	"\tpopl %edx\n"
 	"\tpopl %ecx\n"
 	"\tpushl $0\n" /* Null return address */
-#elif defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO)
+#elif defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) // CONFIG_GDB_INFO=n, CONFIG_DEBUG_INFO=n
 	"\tmovl $0, (%esp)\n" /* zero initialEFLAGS location */
 #endif
 	"\tjmp _thread_entry\n");
@@ -213,13 +216,28 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 
 	unsigned long *pInitialThread;
 
-	// thread: _main_thread_s, pStackMem: _main_stack, stackSize: 1024, options: 0x1
+	// thread: _main_thread_s, pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1
 	_new_thread_init(thread, pStackMem, stackSize, priority, options);
+
+	// _new_thread_init 에서 한일:
+	// (&(_main_thread_s)->base)->user_options: 0x1
+	// (&(_main_thread_s)->base)->thread_state: 0x4
+	// (&(_main_thread_s)->base)->prio: 0
+	// (&(_main_thread_s)->base)->sched_locked: 0
+	// (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(_main_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->func: NULL
+	//
+	// (_main_thread_s)->init_data: NULL
+	// (_main_thread_s)->fn_abort: NULL
 
 	/* carve the thread entry struct from the "base" of the stack */
 
+	// pStackMem: _main_stack, stackSize: 1024, STACK_ROUND_DOWN(_main_stack + 1024): _main_stack + 1024
 	pInitialThread =
 		(unsigned long *)STACK_ROUND_DOWN(pStackMem + stackSize);
+	// pInitialThread: (unsigned long *)(_main_stack + 1024)
 
 	/*
 	 * Create an initial context on the stack expected by the _Swap()
@@ -228,23 +246,39 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 
 	/* push arguments required by _thread_entry() */
 
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1024), parameter3: NULL
 	*--pInitialThread = (unsigned long)parameter3;
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1024): NULL
+
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1020), parameter2: NULL
 	*--pInitialThread = (unsigned long)parameter2;
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1020): NULL
+
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1016), parameter1: NULL
 	*--pInitialThread = (unsigned long)parameter1;
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1016): NULL
+
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1016), pEntry: _main
 	*--pInitialThread = (unsigned long)pEntry;
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1016): _main
 
 	/* push initial EFLAGS; only modify IF and IOPL bits */
 
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1012),
+	// EflagsGet(): eflag 레지스터 값, EFLAGS_MASK: 0x00003200, EFLAGS_INITIAL: 0x00000200
 	*--pInitialThread = (EflagsGet() & ~EFLAGS_MASK) | EFLAGS_INITIAL;
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1012): eflag 레지스터 값 | 0x00000200
 
 #if defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) \
-	|| defined(CONFIG_X86_IAMCU)
+	|| defined(CONFIG_X86_IAMCU) // CONFIG_GDB_INFO=n, CONFIG_DEBUG_INFO=n, CONFIG_X86_IAMCU=y
 	/*
 	 * Arrange for the _thread_entry_wrapper() function to be called
 	 * to adjust the stack before _thread_entry() is invoked.
 	 */
 
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1008)
 	*--pInitialThread = (unsigned long)_thread_entry_wrapper;
+	// *pInitialThread: *(unsigned long *)(_main_stack + 1008): _thread_entry_wrapper
 
 #else /* defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) */
 
@@ -264,5 +298,6 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 	 * aside for the thread's stack.
 	 */
 
+	// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: _main_thread_s
 	_new_thread_internal(pStackMem, stackSize, priority, options, thread);
 }

@@ -181,6 +181,7 @@ void _check_stack_sentinel(void)
  * This routine does not return, and is marked as such so the compiler won't
  * generate preamble code that is only used by functions that actually return.
  */
+// KID 20170522
 FUNC_NORETURN void _thread_entry(void (*entry)(void *, void *, void *),
 				 void *p1, void *p2, void *p3)
 {
@@ -447,21 +448,39 @@ void _init_static_threads(void)
 }
 #endif
 
+// KID 20170522
+// &thread->base: &(_main_thread_s)->base, prio: 0, _THREAD_PRESTART: 0x4, options: 0x1
 void _init_thread_base(struct _thread_base *thread_base, int priority,
 		       u32_t initial_state, unsigned int options)
 {
 	/* k_q_node is initialized upon first insertion in a list */
 
+	// thread_base->user_options: (&(_main_thread_s)->base)->user_options: 0, options: 0x1
 	thread_base->user_options = (u8_t)options;
+	// thread_base->user_options: (&(_main_thread_s)->base)->user_options: 0x1
+
+	// thread_base->thread_state: (&(_main_thread_s)->base)->thread_state: 0, initial_state: 0x4
 	thread_base->thread_state = (u8_t)initial_state;
+	// thread_base->thread_state: (&(_main_thread_s)->base)->thread_state: 0x4
 
+	// thread_base->prio: (&(_main_thread_s)->base)->prio: 0, priority: 0
 	thread_base->prio = priority;
+	// thread_base->prio: (&(_main_thread_s)->base)->prio: 0
 
+	// thread_base->sched_locked: (&(_main_thread_s)->base)->sched_locked: 0
 	thread_base->sched_locked = 0;
+	// thread_base->sched_locked: (&(_main_thread_s)->base)->sched_locked: 0
 
 	/* swap_data does not need to be initialized */
 
+	// thread_base: &(_main_thread_s)->base
 	_init_thread_timeout(thread_base);
+
+	// _init_thread_timeout 에서 한일:
+	// (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(_main_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->func: NULL
 }
 
 u32_t _k_thread_group_mask_get(struct k_thread *thread)

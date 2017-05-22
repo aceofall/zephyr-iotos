@@ -61,6 +61,9 @@ extern "C" {
 #define ROUND_UP(x, align)                                   \
 	(((unsigned long)(x) + ((unsigned long)align - 1)) & \
 	 ~((unsigned long)align - 1))
+
+// KID 20170522
+// _main_stack + 1024, 4
 #define ROUND_DOWN(x, align) ((unsigned long)(x) & ~((unsigned long)align - 1))
 
 #define ceiling_fraction(numerator, divider) \

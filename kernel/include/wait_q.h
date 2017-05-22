@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#ifdef CONFIG_SYS_CLOCK_EXISTS
+#ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
 #include <timeout_q.h>
 #else
 static ALWAYS_INLINE void _init_thread_timeout(struct _thread_base *thread_base)

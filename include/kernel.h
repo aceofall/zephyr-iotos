@@ -145,6 +145,7 @@ struct _timeout;
 typedef void (*_timeout_func_t)(struct _timeout *t);
 
 // KID 20170517
+// KID 20170522
 // sizeof(struct _timeout): 24 bytes
 struct _timeout {
 	sys_dnode_t node;
@@ -171,6 +172,7 @@ struct __thread_entry {
 /* can be used for creating 'dummy' threads, e.g. for pending on objects */
 // KID 20170517
 // KID 20170519
+// KID 20170522
 // sizeof(struct _thread_base): 40 bytes
 struct _thread_base {
 
@@ -540,6 +542,8 @@ extern void k_thread_abort(k_tid_t thread);
 #define _EXPIRED (-2)
 
 /* timeout is not in use */
+// KID 20170522
+// _INACTIVE: -1
 #define _INACTIVE (-1)
 
 struct _static_thread_data {

@@ -26,6 +26,7 @@ extern "C" {
  *
  * @return the EFLAGS register.
  */
+// KID 20170522
 static inline unsigned int EflagsGet(void)
 {
 	unsigned int eflags; /* EFLAGS register contents */

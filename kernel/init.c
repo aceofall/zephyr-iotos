@@ -82,6 +82,7 @@ u64_t __noinit __end_tick_tsc;
 #define MAIN_STACK_SIZE CONFIG_MAIN_STACK_SIZE
 
 // KID 20170519
+// KID 20170522
 // __noinit: __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
 // __stack: __aligned(4)
 // MAIN_STACK_SIZE: 1024

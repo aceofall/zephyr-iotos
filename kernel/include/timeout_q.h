@@ -23,6 +23,8 @@ extern "C" {
 
 /* initialize the timeouts part of k_thread when enabled in the kernel */
 
+// KID 20170522
+// &thread_base->timeout: &(&(_main_thread_s)->base)->timeout, NULL
 static inline void _init_timeout(struct _timeout *t, _timeout_func_t func)
 {
 	/*
@@ -30,24 +32,32 @@ static inline void _init_timeout(struct _timeout *t, _timeout_func_t func)
 	 * not dealing with timeouts does not have to handle this, such as when
 	 * waiting forever on a semaphore.
 	 */
+	// t->delta_ticks_from_prev: (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev, _INACTIVE: -1
 	t->delta_ticks_from_prev = _INACTIVE;
+	// t->delta_ticks_from_prev: (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
 
 	/*
 	 * Must be initialized here so that the _fiber_wakeup family of APIs can
 	 * verify the fiber is not on a wait queue before aborting a timeout.
 	 */
+	// t->wait_q: (&(&(_main_thread_s)->base)->timeout)->wait_q
 	t->wait_q = NULL;
+	// t->wait_q: (&(&(_main_thread_s)->base)->timeout)->wait_q: NULL
 
 	/*
 	 * Must be initialized here, so the _handle_one_timeout()
 	 * routine can check if there is a fiber waiting on this timeout
 	 */
+	// t->thread: (&(&(_main_thread_s)->base)->timeout)->thread
 	t->thread = NULL;
+	// t->thread: (&(&(_main_thread_s)->base)->timeout)->thread: NULL
 
 	/*
 	 * Function must be initialized before being potentially called.
 	 */
+	// t->func: (&(&(_main_thread_s)->base)->timeout)->func, func: NULL
 	t->func = func;
+	// t->func: (&(&(_main_thread_s)->base)->timeout)->func: NULL
 
 	/*
 	 * These are initialized when enqueing on the timeout queue:
@@ -57,10 +67,19 @@ static inline void _init_timeout(struct _timeout *t, _timeout_func_t func)
 	 */
 }
 
+// KID 20170522
+// thread_base: &(_main_thread_s)->base
 static ALWAYS_INLINE void
 _init_thread_timeout(struct _thread_base *thread_base)
 {
+	// &thread_base->timeout: &(&(_main_thread_s)->base)->timeout
 	_init_timeout(&thread_base->timeout, NULL);
+
+	// _init_timeout 에서 한일:
+	// (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(_main_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->func: NULL
 }
 
 /* remove a thread timing out from kernel object's wait queue */

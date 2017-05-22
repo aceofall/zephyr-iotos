@@ -34,6 +34,8 @@
 #define _THREAD_PENDING (1 << 1)
 
 /* Thread has not yet started */
+// KID 20170522
+// _THREAD_PRESTART: 0x4
 #define _THREAD_PRESTART (1 << 2)
 
 /* Thread has terminated */
@@ -162,7 +164,7 @@ extern void _init_thread_base(struct _thread_base *thread_base,
 			      unsigned int options);
 
 // KID 20170519
-// thread: _main_thread_s, pStackMem: _main_stack, stackSize: 1024, options: 0x1
+// thread: _main_thread_s, pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1
 static ALWAYS_INLINE void _new_thread_init(struct k_thread *thread,
 					    char *pStack, size_t stackSize,
 					    int prio, unsigned int options)
@@ -186,18 +188,34 @@ static ALWAYS_INLINE void _new_thread_init(struct k_thread *thread,
 	*((u32_t *)pStack) = STACK_SENTINEL;
 #endif /* CONFIG_STACK_SENTINEL */
 	/* Initialize various struct k_thread members */
+	// &thread->base: &(_main_thread_s)->base, prio: 0, _THREAD_PRESTART: 0x4, options: 0x1
 	_init_thread_base(&thread->base, prio, _THREAD_PRESTART, options);
 
-	/* static threads overwrite it afterwards with real value */
-	thread->init_data = NULL;
-	thread->fn_abort = NULL;
+	// _init_thread_base 에서 한일:
+	// (&(_main_thread_s)->base)->user_options: 0x1
+	// (&(_main_thread_s)->base)->thread_state: 0x4
+	// (&(_main_thread_s)->base)->prio: 0
+	// (&(_main_thread_s)->base)->sched_locked: 0
+	// (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(_main_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->func: NULL
 
-#ifdef CONFIG_THREAD_CUSTOM_DATA
+	/* static threads overwrite it afterwards with real value */
+	// thread->init_data: (_main_thread_s)->init_data
+	thread->init_data = NULL;
+	// thread->init_data: (_main_thread_s)->init_data: NULL
+
+	// thread->fn_abort: (_main_thread_s)->fn_abort
+	thread->fn_abort = NULL;
+	// thread->fn_abort: (_main_thread_s)->fn_abort: NULL
+
+#ifdef CONFIG_THREAD_CUSTOM_DATA // CONFIG_THREAD_CUSTOM_DATA=n
 	/* Initialize custom data field (value is opaque to kernel) */
 	thread->custom_data = NULL;
 #endif
 
-#if defined(CONFIG_THREAD_STACK_INFO)
+#if defined(CONFIG_THREAD_STACK_INFO) // CONFIG_THREAD_STACK_INFO=n
 	thread->stack_info.start = (u32_t)pStack;
 	thread->stack_info.size = (u32_t)stackSize;
 #endif /* CONFIG_THREAD_STACK_INFO */
