@@ -56,7 +56,7 @@ static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 {
 	unsigned long *pInitialCtx;
 
-#if (defined(CONFIG_FP_SHARING) || defined(CONFIG_GDB_INFO))
+#if (defined(CONFIG_FP_SHARING) || defined(CONFIG_GDB_INFO)) // CONFIG_FP_SHARING=n, CONFIG_GDB_INFO=n
 	thread->arch.excNestCount = 0;
 #endif /* CONFIG_FP_SHARING || CONFIG_GDB_INFO */
 
@@ -68,9 +68,12 @@ static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 	 * initialize the stack frame need to be repeated.
 	 */
 
+	// pStackMem: _main_stack, stackSize: 1024
+	// STACK_ROUND_DOWN(_main_stack + 1024): _main_stack + 1024
 	pInitialCtx = (unsigned long *)STACK_ROUND_DOWN(pStackMem + stackSize);
+	// pInitialCtx: _main_stack + 1024
 
-#ifdef CONFIG_THREAD_MONITOR
+#ifdef CONFIG_THREAD_MONITOR // CONFIG_THREAD_MONITOR=n
 	/*
 	 * In debug mode thread->entry give direct access to the thread entry
 	 * and the corresponding parameters.
@@ -86,14 +89,22 @@ static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 	 *  - eip (so that _Swap() "returns" to the entry point)
 	 *  - edi, esi, ebx, ebp,  eax
 	 */
+	// pInitialCtx: _main_stack + 1024
 	pInitialCtx -= 11;
+	// pInitialCtx: _main_stack + 980
 
+	// thread->callee_saved.esp: (_main_thread_s)->callee_saved.esp, pInitialCtx: _main_stack + 980
 	thread->callee_saved.esp = (unsigned long)pInitialCtx;
-	PRINTK("\nInitial context ESP = 0x%x\n", thread->coopReg.esp);
+	// thread->callee_saved.esp: (_main_thread_s)->callee_saved.esp: _main_stack + 980
 
-	PRINTK("\nstruct thread * = 0x%x", thread);
+	// thread->coopReg.esp: (_main_thread_s)->coopReg.esp: ????
+	PRINTK("\nInitial context ESP = 0x%x\n", thread->coopReg.esp); // null function
 
-	thread_monitor_init(thread);
+	// thread: _main_thread_s
+	PRINTK("\nstruct thread * = 0x%x", thread); // null function
+
+	// thread: _main_thread_s
+	thread_monitor_init(thread); // null function
 }
 
 #if defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) \
@@ -300,4 +311,7 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 
 	// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: _main_thread_s
 	_new_thread_internal(pStackMem, stackSize, priority, options, thread);
+
+	// _new_thread_internal 에서 한일:
+	// (_main_thread_s)->callee_saved.esp: _main_stack + 980
 }

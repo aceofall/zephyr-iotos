@@ -386,10 +386,11 @@
 
 #include <misc/util.h>
 
-#ifdef DEBUG
+#ifdef DEBUG // undefined
 #include <misc/printk.h>
 #define PRINTK(...) printk(__VA_ARGS__)
 #else
+// KID 20170523
 #define PRINTK(...)
 #endif /* DEBUG */
 

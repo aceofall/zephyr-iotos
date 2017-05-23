@@ -75,6 +75,7 @@ typedef struct _caller_saved _caller_saved_t;
  * switch occurs.
  */
 
+// KID 20170523
 struct _callee_saved {
 	unsigned long esp;
 
@@ -137,7 +138,7 @@ typedef struct s_FpRegSet {  /* # of bytes: name of register */
 	tFpReg fpReg[8];	 /* 80 : ST0 -> ST7 */
 } tFpRegSet __aligned(FP_REG_SET_ALIGN);
 
-#ifdef CONFIG_SSE
+#ifdef CONFIG_SSE // CONFIG_SSE=n
 
 /* definition of a single x87 (floating point / MMX) register */
 
@@ -197,10 +198,14 @@ typedef struct s_FpRegSetEx {
 /* empty floating point register definition */
 
 // KID 20170517
+// KID 20170523
+// sizeof(struct s_FpRegSet): 0 bytes
 typedef struct s_FpRegSet {
 } tFpRegSet;
 
 // KID 20170517
+// KID 20170523
+// sizeof(struct s_FpRegSetEx): 0 bytes
 typedef struct s_FpRegSetEx {
 } tFpRegSetEx;
 
@@ -214,6 +219,8 @@ typedef struct s_FpRegSetEx {
  */
 
 // KID 20170517
+// KID 20170523
+// sizeof(struct s_coopFloatReg): 0 bytes
 typedef struct s_coopFloatReg {
 
 	/*
@@ -232,6 +239,7 @@ typedef struct s_coopFloatReg {
  */
 
 // KID 20170517
+// KID 20170523
 // sizeof(struct s_preempFloatReg): 0 bytes
 typedef struct s_preempFloatReg {
 	union {
@@ -250,6 +258,10 @@ typedef struct s_preempFloatReg {
  */
 
 // KID 20170517
+// KID 20170523
+// sizeof(struct s_coopFloatReg): 0 bytes
+// sizeof(struct s_preempFloatReg): 0 bytes
+// sizeof(struct _thread_arch): 0 bytes
 struct _thread_arch {
 
 #ifdef CONFIG_GDB_INFO // CONFIG_GDB_INFO=n

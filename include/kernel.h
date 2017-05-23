@@ -47,7 +47,10 @@ extern "C" {
 #define K_DEBUG(fmt, ...)
 #endif
 
-#if defined(CONFIG_COOP_ENABLED) && defined(CONFIG_PREEMPT_ENABLED)
+#if defined(CONFIG_COOP_ENABLED) && defined(CONFIG_PREEMPT_ENABLED) // CONFIG_COOP_ENABLED=y, CONFIG_PREEMPT_ENABLED=y
+// KID 20170523
+// CONFIG_NUM_COOP_PRIORITIES: 16
+// _NUM_COOP_PRIO: 16
 #define _NUM_COOP_PRIO (CONFIG_NUM_COOP_PRIORITIES)
 #define _NUM_PREEMPT_PRIO (CONFIG_NUM_PREEMPT_PRIORITIES + 1)
 #elif defined(CONFIG_COOP_ENABLED)
@@ -238,8 +241,10 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 
 // KID 20170517
 // KID 20170519
+// KID 20170523
 // sizeof(struct _thread_base): 40 bytes
-// sizeof(struct k_thread): 52 bytes
+// sizeof(struct _thread_arch): 0 bytes
+// sizeof(struct k_thread): 56 bytes
 struct k_thread {
 
 	struct _thread_base base;

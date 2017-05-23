@@ -217,21 +217,33 @@ static inline int _get_new_prio_with_ceiling(int prio)
 }
 
 /* find out the prio bitmap index for a given prio */
+// KID 20170523
+// prio: 0
 static inline int _get_ready_q_prio_bmap_index(int prio)
 {
+	// prio: 0, _NUM_COOP_PRIO: 16
 	return (prio + _NUM_COOP_PRIO) >> 5;
+	// return 0
 }
 
 /* find out the prio bit for a given prio */
+// KID 20170523
+// prio: 0
 static inline int _get_ready_q_prio_bit(int prio)
 {
+	// prio: 0, _NUM_COOP_PRIO: 16
 	return (1 << ((prio + _NUM_COOP_PRIO) & 0x1f));
+	// return 0x8000
 }
 
 /* find out the ready queue array index for a given prio */
+// KID 20170523
+// thread->base.prio: (_main_thread_s)->base.prio: 0
 static inline int _get_ready_q_q_index(int prio)
 {
+	// prio: 0, _NUM_COOP_PRIO: 16
 	return prio + _NUM_COOP_PRIO;
+	// return 16
 }
 
 /* find out the currently highest priority where a thread is ready to run */
@@ -427,9 +439,13 @@ static inline int _is_thread_polling(struct k_thread *thread)
  *
  * This routine must be called with interrupts locked.
  */
+// KID 20170523
+// _main_thread: _main_thread_s
 static inline void _mark_thread_as_started(struct k_thread *thread)
 {
+	// thread->base.thread_state: (_main_thread_s)->base.thread_state: 0x4, _THREAD_PRESTART: 0x4
 	thread->base.thread_state &= ~_THREAD_PRESTART;
+	// thread->base.thread_state: (_main_thread_s)->base.thread_state: 0
 }
 
 /*

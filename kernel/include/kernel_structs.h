@@ -35,6 +35,7 @@
 
 /* Thread has not yet started */
 // KID 20170522
+// KID 20170523
 // _THREAD_PRESTART: 0x4
 #define _THREAD_PRESTART (1 << 2)
 
@@ -143,6 +144,7 @@ extern struct _kernel _kernel;
 // _current: _kernel.current
 #define _current _kernel.current
 // KID 20170519
+// KID 20170523
 // _ready_q: _kernel.ready_q
 #define _ready_q _kernel.ready_q
 #define _timeout_q _kernel.timeout_q
@@ -221,7 +223,7 @@ static ALWAYS_INLINE void _new_thread_init(struct k_thread *thread,
 #endif /* CONFIG_THREAD_STACK_INFO */
 }
 
-#if defined(CONFIG_THREAD_MONITOR)
+#if defined(CONFIG_THREAD_MONITOR) // CONFIG_THREAD_MONITOR=n
 /*
  * Add a thread to the kernel's list of active threads.
  */
@@ -235,6 +237,7 @@ static ALWAYS_INLINE void thread_monitor_init(struct k_thread *thread)
 	irq_unlock(key);
 }
 #else
+// KID 20170523
 #define thread_monitor_init(thread)		\
 	do {/* do nothing */			\
 	} while ((0))

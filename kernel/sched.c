@@ -12,16 +12,28 @@
 #include <misc/util.h>
 
 /* the only struct _kernel instance */
+// KID 20170523
 struct _kernel _kernel = {0};
 
 /* set the bit corresponding to prio in ready q bitmap */
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+// KID 20170523
+// thread->base.prio: (_main_thread_s)->base.prio: 0
 static void _set_ready_q_prio_bit(int prio)
 {
+	// prio: 0, _get_ready_q_prio_bmap_index(0): 0
 	int bmap_index = _get_ready_q_prio_bmap_index(prio);
-	u32_t *bmap = &_ready_q.prio_bmap[bmap_index];
+	// bmap_index: 0
 
+	// bmap_index: 0, _ready_q: _kernel.ready_q,
+	// &_ready_q.prio_bmap[0]: &_kernel.ready_q.prio_bmap[0]
+	u32_t *bmap = &_ready_q.prio_bmap[bmap_index];
+	// bmap: &_kernel.ready_q.prio_bmap[0]
+
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0, prio: 0,
+	// _get_ready_q_prio_bit(0): 0x8000
 	*bmap |= _get_ready_q_prio_bit(prio);
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x8000
 }
 #endif
 
@@ -68,13 +80,26 @@ static struct k_thread *_get_ready_q_head(void)
  * Interrupts must be locked when calling this function.
  */
 
+// KID 20170523
+// _main_thread: _main_thread_s
 void _add_thread_to_ready_q(struct k_thread *thread)
 {
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+	// thread->base.prio: (_main_thread_s)->base.prio: 0
+	// _get_ready_q_q_index(0): 16
 	int q_index = _get_ready_q_q_index(thread->base.prio);
-	sys_dlist_t *q = &_ready_q.q[q_index];
+	// q_index: 16
 
+	// q_index: 16, _ready_q: _kernel.ready_q, &_ready_q.q[16]: &_kernel.ready_q.q[16]
+	sys_dlist_t *q = &_ready_q.q[q_index];
+	// q: &_kernel.ready_q.q[16]
+
+	// thread->base.prio: (_main_thread_s)->base.prio: 0
 	_set_ready_q_prio_bit(thread->base.prio);
+
+	// _set_ready_q_prio_bit 에서 한일:
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x8000
+
 	sys_dlist_append(q, &thread->base.k_q_node);
 
 	struct k_thread **cache = &_ready_q.cache;

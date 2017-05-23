@@ -50,7 +50,7 @@ GEN_OFFSET_SYM(_thread_arch_t, preempFloatReg);
 /* size of the struct tcs structure sans save area for floating point regs */
 
 // KID 20170517
-// sizeof(struct k_thread): 52 bytes
+// sizeof(struct k_thread): 56 bytes
 // sizeof(tCoopFloatReg): 0 bytes
 // sizeof(tPreempFloatReg): 0 bytes
 // GEN_ABSOLUTE_SYM(_K_THREAD_NO_FLOAT_SIZEOF, 52):

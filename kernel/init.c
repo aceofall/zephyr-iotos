@@ -321,7 +321,36 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	_new_thread(_main_thread, _main_stack,
 		    MAIN_STACK_SIZE, _main, NULL, NULL, NULL,
 		    CONFIG_MAIN_THREAD_PRIORITY, K_ESSENTIAL);
+
+	// _new_thread 에서 한일:
+	// (&(_main_thread_s)->base)->user_options: 0x1
+	// (&(_main_thread_s)->base)->thread_state: 0x4
+	// (&(_main_thread_s)->base)->prio: 0
+	// (&(_main_thread_s)->base)->sched_locked: 0
+	// (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(_main_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(_main_thread_s)->base)->timeout)->func: NULL
+	//
+	// (_main_thread_s)->init_data: NULL
+	// (_main_thread_s)->fn_abort: NULL
+	//
+	// *(unsigned long *)(_main_stack + 1024): NULL
+	// *(unsigned long *)(_main_stack + 1020): NULL
+	// *(unsigned long *)(_main_stack + 1016): NULL
+	// *(unsigned long *)(_main_stack + 1016): _main
+	// *(unsigned long *)(_main_stack + 1012): eflag 레지스터 값 | 0x00000200
+	// *(unsigned long *)(_main_stack + 1008): _thread_entry_wrapper
+	//
+	// (_main_thread_s)->callee_saved.esp: _main_stack + 980
+
+	// _main_thread: _main_thread_s
 	_mark_thread_as_started(_main_thread);
+
+	// _mark_thread_as_started 에서 한일:
+	// (_main_thread_s)->base.thread_state: 0
+
+	// _main_thread: _main_thread_s
 	_add_thread_to_ready_q(_main_thread);
 
 #ifdef CONFIG_MULTITHREADING
@@ -378,7 +407,7 @@ FUNC_NORETURN void _Cstart(void)
 #else
 	/* floating point is NOT used during kernel init */
 
-	// __stack: __aligned(4), _K_THREAD_NO_FLOAT_SIZEOF: 52
+	// __stack: __aligned(4), _K_THREAD_NO_FLOAT_SIZEOF: 56
 	char __stack dummy_stack[_K_THREAD_NO_FLOAT_SIZEOF];
 	void *dummy_thread = dummy_stack;
 	// dummy_thread: dummy_stack
