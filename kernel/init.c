@@ -95,6 +95,7 @@ static struct k_thread _idle_thread_s;
 
 // KID 20170519
 k_tid_t const _main_thread = (k_tid_t)&_main_thread_s;
+// KID 20170524
 k_tid_t const _idle_thread = (k_tid_t)&_idle_thread_s;
 
 /*
@@ -312,28 +313,28 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	 *   contain garbage, which would prevent the cache loading algorithm
 	 *   to work as intended
 	 */
-	// _ready_q.cache: _kernel.ready_q.cache, _main_thread: _main_thread_s
+	// _ready_q.cache: _kernel.ready_q.cache, _main_thread: &_main_thread_s
 	_ready_q.cache = _main_thread;
-	// _ready_q.cache: _kernel.ready_q.cache: _main_thread_s
+	// _ready_q.cache: _kernel.ready_q.cache: &_main_thread_s
 
-	// _main_thread: _main_thread_s, MAIN_STACK_SIZE: 1024, CONFIG_MAIN_THREAD_PRIORITY: 0
+	// _main_thread: &_main_thread_s, MAIN_STACK_SIZE: 1024, CONFIG_MAIN_THREAD_PRIORITY: 0
 	// K_ESSENTIAL: 0x1
 	_new_thread(_main_thread, _main_stack,
 		    MAIN_STACK_SIZE, _main, NULL, NULL, NULL,
 		    CONFIG_MAIN_THREAD_PRIORITY, K_ESSENTIAL);
 
 	// _new_thread 에서 한일:
-	// (&(_main_thread_s)->base)->user_options: 0x1
-	// (&(_main_thread_s)->base)->thread_state: 0x4
-	// (&(_main_thread_s)->base)->prio: 0
-	// (&(_main_thread_s)->base)->sched_locked: 0
-	// (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
-	// (&(&(_main_thread_s)->base)->timeout)->wait_q: NULL
-	// (&(&(_main_thread_s)->base)->timeout)->thread: NULL
-	// (&(&(_main_thread_s)->base)->timeout)->func: NULL
+	// (&(&_main_thread_s)->base)->user_options: 0x1
+	// (&(&_main_thread_s)->base)->thread_state: 0x4
+	// (&(&_main_thread_s)->base)->prio: 0
+	// (&(&_main_thread_s)->base)->sched_locked: 0
+	// (&(&(&_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&_main_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(&_main_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(&_main_thread_s)->base)->timeout)->func: NULL
 	//
-	// (_main_thread_s)->init_data: NULL
-	// (_main_thread_s)->fn_abort: NULL
+	// (&_main_thread_s)->init_data: NULL
+	// (&_main_thread_s)->fn_abort: NULL
 	//
 	// *(unsigned long *)(_main_stack + 1024): NULL
 	// *(unsigned long *)(_main_stack + 1020): NULL
@@ -342,26 +343,26 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	// *(unsigned long *)(_main_stack + 1012): eflag 레지스터 값 | 0x00000200
 	// *(unsigned long *)(_main_stack + 1008): _thread_entry_wrapper
 	//
-	// (_main_thread_s)->callee_saved.esp: _main_stack + 980
+	// (&_main_thread_s)->callee_saved.esp: _main_stack + 980
 
-	// _main_thread: _main_thread_s
+	// _main_thread: &_main_thread_s
 	_mark_thread_as_started(_main_thread);
 
 	// _mark_thread_as_started 에서 한일:
-	// (_main_thread_s)->base.thread_state: 0
+	// (&_main_thread_s)->base.thread_state: 0
 
-	// _main_thread: _main_thread_s
+	// _main_thread: &_main_thread_s
 	_add_thread_to_ready_q(_main_thread);
 
 	// _add_thread_to_ready_q 에서 한일:
 	// _kernel.ready_q.prio_bmap[0]: 0x8000
 	//
-	// (&(_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
-	// (&(_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
-	// (&_kernel.ready_q.q[16])->tail->next: &(_main_thread_s)->base.k_q_node
-	// (&_kernel.ready_q.q[16])->tail: &(_main_thread_s)->base.k_q_node
+	// (&(&_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
+	// (&(&_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
+	// (&_kernel.ready_q.q[16])->tail->next: &(&_main_thread_s)->base.k_q_node
+	// (&_kernel.ready_q.q[16])->tail: &(&_main_thread_s)->base.k_q_node
 	//
-	// _kernel.ready_q.cache: _main_thread_s
+	// _kernel.ready_q.cache: &_main_thread_s
 
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 	_new_thread(_idle_thread, _idle_stack,

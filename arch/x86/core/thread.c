@@ -48,7 +48,7 @@ void _thread_entry_wrapper(_thread_entry_t, void *,
  * @return N/A
  */
 // KID 20170522
-// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: _main_thread_s
+// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: &_main_thread_s
 static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 				 int priority,
 				 unsigned int options,
@@ -93,17 +93,17 @@ static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 	pInitialCtx -= 11;
 	// pInitialCtx: _main_stack + 980
 
-	// thread->callee_saved.esp: (_main_thread_s)->callee_saved.esp, pInitialCtx: _main_stack + 980
+	// thread->callee_saved.esp: (&_main_thread_s)->callee_saved.esp, pInitialCtx: _main_stack + 980
 	thread->callee_saved.esp = (unsigned long)pInitialCtx;
-	// thread->callee_saved.esp: (_main_thread_s)->callee_saved.esp: _main_stack + 980
+	// thread->callee_saved.esp: (&_main_thread_s)->callee_saved.esp: _main_stack + 980
 
-	// thread->coopReg.esp: (_main_thread_s)->coopReg.esp: ????
+	// thread->coopReg.esp: (&_main_thread_s)->coopReg.esp: ????
 	PRINTK("\nInitial context ESP = 0x%x\n", thread->coopReg.esp); // null function
 
-	// thread: _main_thread_s
+	// thread: &_main_thread_s
 	PRINTK("\nstruct thread * = 0x%x", thread); // null function
 
-	// thread: _main_thread_s
+	// thread: &_main_thread_s
 	thread_monitor_init(thread); // null function
 }
 
@@ -210,7 +210,7 @@ __asm__("\t.globl _thread_entry\n"
  * @return opaque pointer to initialized k_thread structure
  */
 // KID 20170519
-// _main_thread: _main_thread_s, _main_stack, MAIN_STACK_SIZE: 1024,
+// _main_thread: &_main_thread_s, _main_stack, MAIN_STACK_SIZE: 1024,
 // _main, NULL, NULL, NULL, CONFIG_MAIN_THREAD_PRIORITY: 0, K_ESSENTIAL: 0x1
 void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 		 _thread_entry_t pEntry,
@@ -227,21 +227,21 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 
 	unsigned long *pInitialThread;
 
-	// thread: _main_thread_s, pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1
+	// thread: &_main_thread_s, pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1
 	_new_thread_init(thread, pStackMem, stackSize, priority, options);
 
 	// _new_thread_init 에서 한일:
-	// (&(_main_thread_s)->base)->user_options: 0x1
-	// (&(_main_thread_s)->base)->thread_state: 0x4
-	// (&(_main_thread_s)->base)->prio: 0
-	// (&(_main_thread_s)->base)->sched_locked: 0
-	// (&(&(_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
-	// (&(&(_main_thread_s)->base)->timeout)->wait_q: NULL
-	// (&(&(_main_thread_s)->base)->timeout)->thread: NULL
-	// (&(&(_main_thread_s)->base)->timeout)->func: NULL
+	// (&(&_main_thread_s)->base)->user_options: 0x1
+	// (&(&_main_thread_s)->base)->thread_state: 0x4
+	// (&(&_main_thread_s)->base)->prio: 0
+	// (&(&_main_thread_s)->base)->sched_locked: 0
+	// (&(&(&_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&_main_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(&_main_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(&_main_thread_s)->base)->timeout)->func: NULL
 	//
-	// (_main_thread_s)->init_data: NULL
-	// (_main_thread_s)->fn_abort: NULL
+	// (&_main_thread_s)->init_data: NULL
+	// (&_main_thread_s)->fn_abort: NULL
 
 	/* carve the thread entry struct from the "base" of the stack */
 
@@ -309,9 +309,9 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 	 * aside for the thread's stack.
 	 */
 
-	// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: _main_thread_s
+	// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: &_main_thread_s
 	_new_thread_internal(pStackMem, stackSize, priority, options, thread);
 
 	// _new_thread_internal 에서 한일:
-	// (_main_thread_s)->callee_saved.esp: _main_stack + 980
+	// (&_main_thread_s)->callee_saved.esp: _main_stack + 980
 }

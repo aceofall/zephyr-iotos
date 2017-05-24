@@ -117,8 +117,8 @@ static inline int _is_prio_higher_or_equal(int prio1, int prio2)
 }
 
 // KID 20170524
-// t1->base.prio: (_main_thread_s)->base.prio: 0,
-// t2->base.prio: (_main_thread_s)->base.prio: 0
+// t1->base.prio: (&_main_thread_s)->base.prio: 0,
+// t2->base.prio: (&_main_thread_s)->base.prio: 0
 static inline int _is_prio1_higher_than_prio2(int prio1, int prio2)
 {
 	// prio1: 0, prio2: 0
@@ -161,12 +161,12 @@ static inline int _is_prio_lower(int prio1, int prio2)
 }
 
 // KID 20170524
-// thread: _main_thread_s, *cache: _kernel.ready_q.cache: _main_thread_s
+// thread: &_main_thread_s, *cache: _kernel.ready_q.cache: &_main_thread_s
 static inline int _is_t1_higher_prio_than_t2(struct k_thread *t1,
 					     struct k_thread *t2)
 {
-	// t1->base.prio: (_main_thread_s)->base.prio: 0,
-	// t2->base.prio: (_main_thread_s)->base.prio: 0
+	// t1->base.prio: (&_main_thread_s)->base.prio: 0,
+	// t2->base.prio: (&_main_thread_s)->base.prio: 0
 	// _is_prio1_higher_than_prio2(0, 0): 0
 	return _is_prio1_higher_than_prio2(t1->base.prio, t2->base.prio);
 	// return 0
@@ -451,12 +451,12 @@ static inline int _is_thread_polling(struct k_thread *thread)
  * This routine must be called with interrupts locked.
  */
 // KID 20170523
-// _main_thread: _main_thread_s
+// _main_thread: &_main_thread_s
 static inline void _mark_thread_as_started(struct k_thread *thread)
 {
-	// thread->base.thread_state: (_main_thread_s)->base.thread_state: 0x4, _THREAD_PRESTART: 0x4
+	// thread->base.thread_state: (&_main_thread_s)->base.thread_state: 0x4, _THREAD_PRESTART: 0x4
 	thread->base.thread_state &= ~_THREAD_PRESTART;
-	// thread->base.thread_state: (_main_thread_s)->base.thread_state: 0
+	// thread->base.thread_state: (&_main_thread_s)->base.thread_state: 0
 }
 
 /*

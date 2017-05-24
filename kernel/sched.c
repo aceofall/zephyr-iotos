@@ -18,7 +18,7 @@ struct _kernel _kernel = {0};
 /* set the bit corresponding to prio in ready q bitmap */
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 // KID 20170523
-// thread->base.prio: (_main_thread_s)->base.prio: 0
+// thread->base.prio: (&_main_thread_s)->base.prio: 0
 static void _set_ready_q_prio_bit(int prio)
 {
 	// prio: 0, _get_ready_q_prio_bmap_index(0): 0
@@ -81,11 +81,11 @@ static struct k_thread *_get_ready_q_head(void)
  */
 
 // KID 20170523
-// _main_thread: _main_thread_s
+// _main_thread: &_main_thread_s
 void _add_thread_to_ready_q(struct k_thread *thread)
 {
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
-	// thread->base.prio: (_main_thread_s)->base.prio: 0
+	// thread->base.prio: (&_main_thread_s)->base.prio: 0
 	// _get_ready_q_q_index(0): 16
 	int q_index = _get_ready_q_q_index(thread->base.prio);
 	// q_index: 16
@@ -94,29 +94,29 @@ void _add_thread_to_ready_q(struct k_thread *thread)
 	sys_dlist_t *q = &_ready_q.q[q_index];
 	// q: &_kernel.ready_q.q[16]
 
-	// thread->base.prio: (_main_thread_s)->base.prio: 0
+	// thread->base.prio: (&_main_thread_s)->base.prio: 0
 	_set_ready_q_prio_bit(thread->base.prio);
 
 	// _set_ready_q_prio_bit 에서 한일:
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x8000
 
-	// q: &_kernel.ready_q.q[16], &thread->base.k_q_node: &(_main_thread_s)->base.k_q_node
+	// q: &_kernel.ready_q.q[16], &thread->base.k_q_node: &(&_main_thread_s)->base.k_q_node
 	sys_dlist_append(q, &thread->base.k_q_node);
 
 	// sys_dlist_append 에서 한일:
-	// (&(_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
-	// (&(_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
-	// (&_kernel.ready_q.q[16])->tail->next: &(_main_thread_s)->base.k_q_node
-	// (&_kernel.ready_q.q[16])->tail: &(_main_thread_s)->base.k_q_node
+	// (&(&_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
+	// (&(&_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
+	// (&_kernel.ready_q.q[16])->tail->next: &(&_main_thread_s)->base.k_q_node
+	// (&_kernel.ready_q.q[16])->tail: &(&_main_thread_s)->base.k_q_node
 
 	// &_ready_q.cache: &_kernel.ready_q.cache
 	struct k_thread **cache = &_ready_q.cache;
 	// cache: &_kernel.ready_q.cache
 
-	// thread: _main_thread_s, *cache: _kernel.ready_q.cache: _main_thread_s
-	// _is_t1_higher_prio_than_t2(_main_thread_s, _main_thread_s): 0
+	// thread: &_main_thread_s, *cache: _kernel.ready_q.cache: &_main_thread_s
+	// _is_t1_higher_prio_than_t2(&_main_thread_s, &_main_thread_s): 0
 	*cache = _is_t1_higher_prio_than_t2(thread, *cache) ? thread : *cache;
-	// *cache: _kernel.ready_q.cache: _main_thread_s
+	// *cache: _kernel.ready_q.cache: &_main_thread_s
 #else
 	sys_dlist_append(&_ready_q.q[0], &thread->base.k_q_node);
 	_ready_q.prio_bmap[0] = 1;
