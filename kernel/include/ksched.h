@@ -116,9 +116,14 @@ static inline int _is_prio_higher_or_equal(int prio1, int prio2)
 	// return 1
 }
 
+// KID 20170524
+// t1->base.prio: (_main_thread_s)->base.prio: 0,
+// t2->base.prio: (_main_thread_s)->base.prio: 0
 static inline int _is_prio1_higher_than_prio2(int prio1, int prio2)
 {
+	// prio1: 0, prio2: 0
 	return prio1 < prio2;
+	// return 0
 }
 
 static inline int _is_prio_higher(int prio, int test_prio)
@@ -155,10 +160,16 @@ static inline int _is_prio_lower(int prio1, int prio2)
 	return _is_prio1_lower_than_prio2(prio1, prio2);
 }
 
+// KID 20170524
+// thread: _main_thread_s, *cache: _kernel.ready_q.cache: _main_thread_s
 static inline int _is_t1_higher_prio_than_t2(struct k_thread *t1,
 					     struct k_thread *t2)
 {
+	// t1->base.prio: (_main_thread_s)->base.prio: 0,
+	// t2->base.prio: (_main_thread_s)->base.prio: 0
+	// _is_prio1_higher_than_prio2(0, 0): 0
 	return _is_prio1_higher_than_prio2(t1->base.prio, t2->base.prio);
+	// return 0
 }
 
 static inline int _is_higher_prio_than_current(struct k_thread *thread)

@@ -242,6 +242,7 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 // KID 20170517
 // KID 20170519
 // KID 20170523
+// KID 20170524
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct _thread_arch): 0 bytes
 // sizeof(struct k_thread): 56 bytes

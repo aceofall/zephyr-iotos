@@ -100,11 +100,23 @@ void _add_thread_to_ready_q(struct k_thread *thread)
 	// _set_ready_q_prio_bit 에서 한일:
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x8000
 
+	// q: &_kernel.ready_q.q[16], &thread->base.k_q_node: &(_main_thread_s)->base.k_q_node
 	sys_dlist_append(q, &thread->base.k_q_node);
 
-	struct k_thread **cache = &_ready_q.cache;
+	// sys_dlist_append 에서 한일:
+	// (&(_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
+	// (&(_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
+	// (&_kernel.ready_q.q[16])->tail->next: &(_main_thread_s)->base.k_q_node
+	// (&_kernel.ready_q.q[16])->tail: &(_main_thread_s)->base.k_q_node
 
+	// &_ready_q.cache: &_kernel.ready_q.cache
+	struct k_thread **cache = &_ready_q.cache;
+	// cache: &_kernel.ready_q.cache
+
+	// thread: _main_thread_s, *cache: _kernel.ready_q.cache: _main_thread_s
+	// _is_t1_higher_prio_than_t2(_main_thread_s, _main_thread_s): 0
 	*cache = _is_t1_higher_prio_than_t2(thread, *cache) ? thread : *cache;
+	// *cache: _kernel.ready_q.cache: _main_thread_s
 #else
 	sys_dlist_append(&_ready_q.q[0], &thread->base.k_q_node);
 	_ready_q.prio_bmap[0] = 1;

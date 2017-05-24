@@ -353,7 +353,17 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	// _main_thread: _main_thread_s
 	_add_thread_to_ready_q(_main_thread);
 
-#ifdef CONFIG_MULTITHREADING
+	// _add_thread_to_ready_q 에서 한일:
+	// _kernel.ready_q.prio_bmap[0]: 0x8000
+	//
+	// (&(_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
+	// (&(_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
+	// (&_kernel.ready_q.q[16])->tail->next: &(_main_thread_s)->base.k_q_node
+	// (&_kernel.ready_q.q[16])->tail: &(_main_thread_s)->base.k_q_node
+	//
+	// _kernel.ready_q.cache: _main_thread_s
+
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 	_new_thread(_idle_thread, _idle_stack,
 		    IDLE_STACK_SIZE, idle, NULL, NULL, NULL,
 		    K_LOWEST_THREAD_PRIO, K_ESSENTIAL);

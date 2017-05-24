@@ -67,6 +67,7 @@
 
 // KID 20170518
 // KID 20170519
+// KID 20170524
 // sizeof(struct _ready_q): 264 bytes
 struct _ready_q {
 
@@ -86,6 +87,7 @@ typedef struct _ready_q _ready_q_t;
 
 // KID 20170518
 // KID 20170519
+// KID 20170524
 // sizeof(struct _kernel): 284 bytes
 struct _kernel {
 
