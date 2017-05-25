@@ -66,6 +66,9 @@ u64_t __noinit __end_tick_tsc;
 #endif
 /* init/main and idle threads */
 
+// KID 20170525
+// CONFIG_IDLE_STACK_SIZE: 256
+// IDLE_STACK_SIZE: 256
 #define IDLE_STACK_SIZE CONFIG_IDLE_STACK_SIZE
 
 #if CONFIG_MAIN_STACK_SIZE & (STACK_ALIGN - 1)
@@ -87,15 +90,19 @@ u64_t __noinit __end_tick_tsc;
 // __stack: __aligned(4)
 // MAIN_STACK_SIZE: 1024
 char __noinit __stack _main_stack[MAIN_STACK_SIZE];
+// KID 20170525
+// IDLE_STACK_SIZE: 256
 char __noinit __stack _idle_stack[IDLE_STACK_SIZE];
 
 // KID 20170519
 static struct k_thread _main_thread_s;
+// KID 20170525
 static struct k_thread _idle_thread_s;
 
 // KID 20170519
 k_tid_t const _main_thread = (k_tid_t)&_main_thread_s;
 // KID 20170524
+// KID 20170525
 k_tid_t const _idle_thread = (k_tid_t)&_idle_thread_s;
 
 /*
@@ -365,9 +372,32 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	// _kernel.ready_q.cache: &_main_thread_s
 
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
-	_new_thread(_idle_thread, _idle_stack,
-		    IDLE_STACK_SIZE, idle, NULL, NULL, NULL,
+	// _idle_thread: &_idle_thread_s, IDLE_STACK_SIZE: 256, K_LOWEST_THREAD_PRIO: 15, K_ESSENTIAL: 0x1
+	_new_thread(_idle_thread, _idle_stack, IDLE_STACK_SIZE, idle, NULL, NULL, NULL,
 		    K_LOWEST_THREAD_PRIO, K_ESSENTIAL);
+
+	// _new_thread 에서 한일:
+	// (&(&_idle_thread_s)->base)->user_options: 0x1
+	// (&(&_idle_thread_s)->base)->thread_state: 0x4
+	// (&(&_idle_thread_s)->base)->prio: 15
+	// (&(&_idle_thread_s)->base)->sched_locked: 0
+	// (&(&(&_idle_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&_idle_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(&_idle_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(&_idle_thread_s)->base)->timeout)->func: NULL
+	//
+	// (&_idle_thread_s)->init_data: NULL
+	// (&_idle_thread_s)->fn_abort: NULL
+	//
+	// *(unsigned long *)(_idle_stack + 256): NULL
+	// *(unsigned long *)(_idle_stack + 252): NULL
+	// *(unsigned long *)(_idle_stack + 248): NULL
+	// *(unsigned long *)(_idle_stack + 244): idle
+	// *(unsigned long *)(_idle_stack + 240): eflag 레지스터 값 | 0x00000200
+	// *(unsigned long *)(_idle_stack + 236): _thread_entry_wrapper
+	//
+	// (&_idle_thread_s)->callee_saved.esp: _idle_stack + 212
+
 	_mark_thread_as_started(_idle_thread);
 	_add_thread_to_ready_q(_idle_thread);
 #endif

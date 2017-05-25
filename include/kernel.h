@@ -84,6 +84,7 @@ extern "C" {
 
 #ifdef CONFIG_PREEMPT_ENABLED // CONFIG_PREEMPT_ENABLED=y
 // KID 20170519
+// KID 20170525
 // CONFIG_NUM_PREEMPT_PRIORITIES: 15
 // K_LOWEST_THREAD_PRIO: 15
 #define K_LOWEST_THREAD_PRIO CONFIG_NUM_PREEMPT_PRIORITIES
@@ -243,6 +244,7 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 // KID 20170519
 // KID 20170523
 // KID 20170524
+// KID 20170525
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct _thread_arch): 0 bytes
 // sizeof(struct k_thread): 56 bytes
@@ -362,6 +364,7 @@ typedef void (*k_thread_entry_t)(void *p1, void *p2, void *p3);
 
 /* system thread that must not abort */
 // KID 20170519
+// KID 20170525
 // K_ESSENTIAL: 0x1
 #define K_ESSENTIAL (1 << 0)
 

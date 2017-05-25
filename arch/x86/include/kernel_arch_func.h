@@ -21,6 +21,8 @@ extern "C" {
 // KID 20170522
 // STACK_ALIGN_SIZE: 4
 // _main_stack + 1024
+// ARM10C 20170525
+// _idle_stack + 1024
 #define STACK_ROUND_DOWN(x) ROUND_DOWN(x, STACK_ALIGN_SIZE)
 
 /**

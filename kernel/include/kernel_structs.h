@@ -169,15 +169,19 @@ extern void _init_thread_base(struct _thread_base *thread_base,
 
 // KID 20170519
 // thread: &_main_thread_s, pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1
+// KID 20170525
+// thread: &_idle_thread_s, pStackMem: _idle_stack, stackSize: 256, priority: 15, options: 0x1
 static ALWAYS_INLINE void _new_thread_init(struct k_thread *thread,
 					    char *pStack, size_t stackSize,
 					    int prio, unsigned int options)
 {
 #if !defined(CONFIG_INIT_STACKS) && !defined(CONFIG_THREAD_STACK_INFO) // CONFIG_INIT_STACKS=n, CONFIG_THREAD_STACK_INFO=n
-	// ARG_UNUSED(pStack): (void)(pStack)
+	// ARG_UNUSED(_main_stack): (void)(_main_stack)
+	// ARG_UNUSED(_idle_thread_s): (void)(_idle_thread_s)
 	ARG_UNUSED(pStack);
 
-	// ARG_UNUSED(stackSize): (void)(stackSize)
+	// ARG_UNUSED(1024): (void)(1024)
+	// ARG_UNUSED(256): (void)(256)
 	ARG_UNUSED(stackSize);
 #endif
 
@@ -193,6 +197,7 @@ static ALWAYS_INLINE void _new_thread_init(struct k_thread *thread,
 #endif /* CONFIG_STACK_SENTINEL */
 	/* Initialize various struct k_thread members */
 	// &thread->base: &(&_main_thread_s)->base, prio: 0, _THREAD_PRESTART: 0x4, options: 0x1
+	// &thread->base: &(&_idle_thread_s)->base, prio: 15, _THREAD_PRESTART: 0x4, options: 0x1
 	_init_thread_base(&thread->base, prio, _THREAD_PRESTART, options);
 
 	// _init_thread_base 에서 한일:
@@ -205,14 +210,28 @@ static ALWAYS_INLINE void _new_thread_init(struct k_thread *thread,
 	// (&(&(&_main_thread_s)->base)->timeout)->thread: NULL
 	// (&(&(&_main_thread_s)->base)->timeout)->func: NULL
 
+	// _init_thread_base 에서 한일:
+	// (&(&_idle_thread_s)->base)->user_options: 0x1
+	// (&(&_idle_thread_s)->base)->thread_state: 0x4
+	// (&(&_idle_thread_s)->base)->prio: 15
+	// (&(&_idle_thread_s)->base)->sched_locked: 0
+	// (&(&(&_idle_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&_idle_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(&_idle_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(&_idle_thread_s)->base)->timeout)->func: NULL
+
 	/* static threads overwrite it afterwards with real value */
 	// thread->init_data: (&_main_thread_s)->init_data
+	// thread->init_data: (&_idle_thread_s)->init_data
 	thread->init_data = NULL;
 	// thread->init_data: (&_main_thread_s)->init_data: NULL
+	// thread->init_data: (&_idle_thread_s)->init_data: NULL
 
 	// thread->fn_abort: (&_main_thread_s)->fn_abort
+	// thread->fn_abort: (&_idle_thread_s)->fn_abort
 	thread->fn_abort = NULL;
 	// thread->fn_abort: (&_main_thread_s)->fn_abort: NULL
+	// thread->fn_abort: (&_idle_thread_s)->fn_abort: NULL
 
 #ifdef CONFIG_THREAD_CUSTOM_DATA // CONFIG_THREAD_CUSTOM_DATA=n
 	/* Initialize custom data field (value is opaque to kernel) */
@@ -240,6 +259,7 @@ static ALWAYS_INLINE void thread_monitor_init(struct k_thread *thread)
 }
 #else
 // KID 20170523
+// KID 20170525
 #define thread_monitor_init(thread)		\
 	do {/* do nothing */			\
 	} while ((0))

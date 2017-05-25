@@ -450,6 +450,8 @@ void _init_static_threads(void)
 
 // KID 20170522
 // &thread->base: &(&_main_thread_s)->base, prio: 0, _THREAD_PRESTART: 0x4, options: 0x1
+// ARM10C 20170525
+// &thread->base: &(&_idle_thread_s)->base, prio: 15, _THREAD_PRESTART: 0x4, options: 0x1
 void _init_thread_base(struct _thread_base *thread_base, int priority,
 		       u32_t initial_state, unsigned int options)
 {

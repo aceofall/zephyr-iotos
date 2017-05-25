@@ -151,6 +151,7 @@ void _sys_power_save_idle_exit(s32_t ticks)
 #endif
 
 // KID 20170519
+// KID 20170525
 void idle(void *unused1, void *unused2, void *unused3)
 {
 	ARG_UNUSED(unused1);

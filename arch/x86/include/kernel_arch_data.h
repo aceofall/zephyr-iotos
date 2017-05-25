@@ -391,6 +391,7 @@
 #define PRINTK(...) printk(__VA_ARGS__)
 #else
 // KID 20170523
+// KID 20170525
 #define PRINTK(...)
 #endif /* DEBUG */
 

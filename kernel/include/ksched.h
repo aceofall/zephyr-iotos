@@ -45,11 +45,15 @@ static ALWAYS_INLINE struct k_thread *_get_next_ready_thread(void)
 
 // KID 20170519
 // _main
+// KID 20170525
+// idle
 static inline int _is_idle_thread(void *entry_point)
 {
 	// entry_point: _main
+	// entry_point: idle
 	return entry_point == idle;
 	// return 0
+	// return 1
 }
 
 static inline int _is_idle_thread_ptr(k_tid_t thread)
@@ -68,6 +72,13 @@ static inline int _is_idle_thread_ptr(k_tid_t thread)
 // 	__ASSERT(((0) == 15 && _is_idle_thread(_main)) ||
 // 		 (_is_prio_higher_or_equal((0), 14) && _is_prio_lower_or_equal((0), -16)),
 // 		 "invalid priority (%d); allowed range: %d to %d", (0), 14, -16);
+// } while ((0))
+// ARM10C 20170525
+// _ASSERT_VALID_PRIO(15, _main):
+// do {
+// 	__ASSERT(((15) == 15 && _is_idle_thread(_main)) ||
+// 		 (_is_prio_higher_or_equal((15), 14) && _is_prio_lower_or_equal((15), -16)),
+// 		 "invalid priority (%d); allowed range: %d to %d", (15), 14, -16);
 // } while ((0))
 #define _ASSERT_VALID_PRIO(prio, entry_point) do { \
 	__ASSERT(((prio) == K_IDLE_PRIO && _is_idle_thread(entry_point)) || \
@@ -99,21 +110,30 @@ static inline int _is_idle_thread_ptr(k_tid_t thread)
 
 // KID 20170519
 // prio1: 0, prio2: 14
+// ARM10C 20170525
+// prio1: 15, prio2: 14
 static inline int _is_prio1_higher_than_or_equal_to_prio2(int prio1, int prio2)
 {
 	// prio1: 0, prio2: 14
+	// prio1: 15, prio2: 14
 	return prio1 <= prio2;
 	// return: 1
+	// return: 0
 }
 
 // KID 20170519
 // _is_prio_higher_or_equal((0), 14)
+// ARM10C 20170525
+// _is_prio_higher_or_equal((15), 14)
 static inline int _is_prio_higher_or_equal(int prio1, int prio2)
 {
 	// prio1: 0, prio2: 14
+	// prio1: 15, prio2: 14
 	// _is_prio1_higher_than_or_equal_to_prio2(0, 14): 1
+	// _is_prio1_higher_than_or_equal_to_prio2(15, 14): 0
 	return _is_prio1_higher_than_or_equal_to_prio2(prio1, prio2);
 	// return 1
+	// return 0
 }
 
 // KID 20170524
@@ -133,20 +153,29 @@ static inline int _is_prio_higher(int prio, int test_prio)
 
 // KID 20170519
 // prio1: 0, prio2: -16
+// KID 20170525
+// prio1: 15, prio2: -16
 static inline int _is_prio1_lower_than_or_equal_to_prio2(int prio1, int prio2)
 {
 	// prio1: 0, prio2: -16
+	// prio1: 15, prio2: -16
 	return prio1 >= prio2;
+	// return 1
 	// return 1
 }
 
 // KID 20170519
 // _is_prio_lower_or_equal((0), -16)
+// KID 20170525
+// _is_prio_lower_or_equal((15), -16)
 static inline int _is_prio_lower_or_equal(int prio1, int prio2)
 {
 	// prio1: 0, prio2: -16
+	// prio1: 15, prio2: -16
 	// _is_prio1_lower_than_or_equal_to_prio2(0, -16): 1
+	// _is_prio1_lower_than_or_equal_to_prio2(15, -16): 1
 	return _is_prio1_lower_than_or_equal_to_prio2(prio1, prio2);
+	// return 1
 	// return 1
 }
 
