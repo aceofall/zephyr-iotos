@@ -19,21 +19,31 @@ struct _kernel _kernel = {0};
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 // KID 20170523
 // thread->base.prio: (&_main_thread_s)->base.prio: 0
+// KID 20170526
+// thread->base.prio: (&_idle_thread_s)->base.prio: 15
 static void _set_ready_q_prio_bit(int prio)
 {
 	// prio: 0, _get_ready_q_prio_bmap_index(0): 0
+	// prio: 15, _get_ready_q_prio_bmap_index(15): 0
 	int bmap_index = _get_ready_q_prio_bmap_index(prio);
+	// bmap_index: 0
 	// bmap_index: 0
 
 	// bmap_index: 0, _ready_q: _kernel.ready_q,
 	// &_ready_q.prio_bmap[0]: &_kernel.ready_q.prio_bmap[0]
+	// bmap_index: 0, _ready_q: _kernel.ready_q,
+	// &_ready_q.prio_bmap[0]: &_kernel.ready_q.prio_bmap[0]
 	u32_t *bmap = &_ready_q.prio_bmap[bmap_index];
+	// bmap: &_kernel.ready_q.prio_bmap[0]
 	// bmap: &_kernel.ready_q.prio_bmap[0]
 
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0, prio: 0,
 	// _get_ready_q_prio_bit(0): 0x8000
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0, prio: 15
+	// _get_ready_q_prio_bit(15): 0x80000000
 	*bmap |= _get_ready_q_prio_bit(prio);
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x8000
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x80008000
 }
 #endif
 
@@ -82,25 +92,37 @@ static struct k_thread *_get_ready_q_head(void)
 
 // KID 20170523
 // _main_thread: &_main_thread_s
+// KID 20170526
+// _idle_thread: &_idle_thread_s
 void _add_thread_to_ready_q(struct k_thread *thread)
 {
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 	// thread->base.prio: (&_main_thread_s)->base.prio: 0
 	// _get_ready_q_q_index(0): 16
+	// thread->base.prio: (&_idle_thread_s)->base.prio: 15
+	// _get_ready_q_q_index(15): 31
 	int q_index = _get_ready_q_q_index(thread->base.prio);
 	// q_index: 16
+	// q_index: 31
 
 	// q_index: 16, _ready_q: _kernel.ready_q, &_ready_q.q[16]: &_kernel.ready_q.q[16]
+	// q_index: 31, _ready_q: _kernel.ready_q, &_ready_q.q[31]: &_kernel.ready_q.q[31]
 	sys_dlist_t *q = &_ready_q.q[q_index];
 	// q: &_kernel.ready_q.q[16]
+	// q: &_kernel.ready_q.q[31]
 
 	// thread->base.prio: (&_main_thread_s)->base.prio: 0
+	// thread->base.prio: (&_idle_thread_s)->base.prio: 15
 	_set_ready_q_prio_bit(thread->base.prio);
 
 	// _set_ready_q_prio_bit 에서 한일:
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x8000
 
+	// _set_ready_q_prio_bit 에서 한일:
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x80008000
+
 	// q: &_kernel.ready_q.q[16], &thread->base.k_q_node: &(&_main_thread_s)->base.k_q_node
+	// q: &_kernel.ready_q.q[31], &thread->base.k_q_node: &(&_idle_thread_s)->base.k_q_node
 	sys_dlist_append(q, &thread->base.k_q_node);
 
 	// sys_dlist_append 에서 한일:
@@ -109,13 +131,24 @@ void _add_thread_to_ready_q(struct k_thread *thread)
 	// (&_kernel.ready_q.q[16])->tail->next: &(&_main_thread_s)->base.k_q_node
 	// (&_kernel.ready_q.q[16])->tail: &(&_main_thread_s)->base.k_q_node
 
+	// sys_dlist_append 에서 한일:
+	// (&(&_idle_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[31]
+	// (&(&_idle_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[31])->tail
+	// (&_kernel.ready_q.q[31])->tail->next: &(&_idle_thread_s)->base.k_q_node
+	// (&_kernel.ready_q.q[31])->tail: &(&_idle_thread_s)->base.k_q_node
+
+	// &_ready_q.cache: &_kernel.ready_q.cache
 	// &_ready_q.cache: &_kernel.ready_q.cache
 	struct k_thread **cache = &_ready_q.cache;
+	// cache: &_kernel.ready_q.cache
 	// cache: &_kernel.ready_q.cache
 
 	// thread: &_main_thread_s, *cache: _kernel.ready_q.cache: &_main_thread_s
 	// _is_t1_higher_prio_than_t2(&_main_thread_s, &_main_thread_s): 0
+	// thread: &_idle_thread_s, *cache: _kernel.ready_q.cache: &_main_thread_s
+	// _is_t1_higher_prio_than_t2(&_idle_thread_s, &_main_thread_s): 0
 	*cache = _is_t1_higher_prio_than_t2(thread, *cache) ? thread : *cache;
+	// *cache: _kernel.ready_q.cache: &_main_thread_s
 	// *cache: _kernel.ready_q.cache: &_main_thread_s
 #else
 	sys_dlist_append(&_ready_q.q[0], &thread->base.k_q_node);

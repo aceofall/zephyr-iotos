@@ -398,8 +398,24 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	//
 	// (&_idle_thread_s)->callee_saved.esp: _idle_stack + 212
 
+	// _idle_thread: &_idle_thread_s
 	_mark_thread_as_started(_idle_thread);
+
+	// _mark_thread_as_started 에서 한일:
+	// (&_idle_thread_s)->base.thread_state: 0
+
+	// _idle_thread: &_idle_thread_s
 	_add_thread_to_ready_q(_idle_thread);
+
+	// _add_thread_to_ready_q 에서 한일:
+	// _kernel.ready_q.prio_bmap[0]: 0x80008000
+	//
+	// (&(&_idle_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[31]
+	// (&(&_idle_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[31])->tail
+	// (&_kernel.ready_q.q[31])->tail->next: &(&_idle_thread_s)->base.k_q_node
+	// (&_kernel.ready_q.q[31])->tail: &(&_idle_thread_s)->base.k_q_node
+	//
+	// _kernel.ready_q.cache: &_main_thread_s
 #endif
 
 	initialize_timeouts();

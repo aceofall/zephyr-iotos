@@ -341,23 +341,33 @@ static inline sys_dnode_t *sys_dlist_peek_tail(sys_dlist_t *list)
 
 // KID 20170523
 // q: &_kernel.ready_q.q[16], &thread->base.k_q_node: &(&_main_thread_s)->base.k_q_node
+// KID 20170526
+// q: &_kernel.ready_q.q[31], &thread->base.k_q_node: &(&_idle_thread_s)->base.k_q_node
 static inline void sys_dlist_append(sys_dlist_t *list, sys_dnode_t *node)
 {
 	// node->next: (&(&_main_thread_s)->base.k_q_node)->next, list: &_kernel.ready_q.q[16]
+	// node->next: (&(&_idle_thread_s)->base.k_q_node)->next, list: &_kernel.ready_q.q[31]
 	node->next = list;
 	// node->next: (&(&_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
+	// node->next: (&(&_idle_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[31]
 
 	// node->prev: (&(&_main_thread_s)->base.k_q_node)->prev, list->tail: (&_kernel.ready_q.q[16])->tail
+	// node->prev: (&(&_idle_thread_s)->base.k_q_node)->prev, list->tail: (&_kernel.ready_q.q[31])->tail
 	node->prev = list->tail;
 	// node->prev: (&(&_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
+	// node->prev: (&(&_idle_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[31])->tail
 
 	// list->tail->next: (&_kernel.ready_q.q[16])->tail->next, node: &(&_main_thread_s)->base.k_q_node
+	// list->tail->next: (&_kernel.ready_q.q[31])->tail->next, node: &(&_idle_thread_s)->base.k_q_node
 	list->tail->next = node;
 	// list->tail: (&_kernel.ready_q.q[16])->tail->next: &(&_main_thread_s)->base.k_q_node
+	// list->tail: (&_kernel.ready_q.q[31])->tail->next: &(&_idle_thread_s)->base.k_q_node
 
 	// list->tail: (&_kernel.ready_q.q[16])->tail, node: &(&_main_thread_s)->base.k_q_node
+	// list->tail: (&_kernel.ready_q.q[31])->tail, node: &(&_idle_thread_s)->base.k_q_node
 	list->tail = node;
 	// list->tail: (&_kernel.ready_q.q[16])->tail: &(&_main_thread_s)->base.k_q_node
+	// list->tail: (&_kernel.ready_q.q[31])->tail: &(&_idle_thread_s)->base.k_q_node
 }
 
 /**
