@@ -90,6 +90,7 @@ typedef struct _ready_q _ready_q_t;
 // KID 20170519
 // KID 20170524
 // KID 20170526
+// KID 20170527
 // sizeof(struct _kernel): 284 bytes
 struct _kernel {
 
@@ -151,6 +152,8 @@ extern struct _kernel _kernel;
 // KID 20170523
 // _ready_q: _kernel.ready_q
 #define _ready_q _kernel.ready_q
+// KID 20170527
+// _timeout_q: _kernel.timeout_q
 #define _timeout_q _kernel.timeout_q
 #define _threads _kernel.threads
 

@@ -11,12 +11,15 @@
 #include <atomic.h>
 
 extern struct device __device_init_start[];
+// KID 20170527
 extern struct device __device_PRE_KERNEL_1_start[];
+// KID 20170527
 extern struct device __device_PRE_KERNEL_2_start[];
 extern struct device __device_POST_KERNEL_start[];
 extern struct device __device_APPLICATION_start[];
 extern struct device __device_init_end[];
 
+// KID 20170527
 static struct device *config_levels[] = {
 	__device_PRE_KERNEL_1_start,
 	__device_PRE_KERNEL_2_start,
@@ -43,13 +46,18 @@ extern u32_t __device_busy_end[];
  *
  * @param level init level to run.
  */
+// KID 20170527
+// _SYS_INIT_LEVEL_PRE_KERNEL_1: 0
 void _sys_device_do_config_level(int level)
 {
 	struct device *info;
 
+	// level: 0, config_levels[0]: __device_PRE_KERNEL_1_start, config_levels[1]: __device_PRE_KERNEL_2_start
 	for (info = config_levels[level]; info < config_levels[level+1];
 								info++) {
+		// info->config: (__device_PRE_KERNEL_1_start)->config
 		struct device_config *device = info->config;
+		// device: (__device_PRE_KERNEL_1_start)->config
 
 		device->init(info);
 	}

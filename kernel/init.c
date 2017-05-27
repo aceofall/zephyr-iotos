@@ -118,11 +118,14 @@ k_tid_t const _idle_thread = (k_tid_t)&_idle_thread_s;
 #endif
 // KID 20170516
 // KID 20170517
+// KID 20170527
 // CONFIG_ISR_STACK_SIZE: 2048
 char __noinit __stack _interrupt_stack[CONFIG_ISR_STACK_SIZE];
 
-#ifdef CONFIG_SYS_CLOCK_EXISTS
+#ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
 	#include <misc/dlist.h>
+// KID 20170527
+// _timeout_q: _kernel.timeout_q
 	#define initialize_timeouts() do { \
 		sys_dlist_init(&_timeout_q); \
 	} while ((0))
@@ -420,9 +423,17 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 
 	initialize_timeouts();
 
+	// initialize_timeouts 에서 한일:
+	// (&_kernel.timeout_q)->head: &_kernel.timeout_q
+	// (&_kernel.timeout_q)->tail: &_kernel.timeout_q
+
 	/* perform any architecture-specific initialization */
 
 	kernel_arch_init();
+
+	// kernel_arch_init 에서 한일:
+	// _kernel.nested: 0
+	// _kernel.irq_stack: _interrupt_stack + 2048
 }
 
 static void switch_to_main_thread(void)
@@ -479,7 +490,99 @@ FUNC_NORETURN void _Cstart(void)
 	// dummy_thread: dummy_stack
 	prepare_multithreading(dummy_thread);
 
+	// prepare_multithreading 에서 한일:
+	// _kernel.current: dummy_stack
+	// (struct k_thread* dummy_stack)->base.user_options: 0x1
+	// (struct k_thread* dummy_stack)->base.thread_state: 0x1
+	//
+	// sys_dlist_init 에서 한일:
+	// ready_q 의 list를 초기화함
+	//
+	// (&_kernel.ready_q.q[0...31])->head: &_kernel.ready_q.q[0...31]
+	// (&_kernel.ready_q.q[0...31])->tail: &_kernel.ready_q.q[0...31]
+	//
+	// _kernel.ready_q.cache: &_main_thread_s
+	//
+	// _new_thread 에서 한일:
+	// (&(&_main_thread_s)->base)->user_options: 0x1
+	// (&(&_main_thread_s)->base)->thread_state: 0x4
+	// (&(&_main_thread_s)->base)->prio: 0
+	// (&(&_main_thread_s)->base)->sched_locked: 0
+	// (&(&(&_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&_main_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(&_main_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(&_main_thread_s)->base)->timeout)->func: NULL
+	//
+	// (&_main_thread_s)->init_data: NULL
+	// (&_main_thread_s)->fn_abort: NULL
+	//
+	// *(unsigned long *)(_main_stack + 1024): NULL
+	// *(unsigned long *)(_main_stack + 1020): NULL
+	// *(unsigned long *)(_main_stack + 1016): NULL
+	// *(unsigned long *)(_main_stack + 1016): _main
+	// *(unsigned long *)(_main_stack + 1012): eflag 레지스터 값 | 0x00000200
+	// *(unsigned long *)(_main_stack + 1008): _thread_entry_wrapper
+	//
+	// (&_main_thread_s)->callee_saved.esp: _main_stack + 980
+	//
+	// _mark_thread_as_started 에서 한일:
+	// (&_main_thread_s)->base.thread_state: 0
+	//
+	// _add_thread_to_ready_q 에서 한일:
+	// _kernel.ready_q.prio_bmap[0]: 0x8000
+	//
+	// (&(&_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
+	// (&(&_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
+	// (&_kernel.ready_q.q[16])->tail->next: &(&_main_thread_s)->base.k_q_node
+	// (&_kernel.ready_q.q[16])->tail: &(&_main_thread_s)->base.k_q_node
+	//
+	// _kernel.ready_q.cache: &_main_thread_s
+	//
+	// _new_thread 에서 한일:
+	// (&(&_idle_thread_s)->base)->user_options: 0x1
+	// (&(&_idle_thread_s)->base)->thread_state: 0x4
+	// (&(&_idle_thread_s)->base)->prio: 15
+	// (&(&_idle_thread_s)->base)->sched_locked: 0
+	// (&(&(&_idle_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&_idle_thread_s)->base)->timeout)->wait_q: NULL
+	// (&(&(&_idle_thread_s)->base)->timeout)->thread: NULL
+	// (&(&(&_idle_thread_s)->base)->timeout)->func: NULL
+	//
+	// (&_idle_thread_s)->init_data: NULL
+	// (&_idle_thread_s)->fn_abort: NULL
+	//
+	// *(unsigned long *)(_idle_stack + 256): NULL
+	// *(unsigned long *)(_idle_stack + 252): NULL
+	// *(unsigned long *)(_idle_stack + 248): NULL
+	// *(unsigned long *)(_idle_stack + 244): idle
+	// *(unsigned long *)(_idle_stack + 240): eflag 레지스터 값 | 0x00000200
+	// *(unsigned long *)(_idle_stack + 236): _thread_entry_wrapper
+	//
+	// (&_idle_thread_s)->callee_saved.esp: _idle_stack + 212
+	//
+	// _mark_thread_as_started 에서 한일:
+	// (&_idle_thread_s)->base.thread_state: 0
+	//
+	// _add_thread_to_ready_q 에서 한일:
+	// _kernel.ready_q.prio_bmap[0]: 0x80008000
+	//
+	// (&(&_idle_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[31]
+	// (&(&_idle_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[31])->tail
+	// (&_kernel.ready_q.q[31])->tail->next: &(&_idle_thread_s)->base.k_q_node
+	// (&_kernel.ready_q.q[31])->tail: &(&_idle_thread_s)->base.k_q_node
+	//
+	// _kernel.ready_q.cache: &_main_thread_s
+	//
+	// initialize_timeouts 에서 한일:
+	// (&_kernel.timeout_q)->head: &_kernel.timeout_q
+	// (&_kernel.timeout_q)->tail: &_kernel.timeout_q
+	//
+	// kernel_arch_init 에서 한일:
+	// _kernel.nested: 0
+	// _kernel.irq_stack: _interrupt_stack + 2048
+
 	/* perform basic hardware initialization */
+	// _SYS_INIT_LEVEL_PRE_KERNEL_1: 0
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_PRE_KERNEL_1);
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_PRE_KERNEL_2);
 

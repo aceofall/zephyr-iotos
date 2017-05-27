@@ -35,12 +35,18 @@ extern "C" {
  *
  * @return N/A
  */
+// KID 20170527
 static inline void kernel_arch_init(void)
 {
+	// CONFIG_ISR_STACK_SIZE: 2048
 	extern char _interrupt_stack[CONFIG_ISR_STACK_SIZE];
 
 	_kernel.nested = 0;
+	// _kernel.nested: 0
+
+	// CONFIG_ISR_STACK_SIZE: 2048
 	_kernel.irq_stack = _interrupt_stack + CONFIG_ISR_STACK_SIZE;
+	// _kernel.irq_stack: _interrupt_stack + 2048
 }
 
 /**

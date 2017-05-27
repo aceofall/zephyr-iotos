@@ -270,10 +270,11 @@ struct device;
  * @param init init function for the driver
  * @param config_info address of driver instance config information
  */
+// KID 20170527
 struct device_config {
 	char	*name;
 	int (*init)(struct device *device);
-#ifdef CONFIG_DEVICE_POWER_MANAGEMENT
+#ifdef CONFIG_DEVICE_POWER_MANAGEMENT // CONFIG_DEVICE_POWER_MANAGEMENT=n
 	int (*device_pm_control)(struct device *device, u32_t command,
 			      void *context);
 #endif
@@ -287,6 +288,7 @@ struct device_config {
  * the device type. This pointer is filled in by the driver at init time.
  * @param driver_data driver instance data. For driver use only
  */
+// KID 20170527
 struct device {
 	struct device_config *config;
 	const void *driver_api;

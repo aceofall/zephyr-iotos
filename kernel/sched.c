@@ -13,6 +13,7 @@
 
 /* the only struct _kernel instance */
 // KID 20170523
+// KID 20170527
 struct _kernel _kernel = {0};
 
 /* set the bit corresponding to prio in ready q bitmap */
