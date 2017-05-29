@@ -20,6 +20,7 @@ extern struct device __device_APPLICATION_start[];
 extern struct device __device_init_end[];
 
 // KID 20170527
+// KID 20170529
 static struct device *config_levels[] = {
 	__device_PRE_KERNEL_1_start,
 	__device_PRE_KERNEL_2_start,
