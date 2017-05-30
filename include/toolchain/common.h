@@ -94,7 +94,13 @@
 #endif
 
 // KID 20170519
+// KID 20170530
+// _STRINGIFY(30): "30"
 #define _STRINGIFY(x) #x
+// KID 20170530
+// _STRINGIFY(30): "30"
+//
+// STRINGIFY(30): "30"
 #define STRINGIFY(s) _STRINGIFY(s)
 
 /* Indicate that an array will be used for stack space. */
@@ -108,7 +114,19 @@
 #endif
 
 /* concatenate the values of the arguments into one */
+// KID 20170530
+// _DO_CONCAT(sys_init_, init_static_pools): sys_init_init_static_pools
+// KID 20170530
+// _DO_CONCAT(sys_init_init_static_pools, __COUNTER__): sys_init_init_static_pools0
 #define _DO_CONCAT(x, y) x ## y
+// KID 20170530
+// _DO_CONCAT(sys_init_, init_static_pools): sys_init_init_static_pools
+//
+// _CONCAT(sys_init_, init_static_pools): sys_init_init_static_pools
+// KID 20170530
+// _DO_CONCAT(sys_init_init_static_pools, __COUNTER__): sys_init_init_static_pools0
+//
+// _CONCAT(sys_init_init_static_pools, __COUNTER__): sys_init_init_static_pools0
 #define _CONCAT(x, y) _DO_CONCAT(x, y)
 
 #ifndef BUILD_ASSERT

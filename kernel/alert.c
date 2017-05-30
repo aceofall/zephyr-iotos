@@ -22,7 +22,7 @@ extern struct k_alert _k_alert_list_end[];
 
 struct k_alert *_trace_list_k_alert;
 
-#ifdef CONFIG_OBJECT_TRACING
+#ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 
 /*
  * Complete initialization of statically defined alerts.

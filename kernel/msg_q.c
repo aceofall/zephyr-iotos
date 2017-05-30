@@ -23,7 +23,7 @@
 extern struct k_msgq _k_msgq_list_start[];
 extern struct k_msgq _k_msgq_list_end[];
 
-#ifdef CONFIG_OBJECT_TRACING
+#ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 
 struct k_msgq *_trace_list_k_msgq;
 

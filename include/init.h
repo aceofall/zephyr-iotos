@@ -33,6 +33,11 @@ extern "C" {
 /* Counter use to avoid issues if two or more system devices are declared
  * in the same C file with the same init function
  */
+// KID 20170530
+// _CONCAT(sys_init_, init_static_pools): sys_init_init_static_pools
+// _CONCAT(sys_init_init_static_pools, __COUNTER__): sys_init_init_static_pools0
+//
+// _SYS_NAME(init_static_pools): sys_init_init_static_pools0
 #define _SYS_NAME(init_fn) _CONCAT(_CONCAT(sys_init_, init_fn), __COUNTER__)
 
 /**
@@ -49,6 +54,124 @@ extern "C" {
  * @param prio Priority within the selected initialization level. See
  * DEVICE_INIT for details.
  */
+// KID 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
+// _SYS_NAME(init_static_pools): sys_init_init_static_pools0
+// DEVICE_INIT(sys_init_init_static_pools0, "", init_static_pools, NULL, NULL, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_static_pools),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_static_pools0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
+//
+// SYS_INIT(init_static_pools, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_static_pools),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_static_pools0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
+// ARM10C 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
+//
+// SYS_INIT(init_pipes_module, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_pipes_module0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_pipes_module),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_pipes_module0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_pipes_module0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
+// ARM10C 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
+//
+// SYS_INIT(init_mem_slab_module, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_mem_slab_module0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_mem_slab_module),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_mem_slab_module0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_mem_slab_module0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
+// KID 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
+//
+// SYS_INIT(init_mbox_module, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_mbox_module0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_mbox_module),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_mbox_module0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_mbox_module0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
+// KID 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_DEFAULT: 40
+//
+// SYS_INIT(init_cache, PRE_KERNEL_1, 40);
+// static struct device_config __config_sys_init_init_cache0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_cache),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_cache0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "40"))) = {
+// 	 .config = &__config_sys_init_init_cache0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
+// KID 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_DEFAULT: 40
+//
+// SYS_INIT(_loapic_init, PRE_KERNEL_1, 40):
+// static struct device_config __config_sys_init__loapic_init0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (_loapic_init),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init__loapic_init0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "40"))) = {
+// 	 .config = &__config_sys_init__loapic_init0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
+// KID 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_DEFAULT: 40
+//
+// SYS_INIT(_ioapic_init, PRE_KERNEL_1, 40):
+// static struct device_config __config_sys_init__ioapic_init0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (_ioapic_init),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init__ioapic_init0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "40"))) = {
+// 	 .config = &__config_sys_init__ioapic_init0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 #define SYS_INIT(init_fn, level, prio) \
 	DEVICE_INIT(_SYS_NAME(init_fn), "", init_fn, NULL, NULL, level, prio)
 

@@ -43,7 +43,7 @@
 extern struct k_mutex _k_mutex_list_start[];
 extern struct k_mutex _k_mutex_list_end[];
 
-#ifdef CONFIG_OBJECT_TRACING
+#ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 
 struct k_mutex *_trace_list_k_mutex;
 

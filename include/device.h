@@ -95,7 +95,24 @@ static const int _INIT_LEVEL_APPLICATION = 1;
  * during initialization.
  */
 
-#ifndef CONFIG_DEVICE_POWER_MANAGEMENT
+#ifndef CONFIG_DEVICE_POWER_MANAGEMENT // CONFIG_DEVICE_POWER_MANAGEMENT=n
+// KID 20170530
+// _CONCAT(__config_, sys_init_init_static_pools0): __config_sys_init_init_static_pools0
+// _CONCAT(__device_, sys_init_init_static_pools0): __device_sys_init_init_static_pools0
+// STRINGIFY(30): "30"
+//
+// DEVICE_AND_API_INIT(sys_init_init_static_pools0, "", init_static_pools, NULL, NULL, PRE_KERNEL_1, 30, NULL):
+// static struct device_config __config_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_static_pools),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_static_pools0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 #define DEVICE_AND_API_INIT(dev_name, drv_name, init_fn, data, cfg_info, \
 			    level, prio, api) \
 	\
@@ -155,6 +172,32 @@ static const int _INIT_LEVEL_APPLICATION = 1;
 		      prio, api)
 #endif
 
+// KID 20170530
+// DEVICE_AND_API_INIT(sys_init_init_static_pools0, "", init_static_pools, NULL, NULL, PRE_KERNEL_1, 30, NULL):
+// static struct device_config __config_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_static_pools),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_static_pools0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
+//
+// DEVICE_INIT(sys_init_init_static_pools0, "", init_static_pools, NULL, NULL, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_static_pools),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_static_pools0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 #define DEVICE_INIT(dev_name, drv_name, init_fn, data, cfg_info, level, prio) \
 	DEVICE_AND_API_INIT(dev_name, drv_name, init_fn, data, cfg_info, \
 			    level, prio, NULL)

@@ -21,7 +21,7 @@
 extern struct k_stack _k_stack_list_start[];
 extern struct k_stack _k_stack_list_end[];
 
-#ifdef CONFIG_OBJECT_TRACING
+#ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 
 struct k_stack *_trace_list_k_stack;
 

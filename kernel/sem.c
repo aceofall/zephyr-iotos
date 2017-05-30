@@ -29,7 +29,7 @@
 extern struct k_sem _k_sem_list_start[];
 extern struct k_sem _k_sem_list_end[];
 
-#ifdef CONFIG_OBJECT_TRACING
+#ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 
 struct k_sem *_trace_list_k_sem;
 

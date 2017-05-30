@@ -55,7 +55,7 @@ struct k_mbox *_trace_list_k_mbox;
 #endif	/* CONFIG_OBJECT_TRACING */
 
 #if (CONFIG_NUM_MBOX_ASYNC_MSGS > 0) || \
-	defined(CONFIG_OBJECT_TRACING)
+	defined(CONFIG_OBJECT_TRACING) // CONFIG_NUM_MBOX_ASYNC_MSGS=10, CONFIG_OBJECT_TRACING=n
 
 /*
  * Do run-time initialization of mailbox object subsystem.
@@ -98,6 +98,21 @@ static int init_mbox_module(struct device *dev)
 	return 0;
 }
 
+// KID 20170529
+// CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
+//
+// SYS_INIT(init_mbox_module, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_mbox_module0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_mbox_module),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_mbox_module0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_mbox_module0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 SYS_INIT(init_mbox_module, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS);
 
 #endif /* CONFIG_NUM_MBOX_ASYNC_MSGS or CONFIG_OBJECT_TRACING */

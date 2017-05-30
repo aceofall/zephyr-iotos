@@ -415,7 +415,7 @@ int __irq_controller_isr_vector_get(void)
 	return -1;
 }
 
-#ifdef CONFIG_DEVICE_POWER_MANAGEMENT
+#ifdef CONFIG_DEVICE_POWER_MANAGEMENT // CONFIG_DEVICE_POWER_MANAGEMENT=n
 static int loapic_suspend(struct device *port)
 {
 	volatile int *pLvt; /* pointer to local vector table */
@@ -499,6 +499,21 @@ static int loapic_device_ctrl(struct device *port, u32_t ctrl_command,
 SYS_DEVICE_DEFINE("loapic", _loapic_init, loapic_device_ctrl, PRE_KERNEL_1,
 		  CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 #else
+// KID 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_DEFAULT: 40
+//
+// SYS_INIT(_loapic_init, PRE_KERNEL_1, 40):
+// static struct device_config __config_sys_init__loapic_init0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (_loapic_init),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init__loapic_init0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "40"))) = {
+// 	 .config = &__config_sys_init__loapic_init0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 SYS_INIT(_loapic_init, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 #endif   /* CONFIG_DEVICE_POWER_MANAGEMENT */
 

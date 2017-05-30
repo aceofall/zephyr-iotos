@@ -432,9 +432,24 @@ static void _IoApicRedUpdateLo(unsigned int irq,
 }
 
 
-#ifdef CONFIG_DEVICE_POWER_MANAGEMENT
+#ifdef CONFIG_DEVICE_POWER_MANAGEMENT // CONFIG_DEVICE_POWER_MANAGEMENT=n
 SYS_DEVICE_DEFINE("ioapic", _ioapic_init, ioapic_device_ctrl, PRE_KERNEL_1,
 		  CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 #else
+// KID 20170530
+// CONFIG_KERNEL_INIT_PRIORITY_DEFAULT: 40
+//
+// SYS_INIT(_ioapic_init, PRE_KERNEL_1, 40):
+// static struct device_config __config_sys_init__ioapic_init0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (_ioapic_init),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init__ioapic_init0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "40"))) = {
+// 	 .config = &__config_sys_init__ioapic_init0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 SYS_INIT(_ioapic_init, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 #endif

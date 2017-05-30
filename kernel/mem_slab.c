@@ -66,6 +66,21 @@ static int init_mem_slab_module(struct device *dev)
 	return 0;
 }
 
+// KID 20170529
+// CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
+//
+// SYS_INIT(init_mem_slab_module, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_mem_slab_module0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_mem_slab_module),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_mem_slab_module0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_mem_slab_module0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 SYS_INIT(init_mem_slab_module, PRE_KERNEL_1,
 	 CONFIG_KERNEL_INIT_PRIORITY_OBJECTS);
 

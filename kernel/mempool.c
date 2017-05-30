@@ -122,6 +122,7 @@ static void init_mem_pool(struct k_mem_pool *p)
 	}
 }
 
+// KID 20170530
 int init_static_pools(struct device *unused)
 {
 	ARG_UNUSED(unused);
@@ -134,6 +135,21 @@ int init_static_pools(struct device *unused)
 	return 0;
 }
 
+// KID 20170529
+// CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
+//
+// SYS_INIT(init_static_pools, PRE_KERNEL_1, 30):
+// static struct device_config __config_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_static_pools),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_static_pools0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "30"))) = {
+// 	 .config = &__config_sys_init_init_static_pools0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 SYS_INIT(init_static_pools, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS);
 
 /* A note on synchronization: all manipulation of the actual pool data

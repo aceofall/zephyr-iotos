@@ -54,7 +54,7 @@ _sys_cache_flush_sig(_cache_flush_clflush)
 
 #endif /* CONFIG_CLFLUSH_INSTRUCTION_SUPPORTED || CLFLUSH_DETECT */
 
-#if defined(CONFIG_CLFLUSH_DETECT) || defined(CONFIG_CACHE_LINE_SIZE_DETECT)
+#if defined(CONFIG_CLFLUSH_DETECT) || defined(CONFIG_CACHE_LINE_SIZE_DETECT) // CONFIG_CLFLUSH_DETECT=n, CONFIG_CACHE_LINE_SIZE_DETECT=y
 
 #include <init.h>
 
@@ -98,6 +98,21 @@ static int init_cache(struct device *unused)
 	return 0;
 }
 
+// KID 20170529
+// CONFIG_KERNEL_INIT_PRIORITY_DEFAULT: 40
+//
+// SYS_INIT(init_cache, PRE_KERNEL_1, 40);
+// static struct device_config __config_sys_init_init_cache0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (init_cache),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_init_cache0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "40"))) = {
+// 	 .config = &__config_sys_init_init_cache0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 SYS_INIT(init_cache, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);
 
 #endif /* CONFIG_CLFLUSH_DETECT || CONFIG_CACHE_LINE_SIZE_DETECT */
