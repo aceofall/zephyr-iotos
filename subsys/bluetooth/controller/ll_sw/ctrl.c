@@ -738,8 +738,7 @@ static inline u32_t isr_rx_adv(u8_t devmatch_ok, u8_t irkmatch_ok,
 		struct connection *conn;
 		u32_t ticker_status;
 
-		if (IS_ENABLED(CONFIG_BLUETOOTH_CONTROLLER_CHAN_SEL_2) &&
-		    pdu_adv->chan_sel) {
+		if (IS_ENABLED(CONFIG_BLUETOOTH_CONTROLLER_CHAN_SEL_2)) {
 			radio_pdu_node_rx = packet_rx_reserve_get(4);
 		} else {
 			radio_pdu_node_rx = packet_rx_reserve_get(3);
@@ -1005,8 +1004,7 @@ static inline u32_t isr_rx_obs(u8_t irkmatch_id, u8_t rssi_ready)
 		u32_t ticker_status;
 		u32_t conn_space_us;
 
-		if (IS_ENABLED(CONFIG_BLUETOOTH_CONTROLLER_CHAN_SEL_2) &&
-		    pdu_adv_rx->chan_sel) {
+		if (IS_ENABLED(CONFIG_BLUETOOTH_CONTROLLER_CHAN_SEL_2)) {
 			radio_pdu_node_rx = packet_rx_reserve_get(4);
 		} else {
 			radio_pdu_node_rx = packet_rx_reserve_get(3);
@@ -5605,8 +5603,15 @@ static inline void event_enc_prep(struct connection *conn)
 			/* send enc start resp */
 			start_enc_rsp_send(conn, pdu_ctrl_tx);
 		}
+
 		/* slave send reject ind or start enc req at control priority */
+
+#if defined(CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC)
+		else {
+#else /* !CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC */
 		else if (!conn->pause_tx || conn->refresh) {
+#endif /* !CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC */
+
 			/* ll ctrl packet */
 			pdu_ctrl_tx->ll_id = PDU_DATA_LLID_CTRL;
 
@@ -5631,7 +5636,7 @@ static inline void event_enc_prep(struct connection *conn)
 				 * controller.
 				 */
 				enc_rsp_send(conn);
-#endif /* CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC */
+#endif /* !CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC */
 
 				/* calc the Session Key */
 				ecb_encrypt(&conn->llcp.encryption.ltk[0],
@@ -5670,9 +5675,9 @@ static inline void event_enc_prep(struct connection *conn)
 				pdu_ctrl_tx->payload.llctrl.opcode =
 					PDU_DATA_LLCTRL_TYPE_START_ENC_REQ;
 			}
-		} else {
 
 #if !defined(CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC)
+		} else {
 			/* enable transmit encryption */
 			_radio.conn_curr->enc_tx = 1;
 
@@ -5681,13 +5686,7 @@ static inline void event_enc_prep(struct connection *conn)
 			/* resume data packet rx and tx */
 			_radio.conn_curr->pause_rx = 0;
 			_radio.conn_curr->pause_tx = 0;
-#else /* CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC */
-			/* Fast Enc implementation shall have enqueued the
-			 * start enc rsp in the radio ISR itself, we should
-			 * not get here.
-			 */
-			LL_ASSERT(0);
-#endif /* CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC */
+#endif /* !CONFIG_BLUETOOTH_CONTROLLER_FAST_ENC */
 
 		}
 
