@@ -11,6 +11,7 @@
 #include <string.h>
 
 /* Linker-defined symbols bound the static pool structs */
+// KID 20170531
 extern struct k_mem_pool _k_mem_pool_list_start[];
 extern struct k_mem_pool _k_mem_pool_list_end[];
 
@@ -122,17 +123,26 @@ static void init_mem_pool(struct k_mem_pool *p)
 	}
 }
 
-// KID 20170530
+// KID 20170531
+// __device_sys_init_init_static_pools0
 int init_static_pools(struct device *unused)
 {
+	// unused: __device_sys_init_init_static_pools0
 	ARG_UNUSED(unused);
 	struct k_mem_pool *p;
 
+	// NOTE:
+	// include/arch/x86/linker.ld 파일 참고
+	// section "_k_mem_pool.*" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
+	// compiled 된 코드 기준으로 mempool 용 코드가 없는 상태임. 이대로 코드 분석 진행
+
+	// p: _k_mem_pool_list_start, _k_mem_pool_list_end: _k_mem_pool_list_start
 	for (p = _k_mem_pool_list_start; p < _k_mem_pool_list_end; p++) {
 		init_mem_pool(p);
 	}
 
 	return 0;
+	// return 0
 }
 
 // KID 20170529
@@ -380,7 +390,7 @@ void k_mem_pool_free(struct k_mem_block *block)
 	}
 }
 
-#if (CONFIG_HEAP_MEM_POOL_SIZE > 0)
+#if (CONFIG_HEAP_MEM_POOL_SIZE > 0) // CONFIG_HEAP_MEM_POOL_SIZE=0
 
 /*
  * Heap is defined using HEAP_MEM_POOL_SIZE configuration option.

@@ -82,7 +82,7 @@ extern "C" {
 // 	 .driver_api = NULL,
 // 	 .driver_data = NULL
 // }
-// ARM10C 20170530
+// KID 20170530
 // CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
 //
 // SYS_INIT(init_pipes_module, PRE_KERNEL_1, 30):
@@ -97,7 +97,7 @@ extern "C" {
 // 	 .driver_api = NULL,
 // 	 .driver_data = NULL
 // }
-// ARM10C 20170530
+// KID 20170530
 // CONFIG_KERNEL_INIT_PRIORITY_OBJECTS: 30
 //
 // SYS_INIT(init_mem_slab_module, PRE_KERNEL_1, 30):

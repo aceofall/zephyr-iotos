@@ -3215,6 +3215,7 @@ struct k_mem_pool_lvl {
 	sys_dlist_t free_list;
 };
 
+// KID 20170531
 struct k_mem_pool {
 	void *buf;
 	size_t max_sz;

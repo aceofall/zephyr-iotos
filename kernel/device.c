@@ -53,13 +53,21 @@ void _sys_device_do_config_level(int level)
 {
 	struct device *info;
 
+	// NOTE:
+	// include/arch/x86/linker.ld 파일 참고
+	// section ".init_PRE_KERNEL_1[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
+
 	// level: 0, config_levels[0]: __device_PRE_KERNEL_1_start, config_levels[1]: __device_PRE_KERNEL_2_start
 	for (info = config_levels[level]; info < config_levels[level+1];
 								info++) {
-		// info->config: (__device_PRE_KERNEL_1_start)->config
+		// info: __device_sys_init_init_static_pools0
+		// info->config: (__device_sys_init_init_static_pools0))->config: &__config_sys_init_init_static_pools0
 		struct device_config *device = info->config;
-		// device: (__device_PRE_KERNEL_1_start)->config
+		// device: &__config_sys_init_init_static_pools0
 
+		// device->init: (&__config_sys_init_init_static_pools0)->init: init_static_pools,
+		// info: __device_sys_init_init_static_pools0
+		// init_static_pools(__device_sys_init_init_static_pools0): 0
 		device->init(info);
 	}
 }
