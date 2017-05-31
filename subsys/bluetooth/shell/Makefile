@@ -1,1 +1,2 @@
-obj-$(CONFIG_BLUETOOTH_SHELL) += bt.o
+obj-y += bt.o
+obj-y += gatt.o
