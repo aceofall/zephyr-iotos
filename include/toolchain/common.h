@@ -89,7 +89,9 @@
 
 /* force inlining a function */
 
-#if !defined(_ASMLANGUAGE)
+#if !defined(_ASMLANGUAGE) // undefined 
+// KID 20170601
+// ALWAYS_INLINE: inline __attribute__((always_inline))
   #define ALWAYS_INLINE inline __attribute__((always_inline))
 #endif
 

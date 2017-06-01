@@ -108,10 +108,11 @@ extern "C" {
 
 typedef sys_dlist_t _wait_q_t;
 
-#ifdef CONFIG_OBJECT_TRACING
+#ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 #define _OBJECT_TRACING_NEXT_PTR(type) struct type *__next
 #define _OBJECT_TRACING_INIT .__next = NULL,
 #else
+// KID 20170601
 #define _OBJECT_TRACING_INIT
 #define _OBJECT_TRACING_NEXT_PTR(type)
 #endif
@@ -177,6 +178,7 @@ struct __thread_entry {
 // KID 20170517
 // KID 20170519
 // KID 20170522
+// KID 20170601
 // sizeof(struct _thread_base): 40 bytes
 struct _thread_base {
 
@@ -245,6 +247,7 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 // KID 20170523
 // KID 20170524
 // KID 20170525
+// KID 20170601
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct _thread_arch): 0 bytes
 // sizeof(struct k_thread): 56 bytes
@@ -1761,6 +1764,7 @@ struct k_lifo {
  * @cond INTERNAL_HIDDEN
  */
 
+// KID 20170601
 struct k_stack {
 	_wait_q_t wait_q;
 	u32_t *base, *next, *top;
@@ -1768,6 +1772,18 @@ struct k_stack {
 	_OBJECT_TRACING_NEXT_PTR(k_stack);
 };
 
+// KID 20170601
+// SYS_DLIST_STATIC_INIT(&pipe_async_msgs.wait_q):
+// {{(&pipe_async_msgs.wait_q)}, {(&pipe_async_msgs.wait_q)}}
+// _OBJECT_TRACING_INIT:
+//
+// K_STACK_INITIALIZER(pipe_async_msgs, _k_stack_buf_pipe_async_msgs, 10):
+// {
+//     .wait_q = {{(&pipe_async_msgs.wait_q)}, {(&pipe_async_msgs.wait_q)}},
+//     .base = _k_stack_buf_pipe_async_msgs,
+//     .next = _k_stack_buf_pipe_async_msgs,
+//     .top = _k_stack_buf_pipe_async_msgs + 10,
+// }
 #define K_STACK_INITIALIZER(obj, stack_buffer, stack_num_entries) \
 	{ \
 	.wait_q = SYS_DLIST_STATIC_INIT(&obj.wait_q), \
@@ -1844,6 +1860,28 @@ extern int k_stack_pop(struct k_stack *stack, u32_t *data, s32_t timeout);
  * @param name Name of the stack.
  * @param stack_num_entries Maximum number of values that can be stacked.
  */
+// KID 20170601
+// CONFIG_NUM_PIPE_ASYNC_MSGS: 10
+// __noinit: __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
+// __in_section(_k_stack, static, pipe_async_msgs):
+// __attribute__((section("." "_k_stack" "." "static" "." "pipe_async_msgs")))
+// K_STACK_INITIALIZER(pipe_async_msgs, _k_stack_buf_pipe_async_msgs, 10):
+// {
+//     .wait_q = {{(&pipe_async_msgs.wait_q)}, {(&pipe_async_msgs.wait_q)}},
+//     .base = _k_stack_buf_pipe_async_msgs,
+//     .next = _k_stack_buf_pipe_async_msgs,
+//     .top = _k_stack_buf_pipe_async_msgs + 10,
+// }
+//
+// K_STACK_DEFINE(pipe_async_msgs, 10):
+// u32_t __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) _k_stack_buf_pipe_async_msgs[10];
+// struct k_stack pipe_async_msgs __attribute__((section("." "_k_stack" "." "static" "." "pipe_async_msgs"))) =
+// {
+//     .wait_q = {{(&pipe_async_msgs.wait_q)}, {(&pipe_async_msgs.wait_q)}},
+//     .base = _k_stack_buf_pipe_async_msgs,
+//     .next = _k_stack_buf_pipe_async_msgs,
+//     .top = _k_stack_buf_pipe_async_msgs + 10,
+// }
 #define K_STACK_DEFINE(name, stack_num_entries)                \
 	u32_t __noinit                                      \
 		_k_stack_buf_##name[stack_num_entries];        \

@@ -53,14 +53,20 @@ void k_stack_init(struct k_stack *stack, u32_t *buffer, int num_entries)
 	SYS_TRACING_OBJ_INIT(k_stack, stack);
 }
 
+// KID 20170601
+// &pipe_async_msgs, &async_msg[0]
 void k_stack_push(struct k_stack *stack, u32_t data)
 {
 	struct k_thread *first_pending_thread;
 	unsigned int key;
 
-	__ASSERT(stack->next != stack->top, "stack is full");
+	// stack->next: (&pipe_async_msgs)->next: _k_stack_buf_pipe_async_msgs,
+	// stack->top: (&pipe_async_msgs)->top: _k_stack_buf_pipe_async_msgs + 10
+	__ASSERT(stack->next != stack->top, "stack is full"); // null function
 
+	// irq_lock(): eflags 값
 	key = irq_lock();
+	// key: eflags 값
 
 	first_pending_thread = _unpend_first_thread(&stack->wait_q);
 

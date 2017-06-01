@@ -70,13 +70,21 @@ do {                                                                    \
 //
 // ___in_section(noinit, _FILE_PATH_HASH, __COUNTER__): 
 // __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
+//
+// KID 20170601
+// ___in_section(_k_stack, static, pipe_async_msgs):
+// __attribute__((section("." "_k_stack" "." "static" "." "pipe_async_msgs")))
 #define ___in_section(a, b, c) \
 	__attribute__((section("." _STRINGIFY(a)			\
 				"." _STRINGIFY(b)			\
 				"." _STRINGIFY(c))))
+// KID 20170601
+// __in_section(_k_stack, static, pipe_async_msgs):
+// __attribute__((section("." "_k_stack" "." "static" "." "pipe_async_msgs")))
 #define __in_section(a, b, c) ___in_section(a, b, c)
 
 // KID 20170519
+// KID 20170601
 // NOINIT: noinit
 // ___in_section(noinit, _FILE_PATH_HASH, __COUNTER__): 
 // __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))

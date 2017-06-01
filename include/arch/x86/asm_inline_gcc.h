@@ -39,6 +39,9 @@ extern "C" {
  * "interrupt disable state" prior to the call.
  */
 
+// KID 20170601
+// https://stackoverflow.com/questions/41044421/
+// is-there-a-way-to-tell-gcc-not-to-reorder-any-instructions-not-just-load-stores
 static ALWAYS_INLINE unsigned int _do_irq_lock(void)
 {
 	unsigned int key;
@@ -51,8 +54,13 @@ static ALWAYS_INLINE unsigned int _do_irq_lock(void)
 		:
 		: "memory"
 		);
+	// "pushfl;" : push %eflags onto stack
+	// "cli;" : clear interrupt flag 
+	// "popl key;"
 
+	// key: eflags 값
 	return key;
+	// return eflags 값
 }
 
 

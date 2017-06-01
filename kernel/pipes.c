@@ -19,16 +19,18 @@
 #include <misc/dlist.h>
 #include <init.h>
 
+// KID 20170601
 struct k_pipe_desc {
 	unsigned char *buffer;           /* Position in src/dest buffer */
 	size_t bytes_to_xfer;            /* # bytes left to transfer */
-#if (CONFIG_NUM_PIPE_ASYNC_MSGS > 0)
+#if (CONFIG_NUM_PIPE_ASYNC_MSGS > 0) // CONFIG_NUM_PIPE_ASYNC_MSGS: 10
 	struct k_mem_block *block;       /* Pointer to memory block */
 	struct k_mem_block  copy_block;  /* For backwards compatibility */
 	struct k_sem *sem;               /* Semaphore to give if async */
 #endif
 };
 
+// KID 20170601
 struct k_pipe_async {
 	struct _thread_base thread;   /* Dummy thread object */
 	struct k_pipe_desc  desc;     /* Pipe message descriptor */
@@ -41,12 +43,27 @@ extern struct k_pipe _k_pipe_list_end[];
 struct k_pipe *_trace_list_k_pipe;
 #endif	/* CONFIG_OBJECT_TRACING */
 
-#if (CONFIG_NUM_PIPE_ASYNC_MSGS > 0)
+#if (CONFIG_NUM_PIPE_ASYNC_MSGS > 0) // CONFIG_NUM_PIPE_ASYNC_MSGS: 10
 
 /* Array of asynchronous message descriptors */
+// KID 20170601
+// __noinit: __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
+// CONFIG_NUM_PIPE_ASYNC_MSGS: 10
 static struct k_pipe_async __noinit async_msg[CONFIG_NUM_PIPE_ASYNC_MSGS];
 
 /* stack of unused asynchronous message descriptors */
+// KID 20170601
+// CONFIG_NUM_PIPE_ASYNC_MSGS: 10
+//
+// K_STACK_DEFINE(pipe_async_msgs, 10):
+// u32_t __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) _k_stack_buf_pipe_async_msgs[10];
+// struct k_stack pipe_async_msgs __attribute__((section("." "_k_stack" "." "static" "." "pipe_async_msgs"))) =
+// {
+//     .wait_q = {{(&pipe_async_msgs.wait_q)}, {(&pipe_async_msgs.wait_q)}},
+//     .base = _k_stack_buf_pipe_async_msgs,
+//     .next = _k_stack_buf_pipe_async_msgs,
+//     .top = _k_stack_buf_pipe_async_msgs + 10,
+// }
 K_STACK_DEFINE(pipe_async_msgs, CONFIG_NUM_PIPE_ASYNC_MSGS);
 
 /* Allocate an asynchronous message descriptor */
@@ -85,11 +102,14 @@ static void _pipe_async_finish(struct k_pipe_async *async_desc)
 /*
  * Do run-time initialization of pipe object subsystem.
  */
+// KID 20170601
+// __device_sys_init_init_pipes_module0
 static int init_pipes_module(struct device *dev)
 {
+	// dev: __device_sys_init_init_pipes_module0
 	ARG_UNUSED(dev);
 
-#if (CONFIG_NUM_PIPE_ASYNC_MSGS > 0)
+#if (CONFIG_NUM_PIPE_ASYNC_MSGS > 0) // CONFIG_NUM_PIPE_ASYNC_MSGS=10
 	/*
 	 * Create pool of asynchronous pipe message descriptors.
 	 *
@@ -102,9 +122,17 @@ static int init_pipes_module(struct device *dev)
 	 * that governs access to them.
 	 */
 
+	// CONFIG_NUM_PIPE_ASYNC_MSGS: 10
 	for (int i = 0; i < CONFIG_NUM_PIPE_ASYNC_MSGS; i++) {
+		// i: 0, _THREAD_DUMMY: 0x1
 		async_msg[i].thread.thread_state = _THREAD_DUMMY;
+		// async_msg[0].thread.thread_state: 0x1
+
+		// i: 0
 		async_msg[i].thread.swap_data = &async_msg[i].desc;
+		// async_msg[0].thread.swap_data: &async_msg[0].desc
+
+		// i: 0
 		k_stack_push(&pipe_async_msgs, (u32_t)&async_msg[i]);
 	}
 #endif /* CONFIG_NUM_PIPE_ASYNC_MSGS > 0 */

@@ -208,6 +208,9 @@ static inline void sys_dlist_init(sys_dlist_t *list)
 	// list->tail: (&_kernel.timeout_q)->tail: &_kernel.timeout_q
 }
 
+// KID 20170601
+// SYS_DLIST_STATIC_INIT(&pipe_async_msgs.wait_q):
+// {{(&pipe_async_msgs.wait_q)}, {(&pipe_async_msgs.wait_q)}}
 #define SYS_DLIST_STATIC_INIT(ptr_to_list) {{(ptr_to_list)}, {(ptr_to_list)}}
 
 /**

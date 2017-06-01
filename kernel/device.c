@@ -62,12 +62,19 @@ void _sys_device_do_config_level(int level)
 								info++) {
 		// info: __device_sys_init_init_static_pools0
 		// info->config: (__device_sys_init_init_static_pools0))->config: &__config_sys_init_init_static_pools0
+		// info: __device_sys_init_init_pipes_module0
+		// info->config: (__device_sys_init_init_pipes_module0))->config: &__config_sys_init_init_pipes_module0
 		struct device_config *device = info->config;
 		// device: &__config_sys_init_init_static_pools0
+		// device: &__config_sys_init_init_pipes_module0
 
 		// device->init: (&__config_sys_init_init_static_pools0)->init: init_static_pools,
 		// info: __device_sys_init_init_static_pools0
 		// init_static_pools(__device_sys_init_init_static_pools0): 0
+		//
+		// device->init: (&__config_sys_init_init_pipes_module0)->init: init_pipes_module,
+		// info: __device_sys_init_init_pipes_module0
+		// init_pipes_module(__device_sys_init_init_pipes_module0): 0
 		device->init(info);
 	}
 }

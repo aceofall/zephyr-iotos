@@ -67,7 +67,7 @@
 #endif
 #endif
 
-#ifdef __ASSERT_ON
+#ifdef __ASSERT_ON // undefined
 #if (__ASSERT_ON < 0) || (__ASSERT_ON > 2)
 #error "Invalid __ASSERT() level: must be between 0 and 2"
 #endif
@@ -104,6 +104,7 @@
 #endif
 #else
 // KID 20170519
+// KID 20170601
 #define __ASSERT(test, fmt, ...) \
 	do {/* nothing */        \
 	} while ((0))

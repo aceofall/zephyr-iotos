@@ -40,10 +40,11 @@ extern "C" {
 
 #ifndef _ASMLANGUAGE
 
-#ifdef CONFIG_INT_LATENCY_BENCHMARK
+#ifdef CONFIG_INT_LATENCY_BENCHMARK // CONFIG_INT_LATENCY_BENCHMARK=n
 void _int_latency_start(void);
 void _int_latency_stop(void);
 #else
+// KID 20170601
 #define _int_latency_start()  do { } while (0)
 #define _int_latency_stop()   do { } while (0)
 #endif
@@ -368,13 +369,19 @@ typedef struct nanoIsf {
  *
  */
 
+// KID 20170601
+// ALWAYS_INLINE: inline __attribute__((always_inline))
 static ALWAYS_INLINE unsigned int _arch_irq_lock(void)
 {
+	// _do_irq_lock(): eflags 값
 	unsigned int key = _do_irq_lock();
+	// key: eflags 값
 
-	_int_latency_start();
+	_int_latency_start(); // null function
 
+	// key: eflags 값
 	return key;
+	// return eflags 값
 }
 
 

@@ -14,10 +14,12 @@
 #if !defined(_ASMLANGUAGE)
 
 // KID 20170519
+// KID 20170601
 // NOINIT: noinit
 //
 // __in_section_unique(noinit):
 // __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
+// __noinit: __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
 #define __noinit		__in_section_unique(NOINIT)
 #define __irq_vector_table	_GENERIC_SECTION(IRQ_VECTOR_TABLE)
 #define __sw_isr_table		_GENERIC_SECTION(SW_ISR_TABLE)

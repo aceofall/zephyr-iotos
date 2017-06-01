@@ -190,6 +190,7 @@ extern "C" {
  *
  * @return Lock-out key.
  */
+// KID 20170601
 #define irq_lock() _arch_irq_lock()
 
 /**
