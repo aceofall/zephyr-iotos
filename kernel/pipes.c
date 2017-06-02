@@ -31,6 +31,7 @@ struct k_pipe_desc {
 };
 
 // KID 20170601
+// KID 20170602
 struct k_pipe_async {
 	struct _thread_base thread;   /* Dummy thread object */
 	struct k_pipe_desc  desc;     /* Pipe message descriptor */
@@ -47,6 +48,7 @@ struct k_pipe *_trace_list_k_pipe;
 
 /* Array of asynchronous message descriptors */
 // KID 20170601
+// KID 20170602
 // __noinit: __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
 // CONFIG_NUM_PIPE_ASYNC_MSGS: 10
 static struct k_pipe_async __noinit async_msg[CONFIG_NUM_PIPE_ASYNC_MSGS];
@@ -134,12 +136,26 @@ static int init_pipes_module(struct device *dev)
 
 		// i: 0
 		k_stack_push(&pipe_async_msgs, (u32_t)&async_msg[i]);
+
+		// k_stack_push 에서 한일:
+		// _k_stack_buf_pipe_async_msgs[0]: (u32_t)&async_msg[0]
+		// (&pipe_async_msgs)->next: &_k_stack_buf_pipe_async_msgs[1]
+
+		// i: 1...9 loop 수행
 	}
+
+	// 위 loop에서 한일:
+	// async_msg[0...9].thread.thread_state: 0x1
+	// async_msg[0...9].thread.swap_data: &async_msg[0...9].desc
+	//
+	// _k_stack_buf_pipe_async_msgs[0...9]: (u32_t)&async_msg[0...9]
+	// (&pipe_async_msgs)->next: &_k_stack_buf_pipe_async_msgs[9]
+
 #endif /* CONFIG_NUM_PIPE_ASYNC_MSGS > 0 */
 
 	/* Complete initialization of statically defined mailboxes. */
 
-#ifdef CONFIG_OBJECT_TRACING
+#ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 	struct k_pipe *pipe;
 
 	for (pipe = _k_pipe_list_start; pipe < _k_pipe_list_end; pipe++) {

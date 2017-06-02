@@ -202,7 +202,7 @@ u32_t k_uptime_delta_32(s64_t *reftime)
 
 /* handle the expired timeouts in the nano timeout queue */
 
-#ifdef CONFIG_SYS_CLOCK_EXISTS
+#ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
 #include <wait_q.h>
 
 /*
@@ -217,6 +217,7 @@ u32_t k_uptime_delta_32(s64_t *reftime)
  * interrupt.
  */
 
+// KID 20170602
 volatile int _handling_timeouts;
 
 static inline void handle_timeouts(s32_t ticks)

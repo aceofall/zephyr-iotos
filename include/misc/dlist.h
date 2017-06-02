@@ -26,6 +26,7 @@ extern "C" {
 
 // KID 20170517
 // KID 20170527
+// KID 20170602
 // sizeof(struct _dnode): 8 bytes
 struct _dnode {
 	union {
@@ -42,6 +43,7 @@ struct _dnode {
 // KID 20170518
 // KID 20170523
 // KID 20170527
+// KID 20170602
 // sizeof(struct _dnode): 8 bytes
 // sizeof(sys_dlist_t): 8 bytes
 typedef struct _dnode sys_dlist_t;
@@ -249,9 +251,14 @@ static inline int sys_dlist_is_tail(sys_dlist_t *list, sys_dnode_t *node)
  * @return 1 if empty, 0 otherwise
  */
 
+// KID 20170602
+// list: &(&pipe_async_msgs)->wait_q
 static inline int sys_dlist_is_empty(sys_dlist_t *list)
 {
+	// list->head: (&(&pipe_async_msgs)->wait_q)->head: &pipe_async_msgs.wait_q,
+	// list: &(&pipe_async_msgs)->wait_q
 	return list->head == list;
+	// return 1
 }
 
 /**
@@ -275,9 +282,14 @@ static inline int sys_dlist_has_multiple_nodes(sys_dlist_t *list)
  * @return a pointer to the head element, NULL if list is empty
  */
 
+// KID 20170602
+// wait_q: &(&pipe_async_msgs)->wait_q
 static inline sys_dnode_t *sys_dlist_peek_head(sys_dlist_t *list)
 {
+	// list: &(&pipe_async_msgs)->wait_q
+	// sys_dlist_is_empty(&(&pipe_async_msgs)->wait_q): 1
 	return sys_dlist_is_empty(list) ? NULL : list->head;
+	// return NULL
 }
 
 /**

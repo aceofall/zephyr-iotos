@@ -46,6 +46,7 @@ void _int_latency_stop(void);
 #else
 // KID 20170601
 #define _int_latency_start()  do { } while (0)
+// KID 20170602
 #define _int_latency_stop()   do { } while (0)
 #endif
 
@@ -399,15 +400,22 @@ static ALWAYS_INLINE unsigned int _arch_irq_lock(void)
  *
  */
 
+// KID 20170602
+// key: eflags 값
 static ALWAYS_INLINE void _arch_irq_unlock(unsigned int key)
 {
+	// key: eflags 값
 	if (!(key & 0x200)) {
 		return;
 	}
+	// interrupt flag 체크
 
-	_int_latency_stop();
+	_int_latency_stop(); // null function
 
 	_do_irq_unlock();
+
+	// _do_irq_unlock 에서 한일:
+	// Set Interrupt Flag
 }
 
 /**

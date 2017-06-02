@@ -54,7 +54,7 @@ void k_stack_init(struct k_stack *stack, u32_t *buffer, int num_entries)
 }
 
 // KID 20170601
-// &pipe_async_msgs, &async_msg[0]
+// &pipe_async_msgs, (u32_t)&async_msg[0]
 void k_stack_push(struct k_stack *stack, u32_t data)
 {
 	struct k_thread *first_pending_thread;
@@ -68,8 +68,12 @@ void k_stack_push(struct k_stack *stack, u32_t data)
 	key = irq_lock();
 	// key: eflags 값
 
+	// &stack->wait_q: &(&pipe_async_msgs)->wait_q
+	// _unpend_first_thread(&(&pipe_async_msgs)->wait_q): NULL
 	first_pending_thread = _unpend_first_thread(&stack->wait_q);
+	// first_pending_thread: NULL
 
+	// first_pending_thread: NULL
 	if (first_pending_thread) {
 		_abort_thread_timeout(first_pending_thread);
 		_ready_thread(first_pending_thread);
@@ -82,11 +86,21 @@ void k_stack_push(struct k_stack *stack, u32_t data)
 			return;
 		}
 	} else {
+		// *(stack->next): *((&pipe_async_msgs)->next): _k_stack_buf_pipe_async_msgs[0]
+		// data: (u32_t)&async_msg[0]
 		*(stack->next) = data;
+		// _k_stack_buf_pipe_async_msgs[0]: (u32_t)&async_msg[0]
+
+		// stack->next: (&pipe_async_msgs)->next: &_k_stack_buf_pipe_async_msgs[0]
 		stack->next++;
+		// stack->next: (&pipe_async_msgs)->next: &_k_stack_buf_pipe_async_msgs[1]
 	}
 
+	// key: eflags 값
 	irq_unlock(key);
+
+	// irq_unlock 에서 한일:
+	// Set Interrupt Flag
 }
 
 int k_stack_pop(struct k_stack *stack, u32_t *data, s32_t timeout)

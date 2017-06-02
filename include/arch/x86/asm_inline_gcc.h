@@ -76,12 +76,15 @@ static ALWAYS_INLINE unsigned int _do_irq_lock(void)
  * @return N/A
  */
 
+// KID 20170602
+// ALWAYS_INLINE: inline __attribute__((always_inline))
 static ALWAYS_INLINE void _do_irq_unlock(void)
 {
 	__asm__ volatile (
 		"sti;\n\t"
 		: : : "memory"
 		);
+	// Set Interrupt Flag
 }
 
 

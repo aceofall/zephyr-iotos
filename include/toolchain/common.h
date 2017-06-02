@@ -91,6 +91,7 @@
 
 #if !defined(_ASMLANGUAGE) // undefined 
 // KID 20170601
+// KID 20170602
 // ALWAYS_INLINE: inline __attribute__((always_inline))
   #define ALWAYS_INLINE inline __attribute__((always_inline))
 #endif

@@ -583,12 +583,15 @@ static inline struct k_thread *_peek_first_pending_thread(_wait_q_t *wait_q)
 	return (struct k_thread *)sys_dlist_peek_head(wait_q);
 }
 
+// KID 20170602
+// wait_q: &(&pipe_async_msgs)->wait_q, NULL
 static inline struct k_thread *
 _find_first_thread_to_unpend(_wait_q_t *wait_q, struct k_thread *from)
 {
-#ifdef CONFIG_SYS_CLOCK_EXISTS
+#ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
 	extern volatile int _handling_timeouts;
 
+	// _handling_timeouts: 0
 	if (_handling_timeouts) {
 		sys_dlist_t *q = (sys_dlist_t *)wait_q;
 		sys_dnode_t *cur = from ? &from->base.k_q_node : NULL;
@@ -609,7 +612,10 @@ _find_first_thread_to_unpend(_wait_q_t *wait_q, struct k_thread *from)
 	ARG_UNUSED(from);
 #endif
 
+	// wait_q: &(&pipe_async_msgs)->wait_q
+	// sys_dlist_peek_head(&(&pipe_async_msgs)->wait_q): NULL
 	return (struct k_thread *)sys_dlist_peek_head(wait_q);
+	// return NULL
 
 }
 
@@ -625,15 +631,23 @@ static inline void _unpend_thread(struct k_thread *thread)
 
 /* unpend the first thread from a wait queue */
 /* must be called with interrupts locked */
+// KID 20170602
+// &stack->wait_q: &(&pipe_async_msgs)->wait_q
 static inline struct k_thread *_unpend_first_thread(_wait_q_t *wait_q)
 {
+	// wait_q: &(&pipe_async_msgs)->wait_q
+	// _find_first_thread_to_unpend(&(&pipe_async_msgs)->wait_q, NULL): NULL
 	struct k_thread *thread = _find_first_thread_to_unpend(wait_q, NULL);
+	// thread: NULL
 
+	// thread: NULL
 	if (thread) {
 		_unpend_thread(thread);
 	}
 
+	// thread: NULL
 	return thread;
+	// return NULL
 }
 
 #endif /* _ksched__h_ */

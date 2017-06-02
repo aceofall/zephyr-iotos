@@ -76,6 +76,16 @@ void _sys_device_do_config_level(int level)
 		// info: __device_sys_init_init_pipes_module0
 		// init_pipes_module(__device_sys_init_init_pipes_module0): 0
 		device->init(info);
+
+		// init_static_pools 에서 한일:
+		// 없음
+
+		// init_pipes_module 에서 한일;
+		// async_msg[0...9].thread.thread_state: 0x1
+		// async_msg[0...9].thread.swap_data: &async_msg[0...9].desc
+		//
+		// _k_stack_buf_pipe_async_msgs[0...9]: (u32_t)&async_msg[0...9]
+		// (&pipe_async_msgs)->next: &_k_stack_buf_pipe_async_msgs[9]
 	}
 }
 

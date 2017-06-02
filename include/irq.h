@@ -207,6 +207,8 @@ extern "C" {
  *
  * @return N/A
  */
+// KID 20170602
+// key: eflags 값
 #define irq_unlock(key) _arch_irq_unlock(key)
 
 /**
