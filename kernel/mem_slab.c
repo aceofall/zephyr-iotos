@@ -51,8 +51,11 @@ static void create_free_list(struct k_mem_slab *slab)
  *
  * @return N/A
  */
+// KID 20170604
+// __device_sys_init_init_mem_slab_module0
 static int init_mem_slab_module(struct device *dev)
 {
+	// dev: __device_sys_init_init_mem_slab_module0
 	ARG_UNUSED(dev);
 
 	struct k_mem_slab *slab;

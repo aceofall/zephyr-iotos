@@ -3095,6 +3095,7 @@ extern void k_pipe_block_put(struct k_pipe *pipe, struct k_mem_block *block,
  * @cond INTERNAL_HIDDEN
  */
 
+// KID 20170604
 struct k_mem_slab {
 	_wait_q_t wait_q;
 	u32_t num_blocks;
