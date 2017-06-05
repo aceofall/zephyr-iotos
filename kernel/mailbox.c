@@ -19,18 +19,33 @@
 #include <init.h>
 
 
-#if (CONFIG_NUM_MBOX_ASYNC_MSGS > 0)
+#if (CONFIG_NUM_MBOX_ASYNC_MSGS > 0) // CONFIG_NUM_MBOX_ASYNC_MSGS: 10
 
 /* asynchronous message descriptor type */
+// KID 20170605
 struct k_mbox_async {
 	struct _thread_base thread;		/* dummy thread object */
 	struct k_mbox_msg tx_msg;	/* transmit message descriptor */
 };
 
 /* array of asynchronous message descriptors */
+// KID 20170605
+// CONFIG_NUM_MBOX_ASYNC_MSGS: 10
 static struct k_mbox_async __noinit async_msg[CONFIG_NUM_MBOX_ASYNC_MSGS];
 
 /* stack of unused asynchronous message descriptors */
+// KID 20170605
+// CONFIG_NUM_MBOX_ASYNC_MSGS: 10
+//
+// K_STACK_DEFINE(async_msg_free, 10):
+// u32_t __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) _k_stack_buf_async_msg_free[10];
+// struct k_stack async_msg_free __attribute__((section("." "_k_stack" "." "static" "." "async_msg_free"))) =
+// {
+//     .wait_q = {{(&async_msg_free.wait_q)}, {(&async_msg_free.wait_q)}},
+//     .base = _k_stack_buf_async_msg_free,
+//     .next = _k_stack_buf_async_msg_free,
+//     .top = _k_stack_buf_async_msg_free + 10,
+// }
 K_STACK_DEFINE(async_msg_free, CONFIG_NUM_MBOX_ASYNC_MSGS);
 
 /* allocate an asynchronous message descriptor */
@@ -60,11 +75,14 @@ struct k_mbox *_trace_list_k_mbox;
 /*
  * Do run-time initialization of mailbox object subsystem.
  */
+// KID 20170605
+// __device_sys_init_init_mbox_module0
 static int init_mbox_module(struct device *dev)
 {
+	// dev: __device_sys_init_init_mbox_module0
 	ARG_UNUSED(dev);
 
-#if (CONFIG_NUM_MBOX_ASYNC_MSGS > 0)
+#if (CONFIG_NUM_MBOX_ASYNC_MSGS > 0) // CONFIG_NUM_MBOX_ASYNC_MSGS: 10
 	/*
 	 * Create pool of asynchronous message descriptors.
 	 *
@@ -79,15 +97,49 @@ static int init_mbox_module(struct device *dev)
 
 	int i;
 
+	// CONFIG_NUM_MBOX_ASYNC_MSGS: 10
 	for (i = 0; i < CONFIG_NUM_MBOX_ASYNC_MSGS; i++) {
+		// i: 0, _THREAD_DUMMY: 0x1
 		_init_thread_base(&async_msg[i].thread, 0, _THREAD_DUMMY, 0);
+
+		// _init_thread_base 에서 한일:
+		// (&async_msg[0].thread)->user_options: 0x0
+		// (&async_msg[0].thread)->thread_state: 0x1
+		// (&async_msg[0].thread)->prio: 0
+		// (&async_msg[0].thread)->sched_locked: 0
+		// (&(&async_msg[0].thread)->timeout)->delta_ticks_from_prev: -1
+		// (&(&async_msg[0].thread)->timeout)->wait_q: NULL
+		// (&(&async_msg[0].thread)->timeout)->thread: NULL
+		// (&(&async_msg[0].thread)->timeout)->func: NULL
+
+		// i: 0
 		k_stack_push(&async_msg_free, (u32_t)&async_msg[i]);
+
+		// k_stack_push 에서 한일:
+		// _k_stack_buf_async_msg_free[0]: (u32_t)&async_msg[0]
+		// (&async_msg_free)->next: &_k_stack_buf_async_msg_free[1]
+
+		// i: 1...9 loop 수행
 	}
+
+	// 위 loop에서 한일:
+	// (&async_msg[0...9].thread)->user_options: 0x0
+	// (&async_msg[0...9].thread)->thread_state: 0x1
+	// (&async_msg[0...9].thread)->prio: 0
+	// (&async_msg[0...9].thread)->sched_locked: 0
+	// (&(&async_msg[0...9].thread)->timeout)->delta_ticks_from_prev: -1
+	// (&(&async_msg[0...9].thread)->timeout)->wait_q: NULL
+	// (&(&async_msg[0...9].thread)->timeout)->thread: NULL
+	// (&(&async_msg[0...9].thread)->timeout)->func: NULL
+	//
+	// _k_stack_buf_async_msg_free[0...9]: (u32_t)&async_msg[0...9]
+	// (&async_msg_free)->next: &_k_stack_buf_async_msg_free[9]
+
 #endif /* CONFIG_NUM_MBOX_ASYNC_MSGS > 0 */
 
 	/* Complete initialization of statically defined mailboxes. */
 
-#ifdef CONFIG_OBJECT_TRACING
+#ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 	struct k_mbox *mbox;
 
 	for (mbox = _k_mbox_list_start; mbox < _k_mbox_list_end; mbox++) {
@@ -104,7 +156,8 @@ static int init_mbox_module(struct device *dev)
 // SYS_INIT(init_mbox_module, PRE_KERNEL_1, 30):
 // static struct device_config __config_sys_init_init_mbox_module0 __used
 // __attribute__((__section__(".devconfig.init"))) = {
-// 	.name = "", .init = (init_mbox_module),
+// 	.name = "",
+// 	.init = (init_mbox_module),
 // 	.config_info = (NULL)
 // };
 // static struct device __device_sys_init_init_mbox_module0 __used

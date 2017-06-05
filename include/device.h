@@ -332,6 +332,7 @@ struct device_config {
  * @param driver_data driver instance data. For driver use only
  */
 // KID 20170527
+// KID 20170605
 struct device {
 	struct device_config *config;
 	const void *driver_api;

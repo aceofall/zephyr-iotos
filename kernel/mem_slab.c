@@ -14,7 +14,9 @@
 #include <ksched.h>
 #include <init.h>
 
+// KID 20170605
 extern struct k_mem_slab _k_mem_slab_list_start[];
+// KID 20170605
 extern struct k_mem_slab _k_mem_slab_list_end[];
 
 #ifdef CONFIG_OBJECT_TRACING
@@ -60,6 +62,13 @@ static int init_mem_slab_module(struct device *dev)
 
 	struct k_mem_slab *slab;
 
+	// NOTE:
+	// include/arch/x86/linker.ld 파일 참고
+	// section "_k_mem_slab.*" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
+	// compiled 된 코드 기준으로 mem slab 용 코드가 없는 상태임. 이대로 코드 분석 진행
+	// _k_mem_slab_list_start, _k_mem_slab_list_end 같은 위치를 가르킴
+
+	// slab: _k_mem_slab_list_start,  _k_mem_slab_list_end
 	for (slab = _k_mem_slab_list_start;
 	     slab < _k_mem_slab_list_end;
 	     slab++) {
@@ -67,6 +76,7 @@ static int init_mem_slab_module(struct device *dev)
 		SYS_TRACING_OBJ_INIT(k_mem_slab, slab);
 	}
 	return 0;
+	// return 0
 }
 
 // KID 20170529

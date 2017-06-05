@@ -180,6 +180,7 @@ struct __thread_entry {
 // KID 20170519
 // KID 20170522
 // KID 20170601
+// KID 20170605
 // sizeof(struct _thread_base): 40 bytes
 struct _thread_base {
 
@@ -1883,6 +1884,18 @@ extern int k_stack_pop(struct k_stack *stack, u32_t *data, s32_t timeout);
 //     .next = _k_stack_buf_pipe_async_msgs,
 //     .top = _k_stack_buf_pipe_async_msgs + 10,
 // }
+// KID 20170605
+// CONFIG_NUM_MBOX_ASYNC_MSGS: 10
+//
+// K_STACK_DEFINE(async_msg_free, 10):
+// u32_t __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) _k_stack_buf_async_msg_free[10];
+// struct k_stack async_msg_free __attribute__((section("." "_k_stack" "." "static" "." "async_msg_free"))) =
+// {
+//     .wait_q = {{(&async_msg_free.wait_q)}, {(&async_msg_free.wait_q)}},
+//     .base = _k_stack_buf_async_msg_free,
+//     .next = _k_stack_buf_async_msg_free,
+//     .top = _k_stack_buf_async_msg_free + 10,
+// }
 #define K_STACK_DEFINE(name, stack_num_entries)                \
 	u32_t __noinit                                      \
 		_k_stack_buf_##name[stack_num_entries];        \
@@ -2760,6 +2773,7 @@ struct k_mem_block {
  * @{
  */
 
+// KID 20170605
 struct k_mbox_msg {
 	/** internal use only - needed for legacy API support */
 	u32_t _mailbox;
@@ -2779,7 +2793,7 @@ struct k_mbox_msg {
 	k_tid_t tx_target_thread;
 	/** internal use only - thread waiting on send (may be a dummy) */
 	k_tid_t _syncing_thread;
-#if (CONFIG_NUM_MBOX_ASYNC_MSGS > 0)
+#if (CONFIG_NUM_MBOX_ASYNC_MSGS > 0) // CONFIG_NUM_MBOX_ASYNC_MSGS: 10
 	/** internal use only - semaphore used during asynchronous send */
 	struct k_sem *_async_sem;
 #endif

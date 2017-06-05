@@ -55,6 +55,8 @@ void k_stack_init(struct k_stack *stack, u32_t *buffer, int num_entries)
 
 // KID 20170601
 // &pipe_async_msgs, (u32_t)&async_msg[0]
+// KID 20170605
+// &async_msg_free, (u32_t)&async_msg[0]
 void k_stack_push(struct k_stack *stack, u32_t data)
 {
 	struct k_thread *first_pending_thread;

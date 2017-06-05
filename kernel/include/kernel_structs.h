@@ -28,6 +28,7 @@
 /* Not a real thread */
 // KID 20170519
 // KID 20170601
+// KID 20170605
 // _THREAD_DUMMY: 0x1
 #define _THREAD_DUMMY (1 << 0)
 

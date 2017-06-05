@@ -66,10 +66,13 @@ void _sys_device_do_config_level(int level)
 		// info->config: (__device_sys_init_init_pipes_module0))->config: &__config_sys_init_init_pipes_module0
 		// info: __device_sys_init_init_mem_slab_module0
 		// info->config: (__device_sys_init_init_mem_slab_module0))->config: &__config_sys_init_init_mem_slab_module0
+		// info: __device_sys_init_init_mbox_module0
+		// info->config: (__device_sys_init_init_mbox_module0))->config: &__config_sys_init_init_mbox_module0
 		struct device_config *device = info->config;
 		// device: &__config_sys_init_init_static_pools0
 		// device: &__config_sys_init_init_pipes_module0
 		// device: &__config_sys_init_init_mem_slab_module0
+		// device: &__config_sys_init_init_mbox_module0
 
 		// device->init: (&__config_sys_init_init_static_pools0)->init: init_static_pools,
 		// info: __device_sys_init_init_static_pools0
@@ -77,10 +80,12 @@ void _sys_device_do_config_level(int level)
 		// device->init: (&__config_sys_init_init_pipes_module0)->init: init_pipes_module,
 		// info: __device_sys_init_init_pipes_module0
 		// init_pipes_module(__device_sys_init_init_pipes_module0): 0
-		//
 		// device->init: (&__config_sys_init_init_mem_slab_module0)->init: init_mem_slab_module,
 		// info: __device_sys_init_init_mem_slab_module0
 		// init_mem_slab_module(__device_sys_init_init_mem_slab_module0): 0
+		// device->init: (&__config_sys_init_init_mbox_module0)->init: init_mbox_module,
+		// info: __device_sys_init_init_mbox_module0
+		// init_mbox_module(__device_sys_init_init_mbox_module0): 0
 		device->init(info);
 
 		// init_static_pools 에서 한일:
@@ -92,6 +97,22 @@ void _sys_device_do_config_level(int level)
 		//
 		// _k_stack_buf_pipe_async_msgs[0...9]: (u32_t)&async_msg[0...9]
 		// (&pipe_async_msgs)->next: &_k_stack_buf_pipe_async_msgs[9]
+
+		// init_mem_slab_module 에서 한일:
+		// 없음
+
+		// init_mbox_module 에서 한일:
+		// (&async_msg[0...9].thread)->user_options: 0x0
+		// (&async_msg[0...9].thread)->thread_state: 0x1
+		// (&async_msg[0...9].thread)->prio: 0
+		// (&async_msg[0...9].thread)->sched_locked: 0
+		// (&(&async_msg[0...9].thread)->timeout)->delta_ticks_from_prev: -1
+		// (&(&async_msg[0...9].thread)->timeout)->wait_q: NULL
+		// (&(&async_msg[0...9].thread)->timeout)->thread: NULL
+		// (&(&async_msg[0...9].thread)->timeout)->func: NULL
+		//
+		// _k_stack_buf_async_msg_free[0...9]: (u32_t)&async_msg[0...9]
+		// (&async_msg_free)->next: &_k_stack_buf_async_msg_free[9]
 	}
 }
 
