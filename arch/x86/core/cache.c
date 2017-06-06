@@ -58,7 +58,7 @@ _sys_cache_flush_sig(_cache_flush_clflush)
 
 #include <init.h>
 
-#if defined(CONFIG_CLFLUSH_DETECT)
+#if defined(CONFIG_CLFLUSH_DETECT) // CONFIG_CLFLUSH_DETECT=n
 _sys_cache_flush_t *sys_cache_flush;
 static void init_cache_flush(void)
 {
@@ -69,6 +69,7 @@ static void init_cache_flush(void)
 	}
 }
 #else
+// KID 20170606
 #define init_cache_flush() do { } while ((0))
 
 #if defined(CONFIG_CLFLUSH_INSTRUCTION_SUPPORTED)
@@ -78,24 +79,29 @@ FUNC_ALIAS(_cache_flush_clflush, sys_cache_flush, void);
 #endif /* CONFIG_CLFLUSH_DETECT */
 
 
-#if defined(CONFIG_CACHE_LINE_SIZE_DETECT)
+#if defined(CONFIG_CACHE_LINE_SIZE_DETECT) // CONFIG_CACHE_LINE_SIZE_DETECT=n
 size_t sys_cache_line_size;
 static void init_cache_line_size(void)
 {
 	sys_cache_line_size = _cache_line_size_get();
 }
 #else
+// KID 20170606
 #define init_cache_line_size() do { } while ((0))
 #endif
 
+// KID 20170606
+// __device_sys_init_init_cache0
 static int init_cache(struct device *unused)
 {
+	// unused: __device_sys_init_init_cache0
 	ARG_UNUSED(unused);
 
-	init_cache_flush();
+	init_cache_flush(); // null function
 	init_cache_line_size();
 
 	return 0;
+	// return 0
 }
 
 // KID 20170529
@@ -104,7 +110,8 @@ static int init_cache(struct device *unused)
 // SYS_INIT(init_cache, PRE_KERNEL_1, 40);
 // static struct device_config __config_sys_init_init_cache0 __used
 // __attribute__((__section__(".devconfig.init"))) = {
-// 	.name = "", .init = (init_cache),
+// 	.name = "",
+// 	.init = (init_cache),
 // 	.config_info = (NULL)
 // };
 // static struct device __device_sys_init_init_cache0 __used
