@@ -23,6 +23,8 @@ extern "C" {
 #define LOAPIC_EOI 0x0b0	  /* EOI Reg */
 #define LOAPIC_LDR 0x0d0	  /* Logical Destination Reg */
 #define LOAPIC_DFR 0x0e0	  /* Destination Format Reg */
+// KID 20170607
+// LOAPIC_SVR: 0x0f0
 #define LOAPIC_SVR 0x0f0	  /* Spurious Interrupt Reg */
 #define LOAPIC_ISR 0x100	  /* In-service Reg */
 #define LOAPIC_TMR 0x180	  /* Trigger Mode Reg */

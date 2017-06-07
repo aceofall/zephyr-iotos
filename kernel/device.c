@@ -68,15 +68,18 @@ void _sys_device_do_config_level(int level)
 		// info->config: (__device_sys_init_init_mem_slab_module0))->config: &__config_sys_init_init_mem_slab_module0
 		// info: __device_sys_init_init_mbox_module0
 		// info->config: (__device_sys_init_init_mbox_module0))->config: &__config_sys_init_init_mbox_module0
-		//
 		// info: __device_sys_init_init_cache0
 		// info->config: (__device_sys_init_init_cache0))->config: &__config_sys_init_init_cache0
+		//
+		// info: __device_sys_init__loapic_init0
+		// info->config: (__device_sys_init__loapic_init0))->config: &__config_sys_init__loapic_init0
 		struct device_config *device = info->config;
 		// device: &__config_sys_init_init_static_pools0
 		// device: &__config_sys_init_init_pipes_module0
 		// device: &__config_sys_init_init_mem_slab_module0
 		// device: &__config_sys_init_init_mbox_module0
 		// device: &__config_sys_init_init_cache0
+		// device: &__config_sys_init__loapic_init0
 
 		// device->init: (&__config_sys_init_init_static_pools0)->init: init_static_pools,
 		// info: __device_sys_init_init_static_pools0
@@ -90,10 +93,13 @@ void _sys_device_do_config_level(int level)
 		// device->init: (&__config_sys_init_init_mbox_module0)->init: init_mbox_module,
 		// info: __device_sys_init_init_mbox_module0
 		// init_mbox_module(__device_sys_init_init_mbox_module0): 0
-		//
 		// device->init: (&__config_sys_init_init_cache0)->init: init_cache,
 		// info: __device_sys_init_init_cache0
 		// init_cache(__device_sys_init_init_cache0): 0
+		//
+		// device->init: (&__config_sys_init__loapic_init0)->init: _loapic_init,
+		// info: __device_sys_init__loapic_init0
+		// _loapic_init(__device_sys_init__loapic_init0): 0
 		device->init(info);
 
 		// init_static_pools 에서 한일:

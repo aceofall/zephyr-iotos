@@ -126,6 +126,8 @@
 
 /* Local APIC Spurious-Interrupt Register Bits */
 
+ // KID 20170607
+ // LOAPIC_ENABLE: 0x100
 #define LOAPIC_ENABLE 0x100	/* APIC Enabled */
 #define LOAPIC_FOCUS_DISABLE 0x200 /* Focus Processor Checking */
 
@@ -199,12 +201,16 @@ static u32_t loapic_device_power_state = DEVICE_PM_ACTIVE_STATE;
  *
  */
 
+// KID 20170607
+// info: __device_sys_init__loapic_init0
 static int _loapic_init(struct device *unused)
 {
+	// unused: __device_sys_init__loapic_init0
 	ARG_UNUSED(unused);
 	s32_t loApicMaxLvt; /* local APIC Max LVT */
 
 	/* enable the Local APIC */
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_SVR: 0x0F0, LOAPIC_ENABLE: 0x100
 	sys_write32(sys_read32(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR)
 		    | LOAPIC_ENABLE, CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR);
 
@@ -505,7 +511,8 @@ SYS_DEVICE_DEFINE("loapic", _loapic_init, loapic_device_ctrl, PRE_KERNEL_1,
 // SYS_INIT(_loapic_init, PRE_KERNEL_1, 40):
 // static struct device_config __config_sys_init__loapic_init0 __used
 // __attribute__((__section__(".devconfig.init"))) = {
-// 	.name = "", .init = (_loapic_init),
+// 	.name = "",
+// 	.init = (_loapic_init),
 // 	.config_info = (NULL)
 // };
 // static struct device __device_sys_init__loapic_init0 __used

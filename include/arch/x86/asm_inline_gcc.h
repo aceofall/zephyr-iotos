@@ -415,6 +415,8 @@ static ALWAYS_INLINE
 			 : "memory");
 }
 
+// KID 20170607
+// 0xFEE000F0
 static ALWAYS_INLINE
 	u32_t sys_read32(mm_reg_t addr)
 {
