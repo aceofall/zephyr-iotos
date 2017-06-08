@@ -406,6 +406,7 @@ static ALWAYS_INLINE
 	return ret;
 }
 
+// KID 20170607
 static ALWAYS_INLINE
 	void sys_write32(u32_t data, mm_reg_t addr)
 {
@@ -422,12 +423,17 @@ static ALWAYS_INLINE
 {
 	u32_t ret;
 
+	// addr: 0xFEE000F0
 	__asm__ volatile("movl	%1, %0;\n\t"
 			 : "=r"(ret)
 			 : "m" (*(volatile u32_t *) addr)
 			 : "memory");
 
+	// ret: 0xFF
+
+	// ret: 0xFF
 	return ret;
+	// return 0xFF
 }
 
 

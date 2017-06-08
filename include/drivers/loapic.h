@@ -16,12 +16,18 @@ extern "C" {
 /* Local APIC Register Offset */
 
 #define LOAPIC_ID 0x020		  /* Local APIC ID Reg */
+// KID 20170608
+// LOAPIC_VER: 0x030
 #define LOAPIC_VER 0x030	  /* Local APIC Version Reg */
+// KID 20170608
+// LOAPIC_TPR: 0x080
 #define LOAPIC_TPR 0x080	  /* Task Priority Reg */
 #define LOAPIC_APR 0x090	  /* Arbitration Priority Reg */
 #define LOAPIC_PPR 0x0a0	  /* Processor Priority Reg */
 #define LOAPIC_EOI 0x0b0	  /* EOI Reg */
 #define LOAPIC_LDR 0x0d0	  /* Logical Destination Reg */
+// KID 20170608
+// LOAPIC_DFR: 0x0e0
 #define LOAPIC_DFR 0x0e0	  /* Destination Format Reg */
 // KID 20170607
 // LOAPIC_SVR: 0x0f0
@@ -32,18 +38,32 @@ extern "C" {
 #define LOAPIC_ESR 0x280	  /* Error Status Reg */
 #define LOAPIC_ICRLO 0x300	/* Interrupt Command Reg */
 #define LOAPIC_ICRHI 0x310	/* Interrupt Command Reg */
+// KID 20170608
+// LOAPIC_TIMER: 0x320
 #define LOAPIC_TIMER 0x320	/* LVT (Timer) */
 #define LOAPIC_THERMAL 0x330      /* LVT (Thermal) */
 #define LOAPIC_PMC 0x340	  /* LVT (PMC) */
+// KID 20170608
+// LOAPIC_LINT0: 0x350
 #define LOAPIC_LINT0 0x350	/* LVT (LINT0) */
+// KID 20170608
+// LOAPIC_LINT1: 0x360
 #define LOAPIC_LINT1 0x360	/* LVT (LINT1) */
+// KID 20170608
+// LOAPIC_ERROR: 0x370
 #define LOAPIC_ERROR 0x370	/* LVT (ERROR) */
 #define LOAPIC_TIMER 0x320	/* LVT (Timer) */
+// KID 20170608
+// LOAPIC_TIMER_ICR: 0x380
 #define LOAPIC_TIMER_ICR 0x380    /* Timer Initial Count Reg */
 #define LOAPIC_TIMER_CCR 0x390    /* Timer Current Count Reg */
+// KID 20170608
+// LOAPIC_TIMER_CONFIG: 0x3e0
 #define LOAPIC_TIMER_CONFIG 0x3e0 /* Timer Divide Config Reg */
 
 /* Local APIC Vector Table Bits */
+// KID 20170608
+// LOAPIC_LVT_MASKED: 0x00010000
 #define LOAPIC_LVT_MASKED 0x00010000   /* mask */
 
 #ifndef _ASMLANGUAGE

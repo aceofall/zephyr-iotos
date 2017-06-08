@@ -102,26 +102,46 @@
 /* Local APIC Version Register Bits */
 
 #define LOAPIC_VERSION_MASK 0x000000ff /* LO APIC Version mask */
+// KID 20170608
+// LOAPIC_MAXLVT_MASK: 0x00ff0000
 #define LOAPIC_MAXLVT_MASK 0x00ff0000  /* LO APIC Max LVT mask */
 #define LOAPIC_PENTIUM4 0x00000014     /* LO APIC in Pentium4 */
+// KID 20170608
+// LOAPIC_LVT_PENTIUM4: 5
 #define LOAPIC_LVT_PENTIUM4 5	  /* LO APIC LVT - Pentium4 */
+// KID 20170608
+// LOAPIC_LVT_P6: 4
 #define LOAPIC_LVT_P6 4		       /* LO APIC LVT - P6 */
 #define LOAPIC_LVT_P5 3		       /* LO APIC LVT - P5 */
 
 /* Local APIC Vector Table Bits */
 
 #define LOAPIC_VECTOR 0x000000ff /* vectorNo */
+// KID 20170608
+// LOAPIC_MODE: 0x00000700
 #define LOAPIC_MODE 0x00000700   /* delivery mode */
 #define LOAPIC_FIXED 0x00000000  /* delivery mode: FIXED */
 #define LOAPIC_SMI 0x00000200    /* delivery mode: SMI */
+// KID 20170608
+// LOAPIC_NMI: 0x00000400
 #define LOAPIC_NMI 0x00000400    /* delivery mode: NMI */
+// KID 20170608
+// LOAPIC_EXT: 0x00000700
 #define LOAPIC_EXT 0x00000700    /* delivery mode: ExtINT */
 #define LOAPIC_IDLE 0x00000000   /* delivery status: Idle */
 #define LOAPIC_PEND 0x00001000   /* delivery status: Pend */
+// KID 20170608
+// LOAPIC_HIGH: 0x00000000
 #define LOAPIC_HIGH 0x00000000   /* polarity: High */
+// KID 20170608
+// LOAPIC_LOW: 0x00002000
 #define LOAPIC_LOW 0x00002000    /* polarity: Low */
 #define LOAPIC_REMOTE 0x00004000 /* remote IRR */
+// KID 20170608
+// LOAPIC_EDGE 0x00000000
 #define LOAPIC_EDGE 0x00000000   /* trigger mode: Edge */
+// KID 20170608
+// LOAPIC_LEVEL: 0x00008000
 #define LOAPIC_LEVEL 0x00008000  /* trigger mode: Level */
 
 /* Local APIC Spurious-Interrupt Register Bits */
@@ -211,25 +231,37 @@ static int _loapic_init(struct device *unused)
 
 	/* enable the Local APIC */
 	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_SVR: 0x0F0, LOAPIC_ENABLE: 0x100
+	// sys_read32(0xFEE000F0): 0x000000FF
 	sys_write32(sys_read32(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR)
 		    | LOAPIC_ENABLE, CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR);
 
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_VER: 0x030, LOAPIC_MAXLVT_MASK: 0x00ff0000
 	loApicMaxLvt = (*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_VER) &
 			LOAPIC_MAXLVT_MASK) >> 16;
 
 	/* reset the DFR, TPR, TIMER_CONFIG, and TIMER_ICR */
 
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_DFR: 0x0e0
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_DFR) =
 		(int)0xffffffff;
+
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_TPR: 0x080
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TPR) = (int)0x0;
+
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_TIMER_CONFIG: 0x3e0
 	*(volatile int *) (CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER_CONFIG) =
 		(int)0x0;
+
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_TIMER_ICR: 0x380
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER_ICR) = (int)0x0;
 
 	/* program Local Vector Table for the Virtual Wire Mode */
 
 	/* set LINT0: extInt, high-polarity, edge-trigger, not-masked */
 
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_LINT0: 0x350
+	// LOAPIC_MODE: 0x00000700, LOAPIC_LOW: 0x00002000, LOAPIC_LEVEL: 0x00008000, LOAPIC_LVT_MASKED: 0x00010000,
+	// LOAPIC_EXT: 0x00000700, LOAPIC_HIGH: 0x00000000, LOAPIC_EDGE 0x00000000
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_LINT0) =
 		(*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_LINT0) &
 		 ~(LOAPIC_MODE | LOAPIC_LOW | LOAPIC_LEVEL | LOAPIC_LVT_MASKED)) |
@@ -237,6 +269,9 @@ static int _loapic_init(struct device *unused)
 
 	/* set LINT1: NMI, high-polarity, edge-trigger, not-masked */
 
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_LINT1: 0x360
+	// LOAPIC_MODE: 0x00000700, LOAPIC_LOW: 0x00002000, LOAPIC_LEVEL: 0x00008000, LOAPIC_LVT_MASKED: 0x00010000,
+	// LOAPIC_NMI: 0x00000400, LOAPIC_HIGH: 0x00000000, LOAPIC_EDGE 0x00000000
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_LINT1) =
 		(*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_LINT1) &
 		 ~(LOAPIC_MODE | LOAPIC_LOW | LOAPIC_LEVEL | LOAPIC_LVT_MASKED)) |
@@ -244,20 +279,25 @@ static int _loapic_init(struct device *unused)
 
 	/* lock the Local APIC interrupts */
 
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_TIMER: 0x320, LOAPIC_LVT_MASKED: 0x00010000
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER) =
 		LOAPIC_LVT_MASKED;
+
+	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_ERROR: 0x370, LOAPIC_LVT_MASKED: 0x00010000
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_ERROR) =
 		LOAPIC_LVT_MASKED;
 
+	// LOAPIC_LVT_P6: 4
 	if (loApicMaxLvt >= LOAPIC_LVT_P6)
 		*(volatile int *) (CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_PMC) =
 			LOAPIC_LVT_MASKED;
 
+	// LOAPIC_LVT_PENTIUM4: 5
 	if (loApicMaxLvt >= LOAPIC_LVT_PENTIUM4)
 		*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_THERMAL) =
 			LOAPIC_LVT_MASKED;
 
-#if CONFIG_LOAPIC_SPURIOUS_VECTOR
+#if CONFIG_LOAPIC_SPURIOUS_VECTOR // CONFIG_LOAPIC_SPURIOUS_VECTOR=n
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR) =
 		(*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR)
 		 & 0xFFFFFF00)
@@ -265,7 +305,7 @@ static int _loapic_init(struct device *unused)
 #endif
 
 	/* discard a pending interrupt if any */
-#if CONFIG_EOI_FORWARDING_BUG
+#if CONFIG_EOI_FORWARDING_BUG // CONFIG_EOI_FORWARDING_BUG=y
 	_lakemont_eoi();
 #else
 	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_EOI) = 0;

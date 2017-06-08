@@ -18,6 +18,7 @@ extern "C" {
 #include <stddef.h>
 
 typedef u32_t io_port_t;
+// KID 20170607
 typedef u32_t mm_reg_t;
 typedef u32_t mem_addr_t;
 
