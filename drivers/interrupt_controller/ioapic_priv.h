@@ -15,6 +15,8 @@
 #define IOAPIC_IND 0x00   /* Index Register */
 #define IOAPIC_DATA 0x10  /* IO window (data) - pc.h */
 #define IOAPIC_IRQPA 0x20 /* IRQ Pin Assertion Register */
+// KID 20170609
+// IOAPIC_EOI: 0x40
 #define IOAPIC_EOI 0x40   /* EOI Register */
 
 /* IO APIC indirect register offset */

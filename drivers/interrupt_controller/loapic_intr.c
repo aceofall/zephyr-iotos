@@ -443,6 +443,7 @@ void _loapic_irq_disable(unsigned int irq)
  * @return The vector of the interrupt that is currently being processed, or -1
  * if no IRQ is being serviced.
  */
+// KID 20170609
 int __irq_controller_isr_vector_get(void)
 {
 	int pReg, block;
@@ -451,6 +452,7 @@ int __irq_controller_isr_vector_get(void)
 	 * vectors
 	 */
 	for (block = 7; likely(block > 0); block--) {
+		// block: 7, CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_ISR: 0x100
 		pReg = sys_read32(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_ISR +
 				  (block * 0x10));
 		if (pReg) {

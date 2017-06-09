@@ -24,6 +24,8 @@ extern "C" {
 #define LOAPIC_TPR 0x080	  /* Task Priority Reg */
 #define LOAPIC_APR 0x090	  /* Arbitration Priority Reg */
 #define LOAPIC_PPR 0x0a0	  /* Processor Priority Reg */
+// KID 20170609
+// LOAPIC_EOI: 0x0b0
 #define LOAPIC_EOI 0x0b0	  /* EOI Reg */
 #define LOAPIC_LDR 0x0d0	  /* Logical Destination Reg */
 // KID 20170608
@@ -32,6 +34,8 @@ extern "C" {
 // KID 20170607
 // LOAPIC_SVR: 0x0f0
 #define LOAPIC_SVR 0x0f0	  /* Spurious Interrupt Reg */
+// KID 20170609
+// LOAPIC_ISR: 0x100
 #define LOAPIC_ISR 0x100	  /* In-service Reg */
 #define LOAPIC_TMR 0x180	  /* Trigger Mode Reg */
 #define LOAPIC_IRR 0x200	  /* Interrupt Request Reg */

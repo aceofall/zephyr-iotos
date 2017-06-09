@@ -157,13 +157,14 @@ static ALWAYS_INLINE unsigned int find_lsb_set(u32_t op)
  * after the 'cmovzl', the correct results are yielded.
  */
 
+// KID 20170609
 static ALWAYS_INLINE unsigned int find_msb_set(u32_t op)
 {
 	unsigned int bitpos;
 
 	__asm__ volatile (
 
-#if defined(CONFIG_CMOV)
+#if defined(CONFIG_CMOV) // CONFIG_CMOV=n
 
 		"bsrl %1, %0;\n\t"
 		"cmovzl %2, %0;\n\t"

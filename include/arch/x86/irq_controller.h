@@ -78,6 +78,7 @@ static inline void _irq_controller_irq_config(unsigned int vector,
  * @return the vector of the interrupt that is currently being processed, or
  * -1 if this can't be determined
  */
+// KID 20170609
 static inline int _irq_controller_isr_vector_get(void)
 {
 	return __irq_controller_isr_vector_get();
