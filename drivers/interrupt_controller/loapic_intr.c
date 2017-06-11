@@ -312,6 +312,7 @@ static int _loapic_init(struct device *unused)
 #endif
 
 	return 0;
+	// return 0
 }
 
 /**

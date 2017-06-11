@@ -99,10 +99,13 @@ static void _IoApicRedUpdateLo(unsigned int irq, u32_t value,
  *
  * @return N/A
  */
+// KID 20170611
+// info: __device_sys_init__ioapic_init0
 int _ioapic_init(struct device *unused)
 {
+	// unused: __device_sys_init__ioapic_init0
 	ARG_UNUSED(unused);
-#ifdef CONFIG_IOAPIC_MASK_RTE
+#ifdef CONFIG_IOAPIC_MASK_RTE // CONFIG_IOAPIC_MASK_RTE=y
 	s32_t ix;	/* redirection table index */
 	u32_t rteValue; /* value to copy into redirection table entry */
 
@@ -115,10 +118,15 @@ int _ioapic_init(struct device *unused)
 	 *
 	 * ((__IoApicGet(IOAPIC_VERS) & IOAPIC_MRE_MASK) >> 16) + 1
 	 */
+	// IOAPIC_EDGE: 0x00000000, IOAPIC_HIGH: 0x00000000, IOAPIC_FIXED: 0x00000000,
+	// IOAPIC_INT_MASK: 0x00010000, IOAPIC_PHYSICAL: 0x00000000
 	rteValue = IOAPIC_EDGE | IOAPIC_HIGH | IOAPIC_FIXED | IOAPIC_INT_MASK |
 		   IOAPIC_PHYSICAL | 0 /* dummy vector */;
+	// rteValue: 0x00010000
 
+	// CONFIG_IOAPIC_NUM_RTES: 64
 	for (ix = 0; ix < CONFIG_IOAPIC_NUM_RTES; ix++) {
+		// ix: 0
 		ioApicRedSetHi(ix, 0);
 		ioApicRedSetLo(ix, rteValue);
 	}
@@ -405,6 +413,8 @@ static void ioApicRedSetLo(unsigned int irq, u32_t lower32)
  * @param upper32 Value to be written
  * @return N/A
  */
+// KID 20170611
+// ix: 0, 0
 static void ioApicRedSetHi(unsigned int irq, u32_t upper32)
 {
 	s32_t offset = IOAPIC_REDTBL + (irq << 1) + 1; /* register offset */
@@ -442,7 +452,8 @@ SYS_DEVICE_DEFINE("ioapic", _ioapic_init, ioapic_device_ctrl, PRE_KERNEL_1,
 // SYS_INIT(_ioapic_init, PRE_KERNEL_1, 40):
 // static struct device_config __config_sys_init__ioapic_init0 __used
 // __attribute__((__section__(".devconfig.init"))) = {
-// 	.name = "", .init = (_ioapic_init),
+// 	.name = "",
+// 	.init = (_ioapic_init),
 // 	.config_info = (NULL)
 // };
 // static struct device __device_sys_init__ioapic_init0 __used
