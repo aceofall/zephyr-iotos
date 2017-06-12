@@ -588,6 +588,35 @@ FUNC_NORETURN void _Cstart(void)
 	/* perform basic hardware initialization */
 	// _SYS_INIT_LEVEL_PRE_KERNEL_1: 0
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_PRE_KERNEL_1);
+
+	// _sys_device_do_config_level 에서 한일;
+	// section ".init_PRE_KERNEL_1[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 초기화 진행
+	// init_static_pools
+	// init_pipes_module
+	// init_mem_slab_module
+	// init_mbox_module
+	// init_cache
+	// _loapic_init
+	// _ioapic_init 순으로 초기화 진행
+	//
+	// async_msg[0...9].thread.thread_state: 0x1
+	// async_msg[0...9].thread.swap_data: &async_msg[0...9].desc
+	//
+	// _k_stack_buf_pipe_async_msgs[0...9]: (u32_t)&async_msg[0...9]
+	// (&pipe_async_msgs)->next: &_k_stack_buf_pipe_async_msgs[9]
+	//
+	// (&async_msg[0...9].thread)->user_options: 0x0
+	// (&async_msg[0...9].thread)->thread_state: 0x1
+	// (&async_msg[0...9].thread)->prio: 0
+	// (&async_msg[0...9].thread)->sched_locked: 0
+	// (&(&async_msg[0...9].thread)->timeout)->delta_ticks_from_prev: -1
+	// (&(&async_msg[0...9].thread)->timeout)->wait_q: NULL
+	// (&(&async_msg[0...9].thread)->timeout)->thread: NULL
+	// (&(&async_msg[0...9].thread)->timeout)->func: NULL
+	//
+	// _k_stack_buf_async_msg_free[0...9]: (u32_t)&async_msg[0...9]
+	// (&async_msg_free)->next: &_k_stack_buf_async_msg_free[9]
+
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_PRE_KERNEL_2);
 
 	/* initialize stack canaries */

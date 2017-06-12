@@ -356,17 +356,25 @@ static u32_t __IoApicGet(s32_t offset)
  * @param value Value to set the register
  * @return N/A
  */
+// KID 20170612
+// offset: 0x11, upper32: 0
 static void __IoApicSet(s32_t offset, u32_t value)
 {
 	int key; /* interrupt lock level */
 
 	/* lock interrupts to ensure indirect addressing works "atomically" */
 
+	// irq_lock(): eflags 값
 	key = irq_lock();
+	// key: eflags 값
 
+	// CONFIG_IOAPIC_BASE_ADDRESS: 0xFEC00000, IOAPIC_IND: 0x00, offset: 0x11
 	*(volatile char *)(CONFIG_IOAPIC_BASE_ADDRESS + IOAPIC_IND) = (char)offset;
+
+	// CONFIG_IOAPIC_BASE_ADDRESS: 0xFEC00000, IOAPIC_DATA: 0x10, value: 0
 	*((volatile u32_t *)(CONFIG_IOAPIC_BASE_ADDRESS + IOAPIC_DATA)) = value;
 
+	// key: eflags 값
 	irq_unlock(key);
 }
 
@@ -417,8 +425,11 @@ static void ioApicRedSetLo(unsigned int irq, u32_t lower32)
 // ix: 0, 0
 static void ioApicRedSetHi(unsigned int irq, u32_t upper32)
 {
+	// IOAPIC_REDTBL: 0x10, irq: 0
 	s32_t offset = IOAPIC_REDTBL + (irq << 1) + 1; /* register offset */
+	// offset: 0x11
 
+	// offset: 0x11, upper32: 0
 	__IoApicSet(offset, upper32);
 }
 

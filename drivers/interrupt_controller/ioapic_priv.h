@@ -12,7 +12,11 @@
 
 /* IO APIC direct register offsets */
 
+// KID 20170612
+// IOAPIC_IND: 0x00
 #define IOAPIC_IND 0x00   /* Index Register */
+// KID 20170612
+// IOAPIC_DATA: 0x10
 #define IOAPIC_DATA 0x10  /* IO window (data) - pc.h */
 #define IOAPIC_IRQPA 0x20 /* IRQ Pin Assertion Register */
 // KID 20170609
@@ -25,6 +29,8 @@
 #define IOAPIC_VERS 0x01   /* IOAPIC Version */
 #define IOAPIC_ARB 0x02    /* IOAPIC Arbitration ID */
 #define IOAPIC_BOOT 0x03   /* IOAPIC Boot Configuration */
+// KID 20170612
+// IOAPIC_REDTBL: 0x10
 #define IOAPIC_REDTBL 0x10 /* Redirection Table (24 * 64bit) */
 
 /* Interrupt delivery type */
