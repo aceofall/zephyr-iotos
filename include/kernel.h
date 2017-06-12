@@ -3865,6 +3865,19 @@ extern void _timer_expiration_handler(struct _timeout *t);
  * @param sym Thread stack symbol name
  * @param size Size of the stack memory region
  */
+// KID 20170612
+// MAIN_STACK_SIZE: 1024
+// STACK_ALIGN: 4
+// __noinit: __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
+// __stack: __aligned(4)
+//
+// K_THREAD_STACK_DEFINE(_main_stack, 1024):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _main_stack[1024]
+// KID 20170612
+// IDLE_STACK_SIZE: 256
+//
+// K_THREAD_STACK_DEFINE(_idle_stack, 256);
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _idle_stack[256]
 #define K_THREAD_STACK_DEFINE(sym, size) \
 	char __noinit __aligned(STACK_ALIGN) sym[size]
 

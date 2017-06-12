@@ -67,6 +67,7 @@ u64_t __noinit __end_tick_tsc;
 /* init/main and idle threads */
 
 // KID 20170525
+// KID 20170612
 // CONFIG_IDLE_STACK_SIZE: 256
 // IDLE_STACK_SIZE: 256
 #define IDLE_STACK_SIZE CONFIG_IDLE_STACK_SIZE
@@ -80,19 +81,25 @@ u64_t __noinit __end_tick_tsc;
 #endif
 
 // KID 20170519
+// KID 20170612
 // CONFIG_MAIN_STACK_SIZE: 1024
 // MAIN_STACK_SIZE: 1024
 #define MAIN_STACK_SIZE CONFIG_MAIN_STACK_SIZE
 
 // KID 20170519
 // KID 20170522
-// __noinit: __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
-// __stack: __aligned(4)
+// KID 20170612
 // MAIN_STACK_SIZE: 1024
+//
+// K_THREAD_STACK_DEFINE(_main_stack, 1024):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _main_stack[1024]
 K_THREAD_STACK_DEFINE(_main_stack, MAIN_STACK_SIZE);
 
 // KID 20170525
 // IDLE_STACK_SIZE: 256
+//
+// K_THREAD_STACK_DEFINE(_idle_stack, 256);
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _idle_stack[256]
 K_THREAD_STACK_DEFINE(_idle_stack, IDLE_STACK_SIZE);
 
 // KID 20170519
@@ -251,7 +258,7 @@ void __weak main(void)
  * @return N/A
  */
 // KID 20170518
-// dummy_thread: dummy_stack
+// dummy_thread: &dummy_thread_memory
 static void prepare_multithreading(struct k_thread *dummy_thread)
 {
 #ifdef CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN // CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN=n
@@ -265,19 +272,19 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	 * dummy thread.
 	 */
 
-	// _current: _kernel.current, dummy_thread: dummy_stack
+	// _current: _kernel.current, dummy_thread: &dummy_thread_memory
 	_current = dummy_thread;
-	// _kernel.current: dummy_stack
+	// _kernel.current: &dummy_thread_memory
 
-	// dummy_thread->base.user_options: (struct k_thread* dummy_stack)->base.user_options,
+	// dummy_thread->base.user_options: (struct k_thread* &dummy_thread_memory)->base.user_options,
 	// K_ESSENTIAL: 0x1
 	dummy_thread->base.user_options = K_ESSENTIAL;
-	// dummy_thread->base.user_options: (struct k_thread* dummy_stack)->base.user_options: 0x1
+	// dummy_thread->base.user_options: (struct k_thread* &dummy_thread_memory)->base.user_options: 0x1
 
-	// dummy_thread->base.thread_state: (struct k_thread* dummy_stack)->base.thread_state,
+	// dummy_thread->base.thread_state: (struct k_thread* &dummy_thread_memory)->base.thread_state,
 	// _THREAD_DUMMY: 0x1
 	dummy_thread->base.thread_state = _THREAD_DUMMY;
-	// dummy_thread->base.thread_state: (struct k_thread* dummy_stack)->base.thread_state: 0x1
+	// dummy_thread->base.thread_state: (struct k_thread* &dummy_thread_memory)->base.thread_state: 0x1
 #endif
 
 	/* _kernel.ready_q is all zeroes */
@@ -475,7 +482,7 @@ FUNC_NORETURN void _Cstart(void)
 	// __stack: __aligned(4), _K_THREAD_NO_FLOAT_SIZEOF: 56
 	struct k_thread dummy_thread_memory;
 	struct k_thread *dummy_thread = &dummy_thread_memory;
-	// dummy_thread: dummy_stack
+	// dummy_thread: &dummy_thread_memory
 #endif
 
 	/*
@@ -484,13 +491,13 @@ FUNC_NORETURN void _Cstart(void)
 	 * before the hardware initialization phase.
 	 */
 
-	// dummy_thread: dummy_stack
+	// dummy_thread: &dummy_thread_memory
 	prepare_multithreading(dummy_thread);
 
 	// prepare_multithreading 에서 한일:
-	// _kernel.current: dummy_stack
-	// (struct k_thread* dummy_stack)->base.user_options: 0x1
-	// (struct k_thread* dummy_stack)->base.thread_state: 0x1
+	// _kernel.current: &dummy_thread_memory
+	// (struct k_thread* &dummy_thread_memory)->base.user_options: 0x1
+	// (struct k_thread* &dummy_thread_memory)->base.thread_state: 0x1
 	//
 	// sys_dlist_init 에서 한일:
 	// ready_q 의 list를 초기화함

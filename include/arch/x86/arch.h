@@ -60,6 +60,7 @@ void _int_latency_stop(void);
  */
 
 // KID 20170517
+// KID 20170612
 // FP_REG_SET_ALIGN: 4
 // STACK_ALIGN: 4
 #define STACK_ALIGN  FP_REG_SET_ALIGN
