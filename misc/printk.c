@@ -251,6 +251,8 @@ int vprintk(const char *fmt, va_list ap)
  *
  * @return Number of characters printed
  */
+// KID 20170613
+// "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 int printk(const char *fmt, ...)
 {
 	int ret;

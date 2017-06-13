@@ -21,6 +21,7 @@ extern struct device __device_init_end[];
 
 // KID 20170527
 // KID 20170529
+// KID 20170613
 static struct device *config_levels[] = {
 	__device_PRE_KERNEL_1_start,
 	__device_PRE_KERNEL_2_start,
@@ -49,6 +50,8 @@ extern u32_t __device_busy_end[];
  */
 // KID 20170527
 // _SYS_INIT_LEVEL_PRE_KERNEL_1: 0
+// ARM10C 20170613
+// _SYS_INIT_LEVEL_PRE_KERNEL_2: 1
 void _sys_device_do_config_level(int level)
 {
 	struct device *info;
@@ -57,7 +60,12 @@ void _sys_device_do_config_level(int level)
 	// include/arch/x86/linker.ld 파일 참고
 	// section ".init_PRE_KERNEL_1[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
 
+	// NOTE:
+	// include/arch/x86/linker.ld 파일 참고
+	// section ".init_PRE_KERNEL_2[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
+
 	// level: 0, config_levels[0]: __device_PRE_KERNEL_1_start, config_levels[1]: __device_PRE_KERNEL_2_start
+	// level: 1, config_levels[1]: __device_PRE_KERNEL_2_start, config_levels[2]: __device_POST_KERNEL_start
 	for (info = config_levels[level]; info < config_levels[level+1];
 								info++) {
 		// info: __device_sys_init_init_static_pools0

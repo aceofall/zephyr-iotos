@@ -29,21 +29,30 @@
 
 /* kernel build timestamp items */
 
+// KID 20170613
+// BUILD_TIMESTAMP: "BUILD: " __DATE__ " " __TIME__
 #define BUILD_TIMESTAMP "BUILD: " __DATE__ " " __TIME__
 
-#ifdef CONFIG_BUILD_TIMESTAMP
+#ifdef CONFIG_BUILD_TIMESTAMP // CONFIG_BUILD_TIMESTAMP=y
+// BUILD_TIMESTAMP: "BUILD: " __DATE__ " " __TIME__
 const char * const build_timestamp = BUILD_TIMESTAMP;
 #endif
 
 /* boot banner items */
 
+// KID 20170613
+// KERNEL_VERSION_STRING: "1.8.99"
+// BOOT_BANNER: "BOOTING ZEPHYR OS v" "1.8.99"
 #define BOOT_BANNER "BOOTING ZEPHYR OS v" KERNEL_VERSION_STRING
 
-#if !defined(CONFIG_BOOT_BANNER)
+#if !defined(CONFIG_BOOT_BANNER) // CONFIG_BOOT_BANNER=y
 #define PRINT_BOOT_BANNER() do { } while (0)
-#elif !defined(CONFIG_BUILD_TIMESTAMP)
+#elif !defined(CONFIG_BUILD_TIMESTAMP) // CONFIG_BUILD_TIMESTAMP=y
 #define PRINT_BOOT_BANNER() printk("***** " BOOT_BANNER " *****\n")
 #else
+// KID 20170613
+// BOOT_BANNER: "BOOTING ZEPHYR OS v" "1.8.99"
+// build_timestamp: "BUILD: " __DATE__ " " __TIME__
 #define PRINT_BOOT_BANNER() \
 	printk("***** " BOOT_BANNER " - %s *****\n", build_timestamp)
 #endif
@@ -617,10 +626,15 @@ FUNC_NORETURN void _Cstart(void)
 	// _k_stack_buf_async_msg_free[0...9]: (u32_t)&async_msg[0...9]
 	// (&async_msg_free)->next: &_k_stack_buf_async_msg_free[9]
 
+	// _SYS_INIT_LEVEL_PRE_KERNEL_2: 1
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_PRE_KERNEL_2);
 
+	// _sys_device_do_config_level 에서 한일;
+	// section ".init_PRE_KERNEL_2[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 초기화 진행
+	// 현재 코드 기준 컴파일 된 코드가 없음
+
 	/* initialize stack canaries */
-#ifdef CONFIG_STACK_CANARIES
+#ifdef CONFIG_STACK_CANARIES // CONFIG_STACK_CANARIES=n
 	__stack_chk_guard = (void *)sys_rand32_get();
 #endif
 

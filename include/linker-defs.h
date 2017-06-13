@@ -66,6 +66,7 @@
  * ensure the objects aren't discarded if there is no direct reference to them
  */
 
+// KID 20170613
 #define DEVICE_INIT_LEVEL(level)				\
 		__device_##level##_start = .;			\
 		KEEP(*(SORT(.init_##level[0-9])));		\
@@ -77,6 +78,7 @@
  * initialized (i.e. ordered by level, sorted by priority within a level)
  */
 
+// KID 20170613
 #define	DEVICE_INIT_SECTIONS()			\
 		__device_init_start = .;	\
 		DEVICE_INIT_LEVEL(PRE_KERNEL_1)	\

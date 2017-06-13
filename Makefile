@@ -1,5 +1,8 @@
+# KID 20170613
 VERSION_MAJOR 	   = 1
+# KID 20170613
 VERSION_MINOR 	   = 8
+# KID 20170613
 PATCHLEVEL 	   = 99
 VERSION_RESERVED   = 0
 EXTRAVERSION       =
@@ -1071,10 +1074,14 @@ prepare: $(archprepare) dts FORCE
 # KERNELRELEASE can change from a few different places, meaning version.h
 # needs to be updated, so this check is forced on all builds
 
+# KID 20170613
 VERSION_MAJOR_HEX=$(shell printf '%02x\n' ${VERSION_MAJOR})
+# KID 20170613
 VERSION_MINOR_HEX=$(shell printf '%02x\n' ${VERSION_MINOR})
+# KID 20170613
 PATCHLEVEL_HEX=$(shell printf '%02x\n' ${PATCHLEVEL})
 VERSION_RESERVED_HEX=00
+# KID 20170613
 KERNEL_VERSION_HEX=0x$(VERSION_MAJOR_HEX)$(VERSION_MINOR_HEX)$(PATCHLEVEL_HEX)
 
 define filechk_version.h
