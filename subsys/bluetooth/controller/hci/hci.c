@@ -189,8 +189,10 @@ static void reset(struct net_buf *buf, struct net_buf **evt)
 	hci_hbuf_sent = 0;
 	hci_hbuf_acked = 0;
 	conn_count = 0;
-	atomic_set_bit(&hci_state_mask, HCI_STATE_BIT_RESET);
-	k_poll_signal(hbuf_signal, 0x0);
+	if (buf) {
+		atomic_set_bit(&hci_state_mask, HCI_STATE_BIT_RESET);
+		k_poll_signal(hbuf_signal, 0x0);
+	}
 #endif
 }
 
@@ -494,17 +496,15 @@ static void le_read_wl_size(struct net_buf *buf, struct net_buf **evt)
 	rp = cmd_complete(evt, sizeof(*rp));
 	rp->status = 0x00;
 
-	rp->wl_size = 8;
+	rp->wl_size = ll_wl_size_get();
 }
 
 static void le_clear_wl(struct net_buf *buf, struct net_buf **evt)
 {
 	struct bt_hci_evt_cc_status *ccst;
 
-	ll_filter_clear();
-
 	ccst = cmd_complete(evt, sizeof(*ccst));
-	ccst->status = 0x00;
+	ccst->status = ll_wl_clear();
 }
 
 static void le_add_dev_to_wl(struct net_buf *buf, struct net_buf **evt)
@@ -513,10 +513,10 @@ static void le_add_dev_to_wl(struct net_buf *buf, struct net_buf **evt)
 	struct bt_hci_evt_cc_status *ccst;
 	u32_t status;
 
-	status = ll_filter_add(cmd->addr.type, &cmd->addr.a.val[0]);
+	status = ll_wl_add(&cmd->addr);
 
 	ccst = cmd_complete(evt, sizeof(*ccst));
-	ccst->status = (!status) ? 0x00 : BT_HCI_ERR_MEM_CAPACITY_EXCEEDED;
+	ccst->status = status;
 }
 
 static void le_rem_dev_from_wl(struct net_buf *buf, struct net_buf **evt)
@@ -525,10 +525,10 @@ static void le_rem_dev_from_wl(struct net_buf *buf, struct net_buf **evt)
 	struct bt_hci_evt_cc_status *ccst;
 	u32_t status;
 
-	status = ll_filter_remove(cmd->addr.type, &cmd->addr.a.val[0]);
+	status = ll_wl_remove(&cmd->addr);
 
 	ccst = cmd_complete(evt, sizeof(*ccst));
-	ccst->status = (!status) ? 0x00 : BT_HCI_ERR_CMD_DISALLOWED;
+	ccst->status = status;
 }
 
 static void le_encrypt(struct net_buf *buf, struct net_buf **evt)
@@ -572,16 +572,17 @@ static void le_set_adv_param(struct net_buf *buf, struct net_buf **evt)
 	struct bt_hci_cp_le_set_adv_param *cmd = (void *)buf->data;
 	struct bt_hci_evt_cc_status *ccst;
 	u16_t min_interval;
+	u32_t status;
 
 	min_interval = sys_le16_to_cpu(cmd->min_interval);
 
-	ll_adv_params_set(min_interval, cmd->type,
-			  cmd->own_addr_type, cmd->direct_addr.type,
-			  &cmd->direct_addr.a.val[0], cmd->channel_map,
-			  cmd->filter_policy);
+	status = ll_adv_params_set(min_interval, cmd->type, cmd->own_addr_type,
+				   cmd->direct_addr.type,
+				   &cmd->direct_addr.a.val[0], cmd->channel_map,
+				   cmd->filter_policy);
 
 	ccst = cmd_complete(evt, sizeof(*ccst));
-	ccst->status = 0x00;
+	ccst->status = (!status) ? 0x00 : BT_HCI_ERR_CMD_DISALLOWED;
 }
 
 static void le_read_adv_chan_tx_power(struct net_buf *buf, struct net_buf **evt)
@@ -637,15 +638,16 @@ static void le_set_scan_param(struct net_buf *buf, struct net_buf **evt)
 	struct bt_hci_evt_cc_status *ccst;
 	u16_t interval;
 	u16_t window;
+	u32_t status;
 
 	interval = sys_le16_to_cpu(cmd->interval);
 	window = sys_le16_to_cpu(cmd->window);
 
-	ll_scan_params_set(cmd->scan_type, interval, window, cmd->addr_type,
-			   cmd->filter_policy);
+	status = ll_scan_params_set(cmd->scan_type, interval, window,
+				    cmd->addr_type, cmd->filter_policy);
 
 	ccst = cmd_complete(evt, sizeof(*ccst));
-	ccst->status = 0x00;
+	ccst->status = (!status) ? 0x00 : BT_HCI_ERR_CMD_DISALLOWED;
 }
 
 static void le_set_scan_enable(struct net_buf *buf, struct net_buf **evt)
