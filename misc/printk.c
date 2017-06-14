@@ -17,9 +17,12 @@
 #include <toolchain.h>
 #include <sections.h>
 
+// KID 20170614
 typedef int (*out_func_t)(int c, void *ctx);
 
+// KID 20170614
 enum pad_type {
+	// PAD_NONE: 0
 	PAD_NONE,
 	PAD_ZERO_BEFORE,
 	PAD_SPACE_BEFORE,
@@ -39,6 +42,7 @@ static void _printk_hex_ulong(out_func_t out, void *ctx,
  *
  * @return 0
  */
+// KID 20170614
 static int _nop_char_out(int c)
 {
 	ARG_UNUSED(c);
@@ -47,6 +51,7 @@ static int _nop_char_out(int c)
 	return 0;
 }
 
+// KID 20170614
 static int (*_char_out)(int) = _nop_char_out;
 
 /**
@@ -85,18 +90,32 @@ void *__printk_get_hook(void)
  *
  * @return N/A
  */
+// KID 20170614
+// char_out, &ctx, fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 void _vprintk(out_func_t out, void *ctx, const char *fmt, va_list ap)
 {
 	int might_format = 0; /* 1 if encountered a '%' */
+	// might_format: 0
+
+	// PAD_NONE: 0
 	enum pad_type padding = PAD_NONE;
+	// padding: 0
+
 	int min_width = -1;
+	// min_width: -1
+
 	int long_ctr = 0;
+	// long_ctr: 0
 
 	/* fmt has already been adjusted if needed */
 
+	// fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - "BUILD: " __DATE__ " " __TIME__ *****\n"
 	while (*fmt) {
+		// might_format: 0
 		if (!might_format) {
+			// *fmt: '*'
 			if (*fmt != '%') {
+				// out: char_out, *fmt: '*', ctx: &ctx
 				out((int)*fmt, ctx);
 			} else {
 				might_format = 1;
@@ -215,20 +234,31 @@ still_might_format:
 	}
 }
 
+// KID 20170614
 struct out_context {
 	int count;
 };
 
+// KID 20170614
+// *fmt: '*', ctx: &ctx
 static int char_out(int c, struct out_context *ctx)
 {
+	// ctx->count: (&ctx)->count: 0
 	ctx->count++;
+	// ctx->count: (&ctx)->count: 1
+
+	// c: '*'
 	return _char_out(c);
 }
 
+// KID 20170614
+// fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 int vprintk(const char *fmt, va_list ap)
 {
 	struct out_context ctx = { 0 };
+	// ctx.count: 0
 
+	// fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 	_vprintk((out_func_t)char_out, &ctx, fmt, ap);
 	return ctx.count;
 }
@@ -258,7 +288,10 @@ int printk(const char *fmt, ...)
 	int ret;
 	va_list ap;
 
+	// fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 	va_start(ap, fmt);
+
+	// fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 	ret = vprintk(fmt, ap);
 	va_end(ap);
 

@@ -10,6 +10,7 @@
 #include <misc/util.h>
 #include <atomic.h>
 
+// KID 20170614
 extern struct device __device_init_start[];
 // KID 20170527
 extern struct device __device_PRE_KERNEL_1_start[];
@@ -17,6 +18,7 @@ extern struct device __device_PRE_KERNEL_1_start[];
 extern struct device __device_PRE_KERNEL_2_start[];
 extern struct device __device_POST_KERNEL_start[];
 extern struct device __device_APPLICATION_start[];
+// KID 20170614
 extern struct device __device_init_end[];
 
 // KID 20170527
@@ -82,6 +84,8 @@ void _sys_device_do_config_level(int level)
 		// info->config: (__device_sys_init__loapic_init0))->config: &__config_sys_init__loapic_init0
 		// info: __device_sys_init__ioapic_init0
 		// info->config: (__device_sys_init__ioapic_init0))->config: &__config_sys_init__ioapic_init0
+		// info: __device_sys_init_uart_console_init0
+		// info->config: (__device_sys_init_uart_console_init0))->config: &__config_sys_init_uart_console_init0
 		struct device_config *device = info->config;
 		// device: &__config_sys_init_init_static_pools0
 		// device: &__config_sys_init_init_pipes_module0
@@ -90,6 +94,7 @@ void _sys_device_do_config_level(int level)
 		// device: &__config_sys_init_init_cache0
 		// device: &__config_sys_init__loapic_init0
 		// device: &__config_sys_init__ioapic_init0
+		// device: &__config_sys_init_uart_console_init0
 
 		// device->init: (&__config_sys_init_init_static_pools0)->init: init_static_pools,
 		// info: __device_sys_init_init_static_pools0
@@ -112,6 +117,9 @@ void _sys_device_do_config_level(int level)
 		// device->init: (&__config_sys_init__ioapic_init0)->init: _ioapic_init,
 		// info: __device_sys_init__ioapic_init0
 		// _ioapic_init(__device_sys_init__ioapic_init0): 0
+		// device->init: (&__config_sys_init_uart_console_init0)->init: uart_console_init,
+		// info: __device_sys_init_uart_console_init0
+		// uart_console_init(__device_sys_init_uart_console_init0): 0
 		device->init(info);
 
 		// init_static_pools 에서 한일:
@@ -151,9 +159,15 @@ void _sys_device_do_config_level(int level)
 	}
 }
 
+// KID 20170614
+// CONFIG_UART_CONSOLE_ON_DEV_NAME: "UART_1"
 struct device *device_get_binding(const char *name)
 {
 	struct device *info;
+
+	// NOTE:
+	// include/arch/x86/linker.ld 파일 참고
+	// 코드 영역 __device_init_start 에서 __device_init_end 사이에 있는 코드들을 순차적으로 찾음
 
 	for (info = __device_init_start; info != __device_init_end; info++) {
 		if (info->driver_api && !strcmp(name, info->config->name)) {

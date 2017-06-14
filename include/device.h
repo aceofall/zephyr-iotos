@@ -333,6 +333,7 @@ struct device_config {
  */
 // KID 20170527
 // KID 20170605
+// KID 20170614
 struct device {
 	struct device_config *config;
 	const void *driver_api;

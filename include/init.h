@@ -174,6 +174,21 @@ extern "C" {
 // 	 .driver_api = NULL,
 // 	 .driver_data = NULL
 // }
+// KID 20170614
+// CONFIG_UART_CONSOLE_INIT_PRIORITY: 60
+//
+// SYS_INIT(uart_console_init, PRE_KERNEL_1, 60):
+// static struct device_config __config_sys_init_uart_console_init0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "", .init = (uart_console_init),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_uart_console_init0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "60"))) = {
+// 	 .config = &__config_sys_init_uart_console_init0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 #define SYS_INIT(init_fn, level, prio) \
 	DEVICE_INIT(_SYS_NAME(init_fn), "", init_fn, NULL, NULL, level, prio)
 

@@ -483,11 +483,14 @@ void uart_console_hook_install(void)
  *
  * @return 0 if successful, otherwise failed.
  */
+// ARM10C 20170614
+// __device_sys_init_uart_console_init0
 static int uart_console_init(struct device *arg)
 {
-
+	// arg: __device_sys_init_uart_console_init0
 	ARG_UNUSED(arg);
 
+	// CONFIG_UART_CONSOLE_ON_DEV_NAME: "UART_1"
 	uart_console_dev = device_get_binding(CONFIG_UART_CONSOLE_ON_DEV_NAME);
 
 #if defined(CONFIG_USB_UART_CONSOLE) && defined(CONFIG_USB_UART_DTR_WAIT)
@@ -508,10 +511,26 @@ static int uart_console_init(struct device *arg)
 }
 
 /* UART console initializes after the UART device itself */
+// KID 20170614
+// CONFIG_UART_CONSOLE_INIT_PRIORITY: 60
+//
+// SYS_INIT(uart_console_init, PRE_KERNEL_1, 60):
+// static struct device_config __config_sys_init_uart_console_init0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "",
+// 	.init = (uart_console_init),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_uart_console_init0 __used
+// __attribute__((__section__(".init_" "PRE_KERNEL_1" "60"))) = {
+// 	 .config = &__config_sys_init_uart_console_init0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 SYS_INIT(uart_console_init,
-#if defined(CONFIG_USB_UART_CONSOLE)
+#if defined(CONFIG_USB_UART_CONSOLE) // CONFIG_USB_UART_CONSOLE=n
 			APPLICATION,
-#elif defined(CONFIG_EARLY_CONSOLE)
+#elif defined(CONFIG_EARLY_CONSOLE) // CONFIG_EARLY_CONSOLE=y
 			PRE_KERNEL_1,
 #else
 			POST_KERNEL,
