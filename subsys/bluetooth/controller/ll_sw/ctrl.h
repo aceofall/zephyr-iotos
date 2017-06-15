@@ -222,6 +222,11 @@ enum radio_pdu_node_rx_type {
 	NODE_RX_TYPE_DC_PDU,
 	NODE_RX_TYPE_REPORT,
 
+#if defined(CONFIG_BLUETOOTH_CONTROLLER_ADV_EXT)
+	NODE_RX_TYPE_EXT_1M_REPORT,
+	NODE_RX_TYPE_EXT_CODED_REPORT,
+#endif /* CONFIG_BLUETOOTH_CONTROLLER_ADV_EXT */
+
 #if defined(CONFIG_BLUETOOTH_CONTROLLER_SCAN_REQ_NOTIFY)
 	NODE_RX_TYPE_SCAN_REQ,
 #endif /* CONFIG_BLUETOOTH_CONTROLLER_SCAN_REQ_NOTIFY */
@@ -315,8 +320,14 @@ void radio_ticks_active_to_start_set(u32_t ticks_active_to_start);
 /* Downstream - Advertiser */
 struct radio_adv_data *radio_adv_data_get(void);
 struct radio_adv_data *radio_scan_data_get(void);
-u32_t radio_adv_enable(u16_t interval, u8_t chl_map,
+
+#if defined(CONFIG_BLUETOOTH_CONTROLLER_ADV_EXT)
+u32_t radio_adv_enable(u8_t phy_p, u16_t interval, u8_t chl_map,
 		       u8_t filter_policy);
+#else /* !CONFIG_BLUETOOTH_CONTROLLER_ADV_EXT */
+u32_t radio_adv_enable(u16_t interval, u8_t chl_map, u8_t filter_policy);
+#endif /* !CONFIG_BLUETOOTH_CONTROLLER_ADV_EXT */
+
 u32_t radio_adv_disable(void);
 u32_t radio_adv_is_enabled(void);
 u32_t radio_adv_filter_pol_get(void);
@@ -345,5 +356,6 @@ u32_t radio_tx_mem_enqueue(u16_t handle,
 /* Callbacks */
 extern void radio_active_callback(u8_t active);
 extern void radio_event_callback(void);
+extern void ll_adv_scan_state_cb(u8_t bm);
 
 #endif
