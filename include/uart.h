@@ -107,6 +107,7 @@ struct uart_device_config {
 };
 
 /** @brief Driver API structure. */
+// KID 20170615
 struct uart_driver_api {
 	/** Console I/O function */
 	int (*poll_in)(struct device *dev, unsigned char *p_char);
@@ -227,6 +228,8 @@ static inline int uart_poll_in(struct device *dev, unsigned char *p_char)
  *
  * @retval char Sent character.
  */
+// KID 20170615
+// uart_console_dev: NULL, c: '*'
 static inline unsigned char uart_poll_out(struct device *dev,
 					  unsigned char out_char)
 {

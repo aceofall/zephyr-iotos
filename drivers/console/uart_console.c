@@ -33,6 +33,7 @@
 #include <atomic.h>
 #include <misc/printk.h>
 
+// KID 20170615
 static struct device *uart_console_dev;
 
 #ifdef CONFIG_UART_CONSOLE_DEBUG_SERVER_HOOKS
@@ -91,9 +92,11 @@ static int console_in(void)
  * @return The character passed as input.
  */
 
+// KID 20170615
+// c: '*'
 static int console_out(int c)
 {
-#ifdef CONFIG_UART_CONSOLE_DEBUG_SERVER_HOOKS
+#ifdef CONFIG_UART_CONSOLE_DEBUG_SERVER_HOOKS // CONFIG_UART_CONSOLE_DEBUG_SERVER_HOOKS=n
 
 	int handled_by_debug_server = HANDLE_DEBUG_HOOK_OUT(c);
 
@@ -103,9 +106,12 @@ static int console_out(int c)
 
 #endif /* CONFIG_UART_CONSOLE_DEBUG_SERVER_HOOKS */
 
+	// c: '*'
 	if ('\n' == c) {
 		uart_poll_out(uart_console_dev, '\r');
 	}
+
+	// uart_console_dev: NULL, c: '*'
 	uart_poll_out(uart_console_dev, c);
 
 	return c;
@@ -113,15 +119,17 @@ static int console_out(int c)
 
 #endif
 
-#if defined(CONFIG_STDOUT_CONSOLE)
+#if defined(CONFIG_STDOUT_CONSOLE) // CONFIG_STDOUT_CONSOLE=n
 extern void __stdout_hook_install(int (*hook)(int));
 #else
+// KID 20170615
 #define __stdout_hook_install(x)		\
 	do {/* nothing */			\
 	} while ((0))
 #endif
 
-#if defined(CONFIG_PRINTK)
+#if defined(CONFIG_PRINTK) // CONFIG_PRINTK=y
+// KID 20170615
 extern void __printk_hook_install(int (*fn)(int));
 #else
 #define __printk_hook_install(x)		\
@@ -471,10 +479,14 @@ void uart_register_input(struct k_fifo *avail, struct k_fifo *lines,
  * @return N/A
  */
 
+// KID 20170615
 void uart_console_hook_install(void)
 {
-	__stdout_hook_install(console_out);
+	__stdout_hook_install(console_out); // null function
 	__printk_hook_install(console_out);
+
+	// __printk_hook_install 에서 한일:
+	// _char_out: console_out
 }
 
 /**
@@ -491,9 +503,11 @@ static int uart_console_init(struct device *arg)
 	ARG_UNUSED(arg);
 
 	// CONFIG_UART_CONSOLE_ON_DEV_NAME: "UART_1"
+	// device_get_binding("UART_1"): NULL
 	uart_console_dev = device_get_binding(CONFIG_UART_CONSOLE_ON_DEV_NAME);
+	// uart_console_dev: NULL
 
-#if defined(CONFIG_USB_UART_CONSOLE) && defined(CONFIG_USB_UART_DTR_WAIT)
+#if defined(CONFIG_USB_UART_CONSOLE) && defined(CONFIG_USB_UART_DTR_WAIT) // CONFIG_USB_UART_CONSOLE=n, CONFIG_USB_UART_DTR_WAIT=n
 	while (1) {
 		u32_t dtr = 0;
 
@@ -507,7 +521,11 @@ static int uart_console_init(struct device *arg)
 
 	uart_console_hook_install();
 
+	// uart_console_hook_install 에서 한일:
+	// _char_out: console_out
+
 	return 0;
+	// return 0
 }
 
 /* UART console initializes after the UART device itself */

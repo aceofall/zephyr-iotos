@@ -63,9 +63,13 @@ static int (*_char_out)(int) = _nop_char_out;
  *
  * @return N/A
  */
+// KID 20170615
+// console_out
 void __printk_hook_install(int (*fn)(int))
 {
+	//  _char_out: _nop_char_out, fn: console_out
 	_char_out = fn;
+	// _char_out: console_out
 }
 
 /**
@@ -247,7 +251,7 @@ static int char_out(int c, struct out_context *ctx)
 	ctx->count++;
 	// ctx->count: (&ctx)->count: 1
 
-	// c: '*'
+	// _char_out: console_out, c: '*'
 	return _char_out(c);
 }
 

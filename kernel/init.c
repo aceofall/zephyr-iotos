@@ -606,7 +606,8 @@ FUNC_NORETURN void _Cstart(void)
 	// init_mbox_module
 	// init_cache
 	// _loapic_init
-	// _ioapic_init 순으로 초기화 진행
+	// _ioapic_init
+	// uart_console_init 순으로 초기화 진행
 	//
 	// async_msg[0...9].thread.thread_state: 0x1
 	// async_msg[0...9].thread.swap_data: &async_msg[0...9].desc
@@ -625,6 +626,8 @@ FUNC_NORETURN void _Cstart(void)
 	//
 	// _k_stack_buf_async_msg_free[0...9]: (u32_t)&async_msg[0...9]
 	// (&async_msg_free)->next: &_k_stack_buf_async_msg_free[9]
+	//
+	// _char_out: console_out
 
 	// _SYS_INIT_LEVEL_PRE_KERNEL_2: 1
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_PRE_KERNEL_2);

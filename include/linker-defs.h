@@ -79,6 +79,7 @@
  */
 
 // KID 20170613
+// KID 20170615
 #define	DEVICE_INIT_SECTIONS()			\
 		__device_init_start = .;	\
 		DEVICE_INIT_LEVEL(PRE_KERNEL_1)	\

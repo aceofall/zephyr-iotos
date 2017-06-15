@@ -156,6 +156,9 @@ void _sys_device_do_config_level(int level)
 
 		//_ioapic_init 에서 한일:
 		// 정리 필요
+
+		// uart_console_init 에서 한일
+		// _char_out: console_out
 	}
 }
 
@@ -166,16 +169,19 @@ struct device *device_get_binding(const char *name)
 	struct device *info;
 
 	// NOTE:
-	// include/arch/x86/linker.ld 파일 참고
+	// include/linker-defs.h 파일 참고
 	// 코드 영역 __device_init_start 에서 __device_init_end 사이에 있는 코드들을 순차적으로 찾음
+	// SYS_INIT 메크로에 정의된 struct device 의 구조체 값들 중에는 "UART_1" 이름의 장치가 없는 것으로 보임
 
 	for (info = __device_init_start; info != __device_init_end; info++) {
+		// name: "UART_1"
 		if (info->driver_api && !strcmp(name, info->config->name)) {
 			return info;
 		}
 	}
 
 	return NULL;
+	// return NULL
 }
 
 #ifdef CONFIG_DEVICE_POWER_MANAGEMENT
