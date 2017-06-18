@@ -451,9 +451,10 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	// _kernel.irq_stack: _interrupt_stack + 2048
 }
 
+// KID 20170618
 static void switch_to_main_thread(void)
 {
-#ifdef CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN
+#ifdef CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN // CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN=n
 	_arch_switch_to_main_thread(_main_thread, _main_stack, MAIN_STACK_SIZE,
 				    _main);
 #else
@@ -463,6 +464,7 @@ static void switch_to_main_thread(void)
 	 * will never be rescheduled in.
 	 */
 
+	// irq_lock(): eflags 값
 	_Swap(irq_lock());
 #endif
 }
@@ -644,6 +646,9 @@ FUNC_NORETURN void _Cstart(void)
 	/* display boot banner */
 
 	PRINT_BOOT_BANNER();
+
+	// PRINT_BOOT_BANNER 에서 한일:
+	// "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 
 	switch_to_main_thread();
 

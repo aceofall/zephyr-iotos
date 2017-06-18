@@ -492,9 +492,10 @@ int _is_thread_time_slicing(struct k_thread *thread)
 
 /* Must be called with interrupts locked */
 /* Should be called only immediately before a thread switch */
+// KID 20170618
 void _update_time_slice_before_swap(void)
 {
-#ifdef CONFIG_TICKLESS_KERNEL
+#ifdef CONFIG_TICKLESS_KERNEL // CONFIG_TICKLESS_KERNEL=n
 	if (!_is_thread_time_slicing(_get_next_ready_thread())) {
 		return;
 	}
@@ -507,6 +508,7 @@ void _update_time_slice_before_swap(void)
 #endif
 	/* Restart time slice count at new thread switch */
 	_time_slice_elapsed = 0;
+	// _time_slice_elapsed: 0
 }
 #endif /* CONFIG_TIMESLICING */
 

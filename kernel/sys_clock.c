@@ -289,7 +289,8 @@ static inline void handle_timeouts(s32_t ticks)
 	#define handle_timeouts(ticks) do { } while ((0))
 #endif
 
-#ifdef CONFIG_TIMESLICING
+#ifdef CONFIG_TIMESLICING // CONFIG_TIMESLICING=y
+// KID 20170618
 s32_t _time_slice_elapsed;
 s32_t _time_slice_duration = CONFIG_TIMESLICE_SIZE;
 int  _time_slice_prio_ceiling = CONFIG_TIMESLICE_PRIORITY;

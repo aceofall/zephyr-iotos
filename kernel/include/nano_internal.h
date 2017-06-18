@@ -58,6 +58,7 @@ extern void _new_thread(struct k_thread *thread, char *pStack, size_t stackSize,
 
 /* context switching and scheduling-related routines */
 
+// KID 20170618
 extern unsigned int __swap(unsigned int key);
 
 #ifdef CONFIG_TIMESLICING
@@ -68,16 +69,22 @@ extern void _update_time_slice_before_swap(void);
 extern void _check_stack_sentinel(void);
 #endif
 
+// KID 20170618
+// irq_lock(): eflags 값
 static inline unsigned int _Swap(unsigned int key)
 {
 
-#ifdef CONFIG_STACK_SENTINEL
+#ifdef CONFIG_STACK_SENTINEL // CONFIG_STACK_SENTINEL=n
 	_check_stack_sentinel();
 #endif
-#ifdef CONFIG_TIMESLICING
+#ifdef CONFIG_TIMESLICING // CONFIG_TIMESLICING=y
 	_update_time_slice_before_swap();
+
+	// _update_time_slice_before_swap 에서 한일:
+	// _time_slice_elapsed: 0
 #endif
 
+	// key: eflags 값
 	return __swap(key);
 }
 

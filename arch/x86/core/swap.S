@@ -22,7 +22,7 @@
 #include <offsets_short.h>
 
 	/* exports (internal APIs) */
-
+// KID 20170618
 	GTEXT(__swap)
 
 	/* externs */
