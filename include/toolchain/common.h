@@ -58,6 +58,7 @@
       #define PERFOPT_ALIGN .balign 16
     #else
 // KID 20170516
+// KID 20170620
       #define PERFOPT_ALIGN .balign  1
     #endif
 

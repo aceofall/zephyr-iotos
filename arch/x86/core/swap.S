@@ -23,9 +23,12 @@
 
 	/* exports (internal APIs) */
 // KID 20170618
+// GTEXT(__swap): .globl __swap; .type __swap, @function
 	GTEXT(__swap)
 
 	/* externs */
+// KID 20170620
+// GDATA(_k_neg_eagain): .globl _k_neg_eagain; .type _k_neg_eagain, @object
 	GDATA(_k_neg_eagain)
 
 /**
@@ -86,8 +89,14 @@
 	pop %edx
 	pop %eax
 .endm
+// KID 20170620
+// key: eflags 값
+//
+// SECTION_FUNC(TEXT, __swap):
+// .section .TEXT.__swap, "ax";
+// .balign  1; __swap :
 SECTION_FUNC(TEXT, __swap)
-#ifdef CONFIG_EXECUTION_BENCHMARKING
+#ifdef CONFIG_EXECUTION_BENCHMARKING // CONFIG_EXECUTION_BENCHMARKING=n
 	/* Save the eax and edx registers before reading the time stamp
 	* once done pop the values.
 	*/
@@ -99,7 +108,7 @@ SECTION_FUNC(TEXT, __swap)
 	pop %edx
 	pop %eax
 #endif
-#ifdef CONFIG_X86_IAMCU
+#ifdef CONFIG_X86_IAMCU // CONFIG_X86_IAMCU=y
 	/* save EFLAGS on stack right before return address, just as SYSV would
 	 * have done
 	 */

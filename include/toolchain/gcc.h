@@ -160,8 +160,10 @@ A##a:
 #else
 
 // KID 20170516
+// KID 20170620
 #define FUNC_CODE()
 // KID 20170516
+// KID 20170620
 #define FUNC_INSTR(a)
 
 #endif /* !CONFIG_ARM */
@@ -211,7 +213,11 @@ A##a:
 #define WDATA(sym) weak_data sym
 
 #else  /* !CONFIG_ARM && !CONFIG_ARC */
+// KID 20170620
+// GTEXT(__swap): .globl __swap; .type __swap, @function
 #define GTEXT(sym) .globl sym; .type sym, @function
+// KID 20170620
+// GDATA(_k_neg_eagain): .globl _k_neg_eagain; .type _k_neg_eagain, @object
 #define GDATA(sym) .globl sym; .type sym, @object
 #endif
 
@@ -264,6 +270,14 @@ A##a:
 // FUNC_CODE()
 // PERFOPT_ALIGN: .balign  1
 // FUNC_INSTR(a):
+// KID 20170620
+// FUNC_CODE():
+// PERFOPT_ALIGN: .balign  1
+// FUNC_INSTR(a):
+//
+// SECTION_FUNC(TEXT, __swap):
+// .section .TEXT.__swap, "ax";
+// .balign  1; __swap :
 #define SECTION_FUNC(sect, sym)						\
 	.section .sect.sym, "ax";					\
 				FUNC_CODE()				\
