@@ -694,6 +694,8 @@ static inline u32_t isr_rx_adv(u8_t devmatch_ok, u8_t irkmatch_ok,
 	struct radio_pdu_node_rx *radio_pdu_node_rx;
 
 	pdu_adv = (struct pdu_adv *)radio_pkt_scratch_get();
+	_pdu_adv = (struct pdu_adv *)&_radio.advertiser.adv_data.data
+		[_radio.advertiser.adv_data.first][0];
 
 	if ((pdu_adv->type == PDU_ADV_TYPE_SCAN_REQ) &&
 	    (pdu_adv->len == sizeof(struct pdu_adv_payload_scan_req)) &&
@@ -724,7 +726,15 @@ static inline u32_t isr_rx_adv(u8_t devmatch_ok, u8_t irkmatch_ok,
 		   (pdu_adv->len == sizeof(struct pdu_adv_payload_connect_ind)) &&
 		   (((_radio.advertiser.filter_policy & 0x02) == 0) ||
 		    (devmatch_ok) || (irkmatch_ok)) &&
-		   (1 /** @todo own addr match check */) &&
+		   ((_pdu_adv->type != PDU_ADV_TYPE_DIRECT_IND) ||
+		    ((_pdu_adv->tx_addr == pdu_adv->rx_addr) &&
+		     (_pdu_adv->rx_addr == pdu_adv->tx_addr) &&
+		     !memcmp(_pdu_adv->payload.direct_ind.adv_addr,
+			     pdu_adv->payload.connect_ind.adv_addr,
+			     BDADDR_SIZE) &&
+		     !memcmp(_pdu_adv->payload.direct_ind.tgt_addr,
+			     pdu_adv->payload.connect_ind.init_addr,
+			     BDADDR_SIZE))) &&
 		   ((_radio.fc_ena == 0) || (_radio.fc_req == _radio.fc_ack)) &&
 		   (_radio.advertiser.conn)) {
 		struct radio_le_conn_cmplt *radio_le_conn_cmplt;
@@ -750,10 +760,6 @@ static inline u32_t isr_rx_adv(u8_t devmatch_ok, u8_t irkmatch_ok,
 		/* acquire the slave context from advertiser */
 		conn = _radio.advertiser.conn;
 		_radio.advertiser.conn = NULL;
-
-		/* Advertiser transitions to Slave role */
-		LL_ASSERT(_radio.advertiser.is_enabled);
-		_radio.advertiser.is_enabled = 0;
 
 		/* Populate the slave context */
 		conn->handle = mem_index_get(conn, _radio.conn_pool,
@@ -903,8 +909,6 @@ static inline u32_t isr_rx_adv(u8_t devmatch_ok, u8_t irkmatch_ok,
 		ticker_stop_adv_assert(ticker_status, (void *)__LINE__);
 
 		/* Stop Direct Adv Stopper */
-		_pdu_adv = (struct pdu_adv *)&_radio.advertiser.adv_data.data
-			[_radio.advertiser.adv_data.first][0];
 		if (_pdu_adv->type == PDU_ADV_TYPE_DIRECT_IND) {
 			/* Advertiser stop can expire while here in this ISR.
 			 * Deferred attempt to stop can fail as it would have
@@ -1040,10 +1044,6 @@ static inline u32_t isr_rx_scan(u8_t irkmatch_id, u8_t rssi_ready)
 		/* acquire the master context from scanner */
 		conn = _radio.scanner.conn;
 		_radio.scanner.conn = NULL;
-
-		/* Initiator transitions to Master role */
-		LL_ASSERT(_radio.scanner.is_enabled);
-		_radio.scanner.is_enabled = 0;
 
 		/* Tx the connect request packet */
 		pdu_adv_tx = (struct pdu_adv *)radio_pkt_scratch_get();
@@ -4889,39 +4889,26 @@ static void event_adv(u32_t ticks_at_expire, u32_t remainder,
 void event_adv_stop(u32_t ticks_at_expire, u32_t remainder, u16_t lazy,
 		    void *context)
 {
-	u32_t ticker_status;
+	struct radio_le_conn_cmplt *radio_le_conn_cmplt;
 	struct radio_pdu_node_rx *radio_pdu_node_rx;
 	struct pdu_data *pdu_data_rx;
-	struct radio_le_conn_cmplt *radio_le_conn_cmplt;
+	u32_t ticker_status;
 
 	ARG_UNUSED(ticks_at_expire);
 	ARG_UNUSED(remainder);
 	ARG_UNUSED(lazy);
 	ARG_UNUSED(context);
 
-	/* Reset advertiser state */
-	_radio.advertiser.is_enabled = 0;
+	/* Abort an event, if any, to avoid Rx queue corruption used by Radio
+	 * ISR.
+	 */
+	event_stop(0, 0, 0, (void *)STATE_ABORT);
 
 	/* Stop Direct Adv */
 	ticker_status =
 	    ticker_stop(RADIO_TICKER_INSTANCE_ID_RADIO,
 			RADIO_TICKER_USER_ID_WORKER, RADIO_TICKER_ID_ADV,
 			ticker_success_assert, (void *)__LINE__);
-	LL_ASSERT((ticker_status == TICKER_STATUS_SUCCESS) ||
-		  (ticker_status == TICKER_STATUS_BUSY));
-	/** @todo synchronize stopping of scanner, i.e. pre-event and event
-	 * needs to complete
-	 */
-	/* below lines are temporary */
-	ticker_status = ticker_stop(RADIO_TICKER_INSTANCE_ID_RADIO,
-				    RADIO_TICKER_USER_ID_WORKER,
-				    RADIO_TICKER_ID_MARKER_0,
-				    ticker_success_assert, (void *)__LINE__);
-	LL_ASSERT((ticker_status == TICKER_STATUS_SUCCESS) ||
-		  (ticker_status == TICKER_STATUS_BUSY));
-	ticker_status = ticker_stop(RADIO_TICKER_INSTANCE_ID_RADIO,
-				    RADIO_TICKER_USER_ID_WORKER, RADIO_TICKER_ID_EVENT,
-				    ticker_success_assert, (void *)__LINE__);
 	LL_ASSERT((ticker_status == TICKER_STATUS_SUCCESS) ||
 		  (ticker_status == TICKER_STATUS_BUSY));
 
@@ -7985,12 +7972,31 @@ static u32_t role_disable(u8_t ticker_id_primary, u8_t ticker_id_stop)
 	u32_t ticks_xtal_to_start = 0;
 	u32_t ret;
 
+	/* Determine xtal, active and start ticks. Stop directed adv stop
+	 * ticker.
+	 */
 	switch (ticker_id_primary) {
 	case RADIO_TICKER_ID_ADV:
 		ticks_xtal_to_start =
 			_radio.advertiser.hdr.ticks_xtal_to_start;
 		ticks_active_to_start =
 			_radio.advertiser.hdr.ticks_active_to_start;
+
+		/* Stop ticker "may" be in use for direct adv,
+		 * hence stop may fail if ticker not used.
+		 */
+		ret = ticker_stop(RADIO_TICKER_INSTANCE_ID_RADIO,
+				  RADIO_TICKER_USER_ID_APP, ticker_id_stop,
+				  ticker_if_done, (void *)&ret_cb);
+		if (ret == TICKER_STATUS_BUSY) {
+			/* wait for ticker to be stopped */
+			while (ret_cb == TICKER_STATUS_BUSY) {
+				cpu_sleep();
+			}
+		}
+
+		LL_ASSERT((ret_cb == TICKER_STATUS_SUCCESS) ||
+			  (ret_cb == TICKER_STATUS_FAILURE));
 		break;
 
 	case RADIO_TICKER_ID_SCAN:
@@ -8022,7 +8028,6 @@ static u32_t role_disable(u8_t ticker_id_primary, u8_t ticker_id_stop)
 	}
 
 	LL_ASSERT(!_radio.ticker_id_stop);
-
 	_radio.ticker_id_stop = ticker_id_primary;
 
 	/* Step 1: Is Primary started? Stop the Primary ticker */
@@ -9141,8 +9146,38 @@ void radio_rx_dequeue(void)
 	}
 
 	if (radio_pdu_node_rx->hdr.type == NODE_RX_TYPE_CONNECTION) {
-		u8_t bm = ((u8_t)_radio.scanner.is_enabled << 1) |
-			  _radio.advertiser.is_enabled;
+		struct radio_le_conn_cmplt *radio_le_conn_cmplt;
+		struct connection *conn = NULL;
+		struct pdu_data *pdu_data_rx;
+		u8_t bm;
+
+		pdu_data_rx = (void *)radio_pdu_node_rx->pdu_data;
+		radio_le_conn_cmplt = (void *)&pdu_data_rx->payload;
+		if ((radio_le_conn_cmplt->status == 0x3c) ||
+		    radio_le_conn_cmplt->role) {
+			if (radio_le_conn_cmplt->status == 0x3c) {
+				conn = _radio.advertiser.conn;
+				_radio.advertiser.conn = NULL;
+			}
+
+			LL_ASSERT(_radio.advertiser.is_enabled);
+			_radio.advertiser.is_enabled = 0;
+		} else {
+			LL_ASSERT(_radio.scanner.is_enabled);
+			_radio.scanner.is_enabled = 0;
+		}
+
+		if (conn) {
+			struct radio_pdu_node_rx *node_rx = (void *)
+				&conn->llcp_terminate.radio_pdu_node_rx;
+
+			mem_release(node_rx->hdr.onion.link,
+				    &_radio.link_rx_free);
+			mem_release(conn, &_radio.conn_free);
+		}
+
+		bm = ((u8_t)_radio.scanner.is_enabled << 1) |
+		     _radio.advertiser.is_enabled;
 
 		if (!bm) {
 			ll_adv_scan_state_cb(0);
