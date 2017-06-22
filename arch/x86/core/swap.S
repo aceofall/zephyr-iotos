@@ -112,6 +112,7 @@ SECTION_FUNC(TEXT, __swap)
 	/* save EFLAGS on stack right before return address, just as SYSV would
 	 * have done
 	 */
+	// key: eflags 값
 	pushl	0(%esp)
 	movl	%eax, 4(%esp)
 #endif
