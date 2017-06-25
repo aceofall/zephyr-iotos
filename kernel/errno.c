@@ -19,6 +19,7 @@
  * not assembly language safe.
  * FIXME: wastes 4 bytes
  */
+// KID 20170625
 const int _k_neg_eagain = -EAGAIN;
 
 #ifdef CONFIG_ERRNO

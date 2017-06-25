@@ -146,7 +146,7 @@ SECTION_FUNC(TEXT, __swap)
 	movl	_kernel_offset_to_current(%edi), %ecx
 	movl	%esp, _thread_offset_to_esp(%ecx)
 
-#ifdef CONFIG_KERNEL_EVENT_LOGGER_CONTEXT_SWITCH
+#ifdef CONFIG_KERNEL_EVENT_LOGGER_CONTEXT_SWITCH // CONFIG_KERNEL_EVENT_LOGGER_CONTEXT_SWITCH=n
 	/* Register the context switch */
 	call	_sys_k_event_logger_context_switch
 #endif
@@ -157,7 +157,7 @@ SECTION_FUNC(TEXT, __swap)
 	 * thread to be swapped in, and %edi still contains &_kernel.
 	 */
 
-#ifdef CONFIG_FP_SHARING
+#ifdef CONFIG_FP_SHARING // CONFIG_FP_SHARING=n
 	/*
 	 * Clear the CR0[TS] bit (in the event the current thread
 	 * doesn't have floating point enabled) to prevent the "device not
