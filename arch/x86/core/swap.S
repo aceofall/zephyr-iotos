@@ -345,7 +345,7 @@ CROHandlingDone:
 	/* Utilize the 'eflags' parameter to __swap() */
 
 	pushl	4(%esp)
-#ifdef CONFIG_INT_LATENCY_BENCHMARK
+#ifdef CONFIG_INT_LATENCY_BENCHMARK // CONFIG_INT_LATENCY_BENCHMARK=n
 	testl	$0x200, (%esp)
 	jz	skipIntLatencyStop
 
@@ -359,7 +359,7 @@ CROHandlingDone:
 skipIntLatencyStop:
 #endif
 	popfl
-#if CONFIG_X86_IAMCU
+#if CONFIG_X86_IAMCU // CONFIG_X86_IAMCU=y
 	/* Remember that eflags we stuck into the stack before the return
 	 * address? need to get it out of there since the calling convention
 	 * will not do that for us.
@@ -368,7 +368,7 @@ skipIntLatencyStop:
 	movl	%edx, (%esp)
 #endif
 
-#ifdef CONFIG_EXECUTION_BENCHMARKING
+#ifdef CONFIG_EXECUTION_BENCHMARKING // CONFIG_EXECUTION_BENCHMARKING=n
 	/* Save the eax and edx registers before reading the time stamp
 	* once done pop the values.
 	*/
