@@ -4275,7 +4275,9 @@ int bt_le_adv_start(const struct bt_le_adv_param *param,
 		return err;
 	}
 
-	atomic_set_bit(bt_dev.flags, BT_DEV_KEEP_ADVERTISING);
+	if (!(param->options & BT_LE_ADV_OPT_ONE_TIME)) {
+		atomic_set_bit(bt_dev.flags, BT_DEV_KEEP_ADVERTISING);
+	}
 
 	return 0;
 }
@@ -4284,15 +4286,10 @@ int bt_le_adv_stop(void)
 {
 	int err;
 
-	/* Advertise disable may fail if slave connections are established,
-	 * and advertising is not kept ON as the controller does not support
-	 * simultaneous slave connections and connectable advertising state.
-	 * Hence, we test and clear BT_DEV_KEEP_ADVERTISING flag before trying
-	 * to disable advertising if BT_DEV_ADVERTISING is set.
+	/* Make sure advertising is not re-enabled later even if it's not
+	 * currently enabled (i.e. BT_DEV_ADVERTISING is not set).
 	 */
-	if (!atomic_test_and_clear_bit(bt_dev.flags, BT_DEV_KEEP_ADVERTISING)) {
-		return -EALREADY;
-	}
+	atomic_clear_bit(bt_dev.flags, BT_DEV_KEEP_ADVERTISING);
 
 	if (!atomic_test_bit(bt_dev.flags, BT_DEV_ADVERTISING)) {
 		return 0;
