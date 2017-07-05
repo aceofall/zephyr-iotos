@@ -60,7 +60,7 @@ static u32_t conn_count;
 #endif
 
 #define DEFAULT_EVENT_MASK           0x1fffffffffff
-#define DEFAULT_EVENT_MASK_PAGE_2    0x1fffffffffff
+#define DEFAULT_EVENT_MASK_PAGE_2    0x0
 #define DEFAULT_LE_EVENT_MASK 0x1f
 
 static u64_t event_mask = DEFAULT_EVENT_MASK;
@@ -382,6 +382,8 @@ static void read_supported_commands(struct net_buf *buf, struct net_buf **evt)
 	rp->commands[14] |= BIT(3) | BIT(5);
 	/* Read BD ADDR. */
 	rp->commands[15] |= BIT(1);
+	/* Set Event Mask Page 2 */
+	rp->commands[22] |= BIT(2);
 	/* LE Set Event Mask, LE Read Buffer Size, LE Read Local Supp Feats,
 	 * Set Random Addr
 	 */
@@ -2031,6 +2033,7 @@ static void le_unknown_rsp(struct pdu_data *pdu_data, u16_t handle,
 static void remote_version_info(struct pdu_data *pdu_data, u16_t handle,
 				struct net_buf *buf)
 {
+	struct pdu_data_llctrl_version_ind *ver_ind;
 	struct bt_hci_evt_remote_version_info *ep;
 
 	if (!(event_mask & BT_EVT_MASK_REMOTE_VERSION_INFO)) {
@@ -2040,14 +2043,12 @@ static void remote_version_info(struct pdu_data *pdu_data, u16_t handle,
 	evt_create(buf, BT_HCI_EVT_REMOTE_VERSION_INFO, sizeof(*ep));
 	ep = net_buf_add(buf, sizeof(*ep));
 
+	ver_ind = &pdu_data->payload.llctrl.ctrldata.version_ind;
 	ep->status = 0x00;
 	ep->handle = sys_cpu_to_le16(handle);
-	ep->version =
-	      pdu_data->payload.llctrl.ctrldata.version_ind.version_number;
-	ep->manufacturer =
-		pdu_data->payload.llctrl.ctrldata.version_ind.company_id;
-	ep->subversion =
-	      pdu_data->payload.llctrl.ctrldata.version_ind.sub_version_number;
+	ep->version = ver_ind->version_number;
+	ep->manufacturer = sys_cpu_to_le16(ver_ind->company_id);
+	ep->subversion = sys_cpu_to_le16(ver_ind->sub_version_number);
 }
 
 static void le_conn_param_req(struct pdu_data *pdu_data, u16_t handle,
