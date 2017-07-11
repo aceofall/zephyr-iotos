@@ -20,6 +20,7 @@
 #define _kernel_offset_to_irq_stack \
 	(___kernel_t_irq_stack_OFFSET)
 
+// KID 20170711
 #define _kernel_offset_to_current \
 	(___kernel_t_current_OFFSET)
 

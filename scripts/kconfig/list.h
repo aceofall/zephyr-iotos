@@ -6,6 +6,9 @@
  */
 
 #undef offsetof
+// KID 20170711
+// #define offsetof(_kernel_t, current):
+// ((size_t) &((_kernel_t *)0)->current)
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 
 /**

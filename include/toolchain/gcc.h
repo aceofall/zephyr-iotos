@@ -334,6 +334,11 @@ A##a:
 #elif defined(CONFIG_X86) || defined(CONFIG_ARC) // CONFIG_X86=y
 
 // KID 20170517
+// KID 20170711
+// #define GEN_ABSOLUTE_SYM(___kernel_t_current_OFFSET, ((size_t) &((_kernel_t *)0)->current)):
+// __asm__(".globl\t" ___kernel_t_current_OFFSET "\n\t.equ\t" ___kernel_t_current_OFFSET
+// 	   ",%c0"
+// 	   "\n\t.type\t" ___kernel_t_current_OFFSET ",@object" :  : "n"(((size_t) &((_kernel_t *)0)->current)))
 #define GEN_ABSOLUTE_SYM(name, value)               \
 	__asm__(".globl\t" #name "\n\t.equ\t" #name \
 		",%c0"                              \

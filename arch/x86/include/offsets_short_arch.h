@@ -21,6 +21,7 @@
 #define _thread_offset_to_excNestCount \
 	(___thread_t_arch_OFFSET + ___thread_arch_t_excNestCount_OFFSET)
 
+// KID 20170711
 #define _thread_offset_to_esp \
 	(___thread_t_callee_saved_OFFSET + ___callee_saved_t_esp_OFFSET)
 

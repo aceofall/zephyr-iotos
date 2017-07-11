@@ -15,6 +15,11 @@
 
 GEN_ABS_SYM_BEGIN(_OffsetAbsSyms)
 
+// KID 20170711
+// GEN_OFFSET_SYM(_kernel_t, current):
+// __asm__(".globl\t" ___kernel_t_current_OFFSET "\n\t.equ\t" ___kernel_t_current_OFFSET
+// 	   ",%c0"
+// 	   "\n\t.type\t" ___kernel_t_current_OFFSET ",@object" :  : "n"(((size_t) &((_kernel_t *)0)->current)))
 GEN_OFFSET_SYM(_kernel_t, current);
 
 #if defined(CONFIG_THREAD_MONITOR)
@@ -52,6 +57,12 @@ GEN_OFFSET_SYM(_thread_base_t, swap_data);
 
 GEN_OFFSET_SYM(_thread_t, base);
 GEN_OFFSET_SYM(_thread_t, caller_saved);
+
+// KID 20170711
+// GEN_OFFSET_SYM(_thread_t, callee_saved):
+// __asm__(".globl\t" ___thread_t_callee_saved_OFFSET "\n\t.equ\t" ___thread_t_callee_saved_OFFSET
+// 	   ",%c0"
+// 	   "\n\t.type\t" ___thread_t_callee_saved_OFFSET ",@object" :  : "n"(((size_t) &((_thread_t *)0)->callee_saved)))
 GEN_OFFSET_SYM(_thread_t, callee_saved);
 GEN_OFFSET_SYM(_thread_t, arch);
 

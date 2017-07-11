@@ -60,6 +60,11 @@ GEN_ABSOLUTE_SYM(_K_THREAD_NO_FLOAT_SIZEOF,
 		 sizeof(struct k_thread) - sizeof(tCoopFloatReg) -
 			 sizeof(tPreempFloatReg));
 
+// KID 20170711
+// GEN_OFFSET_SYM(_callee_saved_t, esp):
+// __asm__(".globl\t" ___callee_saved_t_esp_OFFSET "\n\t.equ\t" ___callee_saved_t_esp_OFFSET
+// 	   ",%c0"
+// 	   "\n\t.type\t" ___callee_saved_t_esp_OFFSET ",@object" :  : "n"(((size_t) &((_callee_saved_t *)0)->esp)))
 GEN_OFFSET_SYM(_callee_saved_t, esp);
 
 GEN_OFFSET_SYM(tSwapStk, eax);

@@ -76,6 +76,17 @@
 
 /* definition of the GEN_OFFSET_SYM() macros is toolchain independent  */
 
+// KID 20170711
+// offsetof(_kernel_t, current): ((size_t) &((_kernel_t *)0)->current)
+// GEN_ABSOLUTE_SYM(___kernel_t_current_OFFSET, ((size_t) &((_kernel_t *)0)->current)):
+// __asm__(".globl\t" ___kernel_t_current_OFFSET "\n\t.equ\t" ___kernel_t_current_OFFSET
+// 	   ",%c0"
+// 	   "\n\t.type\t" ___kernel_t_current_OFFSET ",@object" :  : "n"(((size_t) &((_kernel_t *)0)->current)))
+//
+// #define GEN_OFFSET_SYM(_kernel_t, current):
+// __asm__(".globl\t" ___kernel_t_current_OFFSET "\n\t.equ\t" ___kernel_t_current_OFFSET
+// 	   ",%c0"
+// 	   "\n\t.type\t" ___kernel_t_current_OFFSET ",@object" :  : "n"(((size_t) &((_kernel_t *)0)->current)))
 #define GEN_OFFSET_SYM(S, M) \
 	GEN_ABSOLUTE_SYM(__##S##_##M##_##OFFSET, offsetof(S, M))
 

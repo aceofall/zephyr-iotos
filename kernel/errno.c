@@ -20,6 +20,7 @@
  * FIXME: wastes 4 bytes
  */
 // KID 20170625
+// KID 20170711
 const int _k_neg_eagain = -EAGAIN;
 
 #ifdef CONFIG_ERRNO

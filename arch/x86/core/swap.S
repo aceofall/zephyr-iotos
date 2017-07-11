@@ -90,6 +90,7 @@
 	pop %eax
 .endm
 // KID 20170620
+// KID 20170711
 // key: eflags 값
 //
 // SECTION_FUNC(TEXT, __swap):
