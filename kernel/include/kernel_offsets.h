@@ -32,9 +32,19 @@ GEN_OFFSET_SYM(_kernel_t, irq_stack);
 GEN_OFFSET_SYM(_kernel_t, idle);
 #endif
 
+// KID 20170711
+// GEN_OFFSET_SYM(_kernel_t, ready_q):
+// __asm__(".globl\t" ___kernel_t_ready_q_OFFSET "\n\t.equ\t" ___kernel_t_ready_q_OFFSET
+// 	   ",%c0"
+// 	   "\n\t.type\t" ___kernel_t_ready_q_OFFSET ",@object" :  : "n"(((size_t) &((_kernel_t *)0)->ready_q)))
 GEN_OFFSET_SYM(_kernel_t, ready_q);
 GEN_OFFSET_SYM(_kernel_t, arch);
 
+// KID 20170711
+// GEN_OFFSET_SYM(_ready_q_t, ready_q):
+// __asm__(".globl\t" ___ready_q_t_cache_OFFSET "\n\t.equ\t" ___ready_q_t_cache_OFFSET
+// 	   ",%c0"
+// 	   "\n\t.type\t" ___ready_q_t_cache_OFFSET ",@object" :  : "n"(((size_t) &((_ready_q_t *)0)->ready_q)))
 GEN_OFFSET_SYM(_ready_q_t, cache);
 
 #ifdef CONFIG_FP_SHARING

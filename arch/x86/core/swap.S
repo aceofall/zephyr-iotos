@@ -113,9 +113,33 @@ SECTION_FUNC(TEXT, __swap)
 	/* save EFLAGS on stack right before return address, just as SYSV would
 	 * have done
 	 */
+	/*
+	// HIGH +--------------------------+ <-- SP 처음위치
+	// ADDR |                          |
+	//      +--------------------------+
+	//      |                          |
+	//      +--------------------------+
+	//      |                          |
+	//      +--------------------------+
+	// LOW  |                          |
+	// ADDR +--------------------------+
+	*/
 	// key: eflags 값
 	pushl	0(%esp)
+	/*
+	// HIGH +--------------------------+ <-- SP 처음위치
+	// ADDR |        eflags 값         |
+	//      +--------------------------+ <- esp (현재 sp 위치)
+	//      |                          |
+	//      +--------------------------+
+	//      |                          |
+	//      +--------------------------+
+	// LOW  |                          |
+	// ADDR +--------------------------+
+	*/
+
 	movl	%eax, 4(%esp)
+	// eax: esp (현재 sp 위치) + 4 :SP 처음위치
 #endif
 	/*
 	 * Push all non-volatile registers onto the stack; do not copy
@@ -125,12 +149,67 @@ SECTION_FUNC(TEXT, __swap)
 	 */
 
 	pushl	%edi
+	/*
+	// HIGH +--------------------------+ <-- SP 처음위치
+	// ADDR |        eflags 값         |
+	//      +--------------------------+
+	//      |          edi             |
+	//      +--------------------------+ <- esp (현재 sp 위치)
+	//      |                          |
+	//      +--------------------------+
+	// LOW  |                          |
+	// ADDR +--------------------------+
+	*/
 
 	movl	$_kernel, %edi
+	// edi: &_kernel
 
 	pushl	%esi
+	/*
+	// HIGH +--------------------------+ <-- SP 처음위치
+	// ADDR |        eflags 값         |
+	//      +--------------------------+
+	//      |          edi             |
+	//      +--------------------------+
+	//      |          esi             |
+	//      +--------------------------+ <- esp (현재 sp 위치)
+	//      |                          |
+	//      +--------------------------+
+	// LOW  |                          |
+	// ADDR +--------------------------+
+	*/
+
 	pushl	%ebx
+	/*
+	// HIGH +--------------------------+ <-- SP 처음위치
+	// ADDR |        eflags 값         |
+	//      +--------------------------+
+	//      |          edi             |
+	//      +--------------------------+
+	//      |          esi             |
+	//      +--------------------------+
+	//      |          ebx             |
+	//      +--------------------------+ <- esp (현재 sp 위치)
+	// LOW  |                          |
+	// ADDR +--------------------------+
+	*/
+
 	pushl	%ebp
+	/*
+	// HIGH +--------------------------+ <-- SP 처음위치
+	// ADDR |        eflags 값         |
+	//      +--------------------------+
+	//      |          edi             |
+	//      +--------------------------+
+	//      |          esi             |
+	//      +--------------------------+
+	//      |          ebx             |
+	//      +--------------------------+
+	//      |          ebp             |
+	//      +--------------------------+ <- esp (현재 sp 위치)
+	// LOW  |                          |
+	// ADDR +--------------------------+
+	*/
 
 	/*
 	 * Carve space for the return value. Setting it to a defafult of
@@ -140,18 +219,40 @@ SECTION_FUNC(TEXT, __swap)
 	 */
 
 	pushl   _k_neg_eagain
-
+	/*
+	// HIGH +--------------------------+ <-- SP 처음위치
+	// ADDR |        eflags 값         |
+	//      +--------------------------+
+	//      |          edi             |
+	//      +--------------------------+
+	//      |          esi             |
+	//      +--------------------------+
+	//      |          ebx             |
+	//      +--------------------------+
+	//      |          ebp             |
+	//      +--------------------------+
+	//      |      _k_neg_eagain       |
+	//      +--------------------------+ <- esp (현재 sp 위치)
+	// LOW  |                          |
+	// ADDR +--------------------------+
+	*/
 
 	/* save esp into k_thread structure */
 
+	// _kernel_offset_to_current(%edi): _kernel.current: &dummy_thread_memory
 	movl	_kernel_offset_to_current(%edi), %ecx
+	// ecx: &dummy_thread_memory
+
+	// _thread_offset_to_esp(%ecx): 
 	movl	%esp, _thread_offset_to_esp(%ecx)
 
 #ifdef CONFIG_KERNEL_EVENT_LOGGER_CONTEXT_SWITCH // CONFIG_KERNEL_EVENT_LOGGER_CONTEXT_SWITCH=n
 	/* Register the context switch */
 	call	_sys_k_event_logger_context_switch
 #endif
+	// _kernel_offset_to_ready_q_cache(%edi): &_main_thread_s
 	movl	_kernel_offset_to_ready_q_cache(%edi), %eax
+	// eax: &_main_thread_s
 
 	/*
 	 * At this point, the %eax register contains the 'k_thread *' of the
@@ -316,10 +417,13 @@ CROHandlingDone:
 
 	/* update _kernel.current to reflect incoming thread */
 
+	// eax: &_main_thread_s, _kernel_offset_to_current(%edi): _kernel.current: &dummy_thread_memory
 	movl    %eax, _kernel_offset_to_current(%edi)
+	// eax: &_main_thread_s, _kernel_offset_to_current(%edi): _kernel.current: &_main_thread_s
 
 	/* recover task/fiber stack pointer from k_thread */
 
+	// _thread_offset_to_esp(%eax)
 	movl	_thread_offset_to_esp(%eax), %esp
 
 
