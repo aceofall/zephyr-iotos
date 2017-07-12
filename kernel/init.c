@@ -112,6 +112,7 @@ K_THREAD_STACK_DEFINE(_main_stack, MAIN_STACK_SIZE);
 K_THREAD_STACK_DEFINE(_idle_stack, IDLE_STACK_SIZE);
 
 // KID 20170519
+// KID 20170712
 static struct k_thread _main_thread_s;
 // KID 20170525
 static struct k_thread _idle_thread_s;
@@ -221,6 +222,7 @@ void _data_copy(void)
  * @return N/A
  */
 // KID 20170519
+// KID 20170712
 static void _main(void *unused1, void *unused2, void *unused3)
 {
 	ARG_UNUSED(unused1);

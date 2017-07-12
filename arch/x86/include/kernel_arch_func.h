@@ -63,6 +63,7 @@ static inline void kernel_arch_init(void)
  * @return N/A
  */
 // KID 20170625
+// KID 20170712
 static ALWAYS_INLINE void
 _set_thread_return_value(struct k_thread *thread, unsigned int value)
 {
