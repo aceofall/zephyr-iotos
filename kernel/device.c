@@ -52,8 +52,10 @@ extern u32_t __device_busy_end[];
  */
 // KID 20170527
 // _SYS_INIT_LEVEL_PRE_KERNEL_1: 0
-// ARM10C 20170613
+// KID 20170613
 // _SYS_INIT_LEVEL_PRE_KERNEL_2: 1
+// KID 20170713
+// _SYS_INIT_LEVEL_POST_KERNEL: 2
 void _sys_device_do_config_level(int level)
 {
 	struct device *info;
@@ -65,6 +67,10 @@ void _sys_device_do_config_level(int level)
 	// NOTE:
 	// include/arch/x86/linker.ld 파일 참고
 	// section ".init_PRE_KERNEL_2[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
+
+	// NOTE:
+	// include/arch/x86/linker.ld 파일 참고
+	// section ".init_POST_KERNEL[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
 
 	// level: 0, config_levels[0]: __device_PRE_KERNEL_1_start, config_levels[1]: __device_PRE_KERNEL_2_start
 	// level: 1, config_levels[1]: __device_PRE_KERNEL_2_start, config_levels[2]: __device_POST_KERNEL_start

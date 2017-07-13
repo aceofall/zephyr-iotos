@@ -223,12 +223,20 @@ void _data_copy(void)
  */
 // KID 20170519
 // KID 20170712
+// KID 20170713
+// NULL, NULL, NULL
 static void _main(void *unused1, void *unused2, void *unused3)
 {
+	// unused1: NULL
 	ARG_UNUSED(unused1);
+
+	// unused2: NULL
 	ARG_UNUSED(unused2);
+
+	// unused3: NULL
 	ARG_UNUSED(unused3);
 
+	// _SYS_INIT_LEVEL_POST_KERNEL: 2
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_POST_KERNEL);
 
 	/* Final init level before app starts */

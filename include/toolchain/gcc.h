@@ -108,6 +108,7 @@ do {                                                                    \
 #define __deprecated	__attribute__((deprecated))
 // KID 20170519
 // KID 20170531
+// KID 20170713
 #define ARG_UNUSED(x) (void)(x)
 
 #define likely(x)   __builtin_expect((long)!!(x), 1L)
