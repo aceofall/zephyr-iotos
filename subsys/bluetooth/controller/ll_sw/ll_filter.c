@@ -239,7 +239,6 @@ bool ctrl_irk_whitelisted(u8_t rl_idx)
 		return false;
 	}
 
-	LL_ASSERT(rl_idx < CONFIG_BLUETOOTH_CONTROLLER_RL_SIZE);
 	LL_ASSERT(rl[rl_idx].taken);
 
 	return rl[rl_idx].wl;
@@ -397,11 +396,12 @@ u8_t ll_rl_find(u8_t id_addr_type, u8_t *id_addr, u8_t *free)
 	return FILTER_IDX_NONE;
 }
 
-bool ctrl_rl_allowed(u8_t id_addr_type, u8_t *id_addr)
+bool ctrl_rl_allowed(u8_t id_addr_type, u8_t *id_addr, u8_t *rl_idx)
 {
 	int i, j;
 
-	if (!rl_enable) {
+	/* If AR is disabled or we matched an IRK then we're all set */
+	if (!rl_enable || *rl_idx != FILTER_IDX_NONE) {
 		return true;
 	}
 
@@ -415,6 +415,7 @@ bool ctrl_rl_allowed(u8_t id_addr_type, u8_t *id_addr)
 			}
 
 			if (j == BDADDR_SIZE) {
+				*rl_idx = i;
 				return !rl[i].pirk || rl[i].dev;
 			}
 		}
