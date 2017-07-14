@@ -30,4 +30,5 @@ static int k_sys_work_q_init(struct device *dev)
 	return 0;
 }
 
+// KID 20170714
 SYS_INIT(k_sys_work_q_init, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);

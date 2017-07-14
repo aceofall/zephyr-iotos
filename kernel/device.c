@@ -74,6 +74,7 @@ void _sys_device_do_config_level(int level)
 
 	// level: 0, config_levels[0]: __device_PRE_KERNEL_1_start, config_levels[1]: __device_PRE_KERNEL_2_start
 	// level: 1, config_levels[1]: __device_PRE_KERNEL_2_start, config_levels[2]: __device_POST_KERNEL_start
+	// level: 2, config_levels[2]: __device_POST_KERNEL_start, config_levels[2]: __device_APPLICATION_start
 	for (info = config_levels[level]; info < config_levels[level+1];
 								info++) {
 		// info: __device_sys_init_init_static_pools0
@@ -92,6 +93,7 @@ void _sys_device_do_config_level(int level)
 		// info->config: (__device_sys_init__ioapic_init0))->config: &__config_sys_init__ioapic_init0
 		// info: __device_sys_init_uart_console_init0
 		// info->config: (__device_sys_init_uart_console_init0))->config: &__config_sys_init_uart_console_init0
+		//
 		struct device_config *device = info->config;
 		// device: &__config_sys_init_init_static_pools0
 		// device: &__config_sys_init_init_pipes_module0
