@@ -107,6 +107,7 @@ extern "C" {
 #define K_LOWEST_APPLICATION_THREAD_PRIO (K_LOWEST_THREAD_PRIO - 1)
 
 // KID 20170602
+// KID 20170715
 typedef sys_dlist_t _wait_q_t;
 
 #ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
@@ -114,6 +115,7 @@ typedef sys_dlist_t _wait_q_t;
 #define _OBJECT_TRACING_INIT .__next = NULL,
 #else
 // KID 20170601
+// KID 20170715
 #define _OBJECT_TRACING_INIT
 #define _OBJECT_TRACING_NEXT_PTR(type)
 #endif
@@ -124,6 +126,7 @@ typedef sys_dlist_t _wait_q_t;
 #define _POLL_EVENT struct k_poll_event *poll_event
 #else
 #define _POLL_EVENT_OBJ_INIT
+// KID 20170715
 #define _POLL_EVENT
 #endif
 
@@ -251,6 +254,7 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 // KID 20170525
 // KID 20170601
 // KID 20170626
+// KID 20170715
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct _thread_arch): 0 bytes
 // sizeof(struct k_thread): 56 bytes
@@ -1338,6 +1342,7 @@ extern u32_t k_uptime_delta_32(s64_t *reftime);
  * @cond INTERNAL_HIDDEN
  */
 
+// KID 20170715
 struct k_queue {
 	_wait_q_t wait_q;
 	sys_slist_t data_q;
@@ -1559,6 +1564,7 @@ static inline void *k_queue_peek_tail(struct k_queue *queue)
  * @cond INTERNAL_HIDDEN
  */
 
+// KID 20170715
 struct k_fifo {
 	struct k_queue _queue;
 };
@@ -2008,6 +2014,7 @@ typedef void (*k_work_handler_t)(struct k_work *work);
  * @cond INTERNAL_HIDDEN
  */
 
+// KID 20170715
 struct k_work_q {
 	struct k_fifo fifo;
 	struct k_thread thread;
@@ -3969,8 +3976,13 @@ extern void _timer_expiration_handler(struct _timeout *t);
 // KID 20170612
 // IDLE_STACK_SIZE: 256
 //
-// K_THREAD_STACK_DEFINE(_idle_stack, 256);
+// K_THREAD_STACK_DEFINE(_idle_stack, 256):
 // char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _idle_stack[256]
+// KID 20170715
+// CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE: 1024
+//
+// K_THREAD_STACK_DEFINE(sys_work_q_stack, 1024):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) sys_work_q_stack[1024]
 #define K_THREAD_STACK_DEFINE(sym, size) \
 	char __noinit __aligned(STACK_ALIGN) sym[size]
 
@@ -4019,6 +4031,7 @@ extern void _timer_expiration_handler(struct _timeout *t);
  * @param sym Stack memory symbol
  * @return Size of the stack
  */
+// KID 20170715
 #define K_THREAD_STACK_SIZEOF(sym) sizeof(sym)
 
 /**

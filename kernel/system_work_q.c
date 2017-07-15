@@ -14,14 +14,24 @@
 #include <kernel.h>
 #include <init.h>
 
+// KID 20170715
+// CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE: 1024
+//
+// K_THREAD_STACK_DEFINE(sys_work_q_stack, 1024):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) sys_work_q_stack[1024]
 K_THREAD_STACK_DEFINE(sys_work_q_stack, CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE);
 
+// KID 20170715
 struct k_work_q k_sys_work_q;
 
+// KID 20170715
+// __device_sys_init_k_sys_work_q_init0
 static int k_sys_work_q_init(struct device *dev)
 {
+	// dev: __device_sys_init_k_sys_work_q_init0
 	ARG_UNUSED(dev);
 
+	// K_THREAD_STACK_SIZEOF(sys_work_q_stack): 1024, CONFIG_SYSTEM_WORKQUEUE_PRIORITY: -1
 	k_work_q_start(&k_sys_work_q,
 		       sys_work_q_stack,
 		       K_THREAD_STACK_SIZEOF(sys_work_q_stack),

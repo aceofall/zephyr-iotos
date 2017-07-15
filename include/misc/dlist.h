@@ -44,6 +44,7 @@ struct _dnode {
 // KID 20170523
 // KID 20170527
 // KID 20170602
+// KID 20170715
 // sizeof(struct _dnode): 8 bytes
 // sizeof(sys_dlist_t): 8 bytes
 typedef struct _dnode sys_dlist_t;
