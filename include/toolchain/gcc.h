@@ -91,8 +91,17 @@ do {                                                                    \
 //
 // __in_section_unique(noinit):
 // __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__")))
-#define __in_section_unique(seg) ___in_section(seg, _FILE_PATH_HASH, \
-						      __COUNTER__)
+#define __in_section_unique(seg) ___in_section(seg, __FILE__, __COUNTER__)
+
+#ifdef CONFIG_APPLICATION_MEMORY
+#define __kernel	__in_section_unique(kernel)
+#define __kernel_noinit	__in_section_unique(kernel_noinit)
+#define __kernel_bss	__in_section_unique(kernel_bss)
+#else
+#define __kernel
+#define __kernel_noinit	__noinit
+#define __kernel_bss
+#endif
 
 #ifndef __packed
 #define __packed        __attribute__((__packed__))
