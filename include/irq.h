@@ -193,6 +193,7 @@ extern "C" {
 // KID 20170601
 // KID 20170612
 // KID 20170618
+// KID 20170717
 #define irq_lock() _arch_irq_lock()
 
 /**

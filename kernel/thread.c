@@ -209,15 +209,36 @@ FUNC_NORETURN void _thread_entry(void (*entry)(void *, void *, void *),
 	CODE_UNREACHABLE;
 }
 
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+// KID 20170717
+// thread: &(&k_sys_work_q)->thread
 static void start_thread(struct k_thread *thread)
 {
+	// irq_lock(): eflags 값
 	int key = irq_lock(); /* protect kernel queues */
+	// key: eflags 값
 
+	// thread: &(&k_sys_work_q)->thread
 	_mark_thread_as_started(thread);
 
+	// _mark_thread_as_started 에서 한일:
+	// (&(&k_sys_work_q)->thread)->base.thread_state: 0
+
+	// thread: &(&k_sys_work_q)->thread, _is_thread_ready(&(&k_sys_work_q)->thread): 1
 	if (_is_thread_ready(thread)) {
+		// thread: &(&k_sys_work_q)->thread
 		_add_thread_to_ready_q(thread);
+
+		// _add_thread_to_ready_q 에서 한일:
+		// _kernel.ready_q.prio_bmap[0]: 0x80018000
+		//
+		// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next: &_kernel.ready_q.q[15]
+		// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&_kernel.ready_q.q[15])->tail
+		// (&_kernel.ready_q.q[15])->tail->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+		// (&_kernel.ready_q.q[15])->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+		//
+		// _kernel.ready_q.cache: &(&k_sys_work_q)->thread
+
 		if (_must_switch_threads()) {
 			_Swap(key);
 			return;
@@ -228,11 +249,15 @@ static void start_thread(struct k_thread *thread)
 }
 #endif
 
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+// KID 20170717
+// new_thread: &(&k_sys_work_q)->thread, delay: 0
 static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 {
-#ifdef CONFIG_SYS_CLOCK_EXISTS
+#ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
+	// delay: 0
 	if (delay == 0) {
+		// thread: &(&k_sys_work_q)->thread
 		start_thread(thread);
 	} else {
 		s32_t ticks = _TICK_ALIGN + _ms_to_ticks(delay);
@@ -266,6 +291,29 @@ k_tid_t k_thread_create(struct k_thread *new_thread, char *stack,
 	_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3, prio,
 		    options);
 
+	// _new_thread 에서 한일:
+	// (&(&(&k_sys_work_q)->thread)->base)->user_options: 0
+	// (&(&(&k_sys_work_q)->thread)->base)->thread_state: 0x4
+	// (&(&(&k_sys_work_q)->thread)->base)->prio: -1
+	// (&(&(&k_sys_work_q)->thread)->base)->sched_locked: 0
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->wait_q: NULL
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->thread: NULL
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->func: NULL
+	//
+	// (&(&k_sys_work_q)->thread)->init_data: NULL
+	// (&(&k_sys_work_q)->thread)->fn_abort: NULL
+	//
+	// *(unsigned long *)(sys_work_q_stack + 1024): NULL
+	// *(unsigned long *)(sys_work_q_stack + 1020): NULL
+	// *(unsigned long *)(sys_work_q_stack + 1016): NULL
+	// *(unsigned long *)(sys_work_q_stack + 1016), pEntry: work_q_main
+	// *(unsigned long *)(sys_work_q_stack + 1012): eflag 레지스터 값 | 0x00000200
+	// *(unsigned long *)(sys_work_q_stack + 1008): _thread_entry_wrapper
+	//
+	// (&(&k_sys_work_q)->thread)->callee_saved.esp: sys_work_q_stack + 980
+
+	// new_thread: &(&k_sys_work_q)->thread, delay: 0
 	schedule_new_thread(new_thread, delay);
 	return new_thread;
 }
@@ -460,6 +508,8 @@ void _init_static_threads(void)
 // &thread->base: &(&_idle_thread_s)->base, prio: 15, _THREAD_PRESTART: 0x4, options: 0x1
 // KID 20170605
 // &async_msg[0].thread, 0, _THREAD_DUMMY: 0x1, 0
+// KID 20170717
+// &thread->base: &(&(&k_sys_work_q)->thread)->base, prio: -1, _THREAD_PRESTART: 0x4, options: 0
 void _init_thread_base(struct _thread_base *thread_base, int priority,
 		       u32_t initial_state, unsigned int options)
 {

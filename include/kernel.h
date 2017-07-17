@@ -570,6 +570,7 @@ extern void k_thread_abort(k_tid_t thread);
 
 /* timeout is not in use */
 // KID 20170522
+// KID 20170717
 // _INACTIVE: -1
 #define _INACTIVE (-1)
 

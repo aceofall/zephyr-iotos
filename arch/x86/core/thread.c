@@ -49,8 +49,10 @@ void _thread_entry_wrapper(_thread_entry_t, void *,
  */
 // KID 20170522
 // pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: &_main_thread_s
-// ARM10C 20170525
+// KID 20170525
 // pStackMem: _idle_stack, stackSize: 256, priority: 15, options: 0x1, thread: &_idle_thread_s
+// KID 20170717
+// pStackMem: sys_work_q_stack, stackSize: 1024, priority: -1, options: 0, thread: &(&k_sys_work_q)->thread
 static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 				 int priority,
 				 unsigned int options,
@@ -74,9 +76,12 @@ static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 	// STACK_ROUND_DOWN(_main_stack + 1024): _main_stack + 1024
 	// pStackMem: _idle_stack, stackSize: 256
 	// STACK_ROUND_DOWN(_idle_stack + 256): _idle_stack + 256
+	// pStackMem: sys_work_q_stack, stackSize: 1024
+	// STACK_ROUND_DOWN(sys_work_q_stack + 1024): sys_work_q_stack + 1024
 	pInitialCtx = (unsigned long *)STACK_ROUND_DOWN(pStackMem + stackSize);
 	// pInitialCtx: _main_stack + 1024
 	// pInitialCtx: _idle_stack + 256
+	// pInitialCtx: sys_work_q_stack + 1024
 
 #ifdef CONFIG_THREAD_MONITOR // CONFIG_THREAD_MONITOR=n
 	/*
@@ -96,26 +101,33 @@ static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
 	 */
 	// pInitialCtx: _main_stack + 1024
 	// pInitialCtx: _idle_stack + 256
+	// pInitialCtx: sys_work_q_stack + 1024
 	pInitialCtx -= 11;
 	// pInitialCtx: _main_stack + 980
 	// pInitialCtx: _idle_stack + 212
+	// pInitialCtx: sys_work_q_stack + 980
 
 	// thread->callee_saved.esp: (&_main_thread_s)->callee_saved.esp, pInitialCtx: _main_stack + 980
 	// thread->callee_saved.esp: (&_idle_thread_s)->callee_saved.esp, pInitialCtx: _idle_stack + 212
+	// thread->callee_saved.esp: (&(&k_sys_work_q)->thread)->callee_saved.esp, pInitialCtx: sys_work_q_stack + 980
 	thread->callee_saved.esp = (unsigned long)pInitialCtx;
 	// thread->callee_saved.esp: (&_main_thread_s)->callee_saved.esp: _main_stack + 980
 	// thread->callee_saved.esp: (&_idle_thread_s)->callee_saved.esp: _idle_stack + 212
+	// thread->callee_saved.esp: (&(&k_sys_work_q)->thread)->callee_saved.esp: sys_work_q_stack + 980
 
 	// thread->coopReg.esp: (&_main_thread_s)->coopReg.esp: ????
 	// thread->coopReg.esp: (&_idle_thread_s)->coopReg.esp: ????
+	// thread->coopReg.esp: (&(&k_sys_work_q)->thread)->coopReg.esp: ????
 	PRINTK("\nInitial context ESP = 0x%x\n", thread->coopReg.esp); // null function
 
 	// thread: &_main_thread_s
 	// thread: &_idle_thread_s
+	// thread: &(&k_sys_work_q)->thread
 	PRINTK("\nstruct thread * = 0x%x", thread); // null function
 
 	// thread: &_main_thread_s
 	// thread: &_idle_thread_s
+	// thread: &(&k_sys_work_q)->thread
 	thread_monitor_init(thread); // null function
 }
 
@@ -248,12 +260,20 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 	// _ASSERT_VALID_PRIO(15, idle):
 	// __ASSERT(((15) == 15 && _is_idle_thread(idle)) || (_is_prio_higher_or_equal((15), 14) && _is_prio_lower_or_equal((15), -16)),
 	//          "invalid priority (%d); allowed range: %d to %d", (15), 14, -16); // null function
+	//
+	// priority: -1, pEntry: work_q_main
+	// _is_idle_thread(work_q_main): 0, _is_prio_higher_or_equal((-1), 14): 1, _is_prio_lower_or_equal((-1), -16): 1
+	//
+	// _ASSERT_VALID_PRIO(-1, work_q_main):
+	// __ASSERT(((-1) == 15 && _is_idle_thread(work_q_main)) || (_is_prio_higher_or_equal((-1), 14) && _is_prio_lower_or_equal((-1), -16)),
+	//          "invalid priority (%d); allowed range: %d to %d", (-1), 14, -16); // null function
 	_ASSERT_VALID_PRIO(priority, pEntry);
 
 	unsigned long *pInitialThread;
 
 	// thread: &_main_thread_s, pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1
 	// thread: &_idle_thread_s, pStackMem: _idle_stack, stackSize: 256, priority: 15, options: 0x1
+	// thread: &(&k_sys_work_q)->thread, pStackMem: sys_work_q_stack, stackSize: 1024, priority: -1, options: 0
 	_new_thread_init(thread, pStackMem, stackSize, priority, options);
 
 	// _new_thread_init 에서 한일:
@@ -282,14 +302,29 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 	// (&_idle_thread_s)->init_data: NULL
 	// (&_idle_thread_s)->fn_abort: NULL
 
+	// _new_thread_init 에서 한일:
+	// (&(&(&k_sys_work_q)->thread)->base)->user_options: 0
+	// (&(&(&k_sys_work_q)->thread)->base)->thread_state: 0x4
+	// (&(&(&k_sys_work_q)->thread)->base)->prio: -1
+	// (&(&(&k_sys_work_q)->thread)->base)->sched_locked: 0
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->wait_q: NULL
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->thread: NULL
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->func: NULL
+	//
+	// (&(&k_sys_work_q)->thread)->init_data: NULL
+	// (&(&k_sys_work_q)->thread)->fn_abort: NULL
+
 	/* carve the thread entry struct from the "base" of the stack */
 
 	// pStackMem: _main_stack, stackSize: 1024, STACK_ROUND_DOWN(_main_stack + 1024): _main_stack + 1024
-	// pStackMem: _idle_stack, stackSize: 256, STACK_ROUND_DOWN(_idle_stack + 1024): _idle_stack + 256
+	// pStackMem: _idle_stack, stackSize: 256, STACK_ROUND_DOWN(_idle_stack + 256): _idle_stack + 256
+	// pStackMem: sys_work_q_stack, stackSize: 1024, STACK_ROUND_DOWN(sys_work_q_stack + 1024): sys_work_q_stack + 1024
 	pInitialThread =
 		(unsigned long *)STACK_ROUND_DOWN(pStackMem + stackSize);
 	// pInitialThread: (unsigned long *)(_main_stack + 1024)
-	// pInitialThread: (unsigned long *)(_idle_stack + 1024)
+	// pInitialThread: (unsigned long *)(_idle_stack + 256)
+	// pInitialThread: (unsigned long *)(sys_work_q_stack + 1024)
 
 	/*
 	 * Create an initial context on the stack expected by the _Swap()
@@ -300,27 +335,35 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1024), parameter3: NULL
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 256), parameter3: NULL
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1024), parameter3: NULL
 	*--pInitialThread = (unsigned long)parameter3;
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1024): NULL
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 256): NULL
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1024): NULL
 
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1020), parameter2: NULL
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 252), parameter2: NULL
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1020), parameter2: NULL
 	*--pInitialThread = (unsigned long)parameter2;
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1020): NULL
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 252): NULL
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1020): NULL
 
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1016), parameter1: NULL
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 248), parameter1: NULL
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1016), parameter1: NULL
 	*--pInitialThread = (unsigned long)parameter1;
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1016): NULL
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 248): NULL
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1016): NULL
 
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1016), pEntry: _main
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 244), pEntry: idle
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1016), pEntry: work_q_main
 	*--pInitialThread = (unsigned long)pEntry;
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1016): _main
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 244): idle
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1016), pEntry: work_q_main
 
 	/* push initial EFLAGS; only modify IF and IOPL bits */
 
@@ -328,9 +371,12 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 	// EflagsGet(): eflag 레지스터 값, EFLAGS_MASK: 0x00003200, EFLAGS_INITIAL: 0x00000200
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 240),
 	// EflagsGet(): eflag 레지스터 값, EFLAGS_MASK: 0x00003200, EFLAGS_INITIAL: 0x00000200
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1012),
+	// EflagsGet(): eflag 레지스터 값, EFLAGS_MASK: 0x00003200, EFLAGS_INITIAL: 0x00000200
 	*--pInitialThread = (EflagsGet() & ~EFLAGS_MASK) | EFLAGS_INITIAL;
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1012): eflag 레지스터 값 | 0x00000200
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 240): eflag 레지스터 값 | 0x00000200
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1012): eflag 레지스터 값 | 0x00000200
 
 #if defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) \
 	|| defined(CONFIG_X86_IAMCU) // CONFIG_GDB_INFO=n, CONFIG_DEBUG_INFO=n, CONFIG_X86_IAMCU=y
@@ -341,9 +387,11 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1008)
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 236)
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1008)
 	*--pInitialThread = (unsigned long)_thread_entry_wrapper;
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1008): _thread_entry_wrapper
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 236): _thread_entry_wrapper
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1008): _thread_entry_wrapper
 
 #else /* defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) */
 
@@ -365,6 +413,7 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 
 	// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: &_main_thread_s
 	// pStackMem: _idle_stack, stackSize: 256, priority: 15, options: 0x1, thread: &_idle_thread_s
+	// pStackMem: sys_work_q_stack, stackSize: 1024, priority: -1, options: 0, thread: &(&k_sys_work_q)->thread
 	_new_thread_internal(pStackMem, stackSize, priority, options, thread);
 
 	// _new_thread_internal 에서 한일:
@@ -372,4 +421,7 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 
 	// _new_thread_internal 에서 한일:
 	// (&_idle_thread_s)->callee_saved.esp: _idle_stack + 212
+
+	// _new_thread_internal 에서 한일:
+	// (&(&k_sys_work_q)->thread)->callee_saved.esp: sys_work_q_stack + 980
 }

@@ -15,6 +15,7 @@
 #include <init.h>
 
 // KID 20170715
+// KID 20170717
 // CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE: 1024
 //
 // K_THREAD_STACK_DEFINE(sys_work_q_stack, 1024):

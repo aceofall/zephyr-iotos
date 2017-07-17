@@ -44,13 +44,17 @@ static ALWAYS_INLINE struct k_thread *_get_next_ready_thread(void)
 // _main
 // KID 20170525
 // idle
+// KID 20170717
+// work_q_main
 static inline int _is_idle_thread(void *entry_point)
 {
 	// entry_point: _main
 	// entry_point: idle
+	// entry_point: work_q_main
 	return entry_point == idle;
 	// return 0
 	// return 1
+	// return 0
 }
 
 static inline int _is_idle_thread_ptr(k_tid_t thread)
@@ -70,12 +74,19 @@ static inline int _is_idle_thread_ptr(k_tid_t thread)
 // 		 (_is_prio_higher_or_equal((0), 14) && _is_prio_lower_or_equal((0), -16)),
 // 		 "invalid priority (%d); allowed range: %d to %d", (0), 14, -16);
 // } while ((0))
-// ARM10C 20170525
+// KID 20170525
 // _ASSERT_VALID_PRIO(15, _main):
 // do {
 // 	__ASSERT(((15) == 15 && _is_idle_thread(_main)) ||
 // 		 (_is_prio_higher_or_equal((15), 14) && _is_prio_lower_or_equal((15), -16)),
 // 		 "invalid priority (%d); allowed range: %d to %d", (15), 14, -16);
+// } while ((0))
+// KID 20170717
+// _ASSERT_VALID_PRIO(-1, work_q_main):
+// do {
+// 	__ASSERT(((-1) == 15 && _is_idle_thread(work_q_main)) ||
+// 		 (_is_prio_higher_or_equal((-1), 14) && _is_prio_lower_or_equal((-1), -16)),
+// 		 "invalid priority (%d); allowed range: %d to %d", (-1), 14, -16);
 // } while ((0))
 #define _ASSERT_VALID_PRIO(prio, entry_point) do { \
 	__ASSERT(((prio) == K_IDLE_PRIO && _is_idle_thread(entry_point)) || \
@@ -107,30 +118,39 @@ static inline int _is_idle_thread_ptr(k_tid_t thread)
 
 // KID 20170519
 // prio1: 0, prio2: 14
-// ARM10C 20170525
+// KID 20170525
 // prio1: 15, prio2: 14
+// KID 20170717
+// prio1: -1, prio2: 14
 static inline int _is_prio1_higher_than_or_equal_to_prio2(int prio1, int prio2)
 {
 	// prio1: 0, prio2: 14
 	// prio1: 15, prio2: 14
+	// prio1: -1, prio2: 14
 	return prio1 <= prio2;
 	// return: 1
 	// return: 0
+	// return: 1
 }
 
 // KID 20170519
 // _is_prio_higher_or_equal((0), 14)
-// ARM10C 20170525
+// KID 20170525
 // _is_prio_higher_or_equal((15), 14)
+// KID 20170717
+// _is_prio_higher_or_equal((-1), 14):
 static inline int _is_prio_higher_or_equal(int prio1, int prio2)
 {
 	// prio1: 0, prio2: 14
-	// prio1: 15, prio2: 14
 	// _is_prio1_higher_than_or_equal_to_prio2(0, 14): 1
+	// prio1: 15, prio2: 14
 	// _is_prio1_higher_than_or_equal_to_prio2(15, 14): 0
+	// prio1: -1, prio2: 14
+	// _is_prio1_higher_than_or_equal_to_prio2(-1, 14): 1
 	return _is_prio1_higher_than_or_equal_to_prio2(prio1, prio2);
 	// return 1
 	// return 0
+	// return 1
 }
 
 // KID 20170524
@@ -139,13 +159,18 @@ static inline int _is_prio_higher_or_equal(int prio1, int prio2)
 // KID 20170526
 // t1->base.prio: (&_idle_thread_s)->base.prio: 15,
 // t2->base.prio: (&_main_thread_s)->base.prio: 0
+// KID 20170717
+// t1->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1,
+// t2->base.prio: (&_main_thread_s)->base.prio: 0
 static inline int _is_prio1_higher_than_prio2(int prio1, int prio2)
 {
 	// prio1: 0, prio2: 0
 	// prio1: 15, prio2: 0
+	// prio1: -1, prio2: 0
 	return prio1 < prio2;
 	// return 0
 	// return 0
+	// return 1
 }
 
 static inline int _is_prio_higher(int prio, int test_prio)
@@ -157,11 +182,15 @@ static inline int _is_prio_higher(int prio, int test_prio)
 // prio1: 0, prio2: -16
 // KID 20170525
 // prio1: 15, prio2: -16
+// KID 20170717
+// prio1: -1, prio2: -16
 static inline int _is_prio1_lower_than_or_equal_to_prio2(int prio1, int prio2)
 {
 	// prio1: 0, prio2: -16
 	// prio1: 15, prio2: -16
+	// prio1: -1, prio2: -16
 	return prio1 >= prio2;
+	// return 1
 	// return 1
 	// return 1
 }
@@ -170,13 +199,18 @@ static inline int _is_prio1_lower_than_or_equal_to_prio2(int prio1, int prio2)
 // _is_prio_lower_or_equal((0), -16)
 // KID 20170525
 // _is_prio_lower_or_equal((15), -16)
+// KID 20170717
+// _is_prio_lower_or_equal((-1), -16)
 static inline int _is_prio_lower_or_equal(int prio1, int prio2)
 {
 	// prio1: 0, prio2: -16
-	// prio1: 15, prio2: -16
 	// _is_prio1_lower_than_or_equal_to_prio2(0, -16): 1
+	// prio1: 15, prio2: -16
 	// _is_prio1_lower_than_or_equal_to_prio2(15, -16): 1
+	// prio1: -1, prio2: -16
+	// _is_prio1_lower_than_or_equal_to_prio2(-1, -16): 1
 	return _is_prio1_lower_than_or_equal_to_prio2(prio1, prio2);
+	// return 1
 	// return 1
 	// return 1
 }
@@ -195,6 +229,8 @@ static inline int _is_prio_lower(int prio1, int prio2)
 // thread: &_main_thread_s, *cache: _kernel.ready_q.cache: &_main_thread_s
 // KID 20170526
 // thread: &_idle_thread_s, *cache: _kernel.ready_q.cache: &_main_thread_s
+// // KID 20170717
+// thread: &(&k_sys_work_q)->thread, *cache: _kernel.ready_q.cache: &_main_thread_s
 static inline int _is_t1_higher_prio_than_t2(struct k_thread *t1,
 					     struct k_thread *t2)
 {
@@ -204,9 +240,13 @@ static inline int _is_t1_higher_prio_than_t2(struct k_thread *t1,
 	// t1->base.prio: (&_idle_thread_s)->base.prio: 16,
 	// t2->base.prio: (&_main_thread_s)->base.prio: 0
 	// _is_prio1_higher_than_prio2(15, 0): 0
+	// t1->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1,
+	// t2->base.prio: (&_main_thread_s)->base.prio: 0
+	// _is_prio1_higher_than_prio2(-1, 0): 1
 	return _is_prio1_higher_than_prio2(t1->base.prio, t2->base.prio);
 	// return 0
 	// return 0
+	// return 1
 }
 
 static inline int _is_higher_prio_than_current(struct k_thread *thread)
@@ -269,11 +309,15 @@ static inline int _get_new_prio_with_ceiling(int prio)
 // prio: 0
 // KID 20170526
 // prio: 15
+// KID 20170717
+// prio: -1
 static inline int _get_ready_q_prio_bmap_index(int prio)
 {
 	// prio: 0, _NUM_COOP_PRIO: 16
 	// prio: 15, _NUM_COOP_PRIO: 16
+	// prio: -1, _NUM_COOP_PRIO: 16
 	return (prio + _NUM_COOP_PRIO) >> 5;
+	// return 0
 	// return 0
 	// return 0
 }
@@ -283,13 +327,17 @@ static inline int _get_ready_q_prio_bmap_index(int prio)
 // prio: 0
 // KID 20170526
 // prio: 15
+// KID 20170717
+// prio: -1
 static inline int _get_ready_q_prio_bit(int prio)
 {
 	// prio: 0, _NUM_COOP_PRIO: 16
 	// prio: 15, _NUM_COOP_PRIO: 16
+	// prio: -1, _NUM_COOP_PRIO: 16
 	return (1 << ((prio + _NUM_COOP_PRIO) & 0x1f));
 	// return 0x8000
 	// return 0x80000000
+	// return 0x10000
 }
 
 /* find out the ready queue array index for a given prio */
@@ -297,13 +345,17 @@ static inline int _get_ready_q_prio_bit(int prio)
 // thread->base.prio: (_main_thread_s)->base.prio: 0
 // KID 20170526
 // thread->base.prio: (&_idle_thread_s)->base.prio: 15
+// KID 20170717
+// thread->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1
 static inline int _get_ready_q_q_index(int prio)
 {
 	// prio: 0, _NUM_COOP_PRIO: 16
 	// prio: 15, _NUM_COOP_PRIO: 16
+	// prio: -1, _NUM_COOP_PRIO: 16
 	return prio + _NUM_COOP_PRIO;
 	// return 16
 	// return 31
+	// return 15
 }
 
 /* find out the currently highest priority where a thread is ready to run */
@@ -422,10 +474,15 @@ static ALWAYS_INLINE int _is_thread_timeout_expired(struct k_thread *thread)
 }
 
 /* check if a thread is on the timeout queue */
+// KID 20170717
+// thread: &(&k_sys_work_q)->thread
 static inline int _is_thread_timeout_active(struct k_thread *thread)
 {
-#ifdef CONFIG_SYS_CLOCK_EXISTS
+#ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
+	// thread->base.timeout.delta_ticks_from_prev: (&(&k_sys_work_q)->thread)->base.timeout.delta_ticks_from_prev: -1,
+	// _INACTIVE: -1
 	return thread->base.timeout.delta_ticks_from_prev != _INACTIVE;
+	// return 0
 #else
 	return 0;
 #endif
@@ -436,20 +493,32 @@ static inline int _has_thread_started(struct k_thread *thread)
 	return !(thread->base.thread_state & _THREAD_PRESTART);
 }
 
+// KID 20170717
+// thread: &(&k_sys_work_q)->thread
 static inline int _is_thread_prevented_from_running(struct k_thread *thread)
 {
+	// thread->base.thread_state: (&(&k_sys_work_q)->thread)->base.thread_state: 0
 	u8_t state = thread->base.thread_state;
+	// state: 0
 
+	// _THREAD_PENDING: 0x2, _THREAD_PRESTART: 0x4, _THREAD_DEAD: 0x8, _THREAD_DUMMY: 0x1, _THREAD_SUSPENDED: 0x10
 	return state & (_THREAD_PENDING | _THREAD_PRESTART | _THREAD_DEAD |
 			_THREAD_DUMMY | _THREAD_SUSPENDED);
+	// return 0
 
 }
 
 /* check if a thread is ready */
+// KID 20170717
+// thread: &(&k_sys_work_q)->thread
 static inline int _is_thread_ready(struct k_thread *thread)
 {
+	// thread: &(&k_sys_work_q)->thread
+	// _is_thread_prevented_from_running(&(&k_sys_work_q)->thread): 0
+	// _is_thread_timeout_active(&(&k_sys_work_q)->thread): 0
 	return !(_is_thread_prevented_from_running(thread) ||
 		 _is_thread_timeout_active(thread));
+	// return 1
 }
 
 /* mark a thread as pending in its TCS */
@@ -503,13 +572,17 @@ static inline int _is_thread_polling(struct k_thread *thread)
 // _main_thread: &_main_thread_s
 // KID 20170525
 // _idle_thread: &_idle_thread_s
+// KID 20170717
+// thread: &(&k_sys_work_q)->thread
 static inline void _mark_thread_as_started(struct k_thread *thread)
 {
 	// thread->base.thread_state: (&_main_thread_s)->base.thread_state: 0x4, _THREAD_PRESTART: 0x4
 	// thread->base.thread_state: (&_idle_thread_s)->base.thread_state: 0x4, _THREAD_PRESTART: 0x4
+	// thread->base.thread_state: (&(&k_sys_work_q)->thread)->base.thread_state: 0x4, _THREAD_PRESTART: 0x4
 	thread->base.thread_state &= ~_THREAD_PRESTART;
 	// thread->base.thread_state: (&_main_thread_s)->base.thread_state: 0
 	// thread->base.thread_state: (&_idle_thread_s)->base.thread_state: 0
+	// thread->base.thread_state: (&(&k_sys_work_q)->thread)->base.thread_state: 0
 }
 
 /*
