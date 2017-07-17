@@ -227,6 +227,9 @@ __asm__("\t.globl _thread_entry\n"
 // KID 20170525
 // _idle_thread: &_idle_thread_s, _idle_stack, IDLE_STACK_SIZE: 256,
 // idle, NULL, NULL, NULL, K_LOWEST_THREAD_PRIO: 15, K_ESSENTIAL: 0x1
+// KID 20170717
+// new_thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, entry: work_q_main,
+// p1: &k_sys_work_q, p2: 0, p3: 0, prio: -1, options: 0
 void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 		 _thread_entry_t pEntry,
 		 void *parameter1, void *parameter2, void *parameter3,

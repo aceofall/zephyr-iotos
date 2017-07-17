@@ -98,6 +98,7 @@ extern unsigned char _idt_base_address[];
 }
 #endif
 
+// KID 20170717
 #define _is_in_isr() (_kernel.nested != 0)
 
 #endif /* _ASMLANGUAGE */

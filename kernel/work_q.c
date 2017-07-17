@@ -15,6 +15,7 @@
 #include <wait_q.h>
 #include <errno.h>
 
+// KID 20170717
 static void work_q_main(void *work_q_ptr, void *p2, void *p3)
 {
 	struct k_work_q *work_q = work_q_ptr;
@@ -48,8 +49,16 @@ static void work_q_main(void *work_q_ptr, void *p2, void *p3)
 void k_work_q_start(struct k_work_q *work_q, char *stack,
 		    size_t stack_size, int prio)
 {
+	// &work_q->fifo: &(&k_sys_work_q)->fifo
 	k_fifo_init(&work_q->fifo);
 
+	// k_fifo_init 에서 한일:
+	// (&(&(&k_sys_work_q)->fifo)->data_q)->head: NULL
+	// (&(&(&k_sys_work_q)->fifo)->data_q)->tail: NULL
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->head: &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+
+	// &work_q->thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, work_q: &k_sys_work_q, prio: -1
 	k_thread_create(&work_q->thread, stack, stack_size, work_q_main,
 			work_q, 0, 0, prio, 0, 0);
 }

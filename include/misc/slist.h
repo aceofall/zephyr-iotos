@@ -21,17 +21,21 @@ extern "C" {
 #endif
 
 
+// KID 20170717
 struct _snode {
 	struct _snode *next;
 };
 
+// KID 20170717
 typedef struct _snode sys_snode_t;
 
+// KID 20170717
 struct _slist {
 	sys_snode_t *head;
 	sys_snode_t *tail;
 };
 
+// KID 20170717
 typedef struct _slist sys_slist_t;
 
 /**
@@ -179,10 +183,17 @@ typedef struct _slist sys_slist_t;
  *
  * @param list A pointer on the list to initialize
  */
+// KID 20170717
+// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q
 static inline void sys_slist_init(sys_slist_t *list)
 {
+	// list->head: (&(&(&k_sys_work_q)->fifo)->data_q)->head
 	list->head = NULL;
+	// list->head: (&(&(&k_sys_work_q)->fifo)->data_q)->head: NULL
+
+	// list->tail: (&(&(&k_sys_work_q)->fifo)->data_q)->tail
 	list->tail = NULL;
+	// list->tail: (&(&(&k_sys_work_q)->fifo)->data_q)->tail: NULL
 }
 
 #define SYS_SLIST_STATIC_INIT(ptr_to_list) {NULL, NULL}

@@ -12,8 +12,9 @@
 #ifndef _OBJECT_TRACING_COMMON_H_
 #define _OBJECT_TRACING_COMMON_H_
 
-#ifndef CONFIG_OBJECT_TRACING
+#ifndef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 
+// KID 20170717
 #define SYS_TRACING_OBJ_INIT(name, obj) do { } while ((0))
 #define SYS_TRACING_OBJ_INIT_DLL(name, obj) do { } while ((0))
 #define SYS_TRACING_OBJ_REMOVE_DLL(name, obj) do { } while ((0))

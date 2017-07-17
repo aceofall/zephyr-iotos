@@ -108,6 +108,7 @@ extern "C" {
 
 // KID 20170602
 // KID 20170715
+// KID 20170717
 typedef sys_dlist_t _wait_q_t;
 
 #ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
@@ -116,6 +117,7 @@ typedef sys_dlist_t _wait_q_t;
 #else
 // KID 20170601
 // KID 20170715
+// KID 20170717
 #define _OBJECT_TRACING_INIT
 #define _OBJECT_TRACING_NEXT_PTR(type)
 #endif
@@ -127,6 +129,7 @@ typedef sys_dlist_t _wait_q_t;
 #else
 #define _POLL_EVENT_OBJ_INIT
 // KID 20170715
+// KID 20170717
 #define _POLL_EVENT
 #endif
 
@@ -1343,6 +1346,7 @@ extern u32_t k_uptime_delta_32(s64_t *reftime);
  */
 
 // KID 20170715
+// KID 20170717
 struct k_queue {
 	_wait_q_t wait_q;
 	sys_slist_t data_q;
@@ -1565,6 +1569,7 @@ static inline void *k_queue_peek_tail(struct k_queue *queue)
  */
 
 // KID 20170715
+// KID 20170717
 struct k_fifo {
 	struct k_queue _queue;
 };
@@ -1595,6 +1600,8 @@ struct k_fifo {
  *
  * @return N/A
  */
+// KID 20170717
+// &work_q->fifo: &(&k_sys_work_q)->fifo
 #define k_fifo_init(fifo) \
 	k_queue_init((struct k_queue *) fifo)
 
@@ -2015,6 +2022,7 @@ typedef void (*k_work_handler_t)(struct k_work *work);
  */
 
 // KID 20170715
+// KID 20170717
 struct k_work_q {
 	struct k_fifo fifo;
 	struct k_thread thread;
@@ -3573,6 +3581,7 @@ extern void k_free(void *ptr);
 #ifdef CONFIG_POLL
 #define _INIT_OBJ_POLL_EVENT(obj) do { (obj)->poll_event = NULL; } while ((0))
 #else
+// KID 20170717
 #define _INIT_OBJ_POLL_EVENT(obj) do { } while ((0))
 #endif
 

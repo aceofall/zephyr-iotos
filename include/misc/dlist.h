@@ -27,6 +27,7 @@ extern "C" {
 // KID 20170517
 // KID 20170527
 // KID 20170602
+// KID 20170717
 // sizeof(struct _dnode): 8 bytes
 struct _dnode {
 	union {
@@ -45,6 +46,7 @@ struct _dnode {
 // KID 20170527
 // KID 20170602
 // KID 20170715
+// KID 20170717
 // sizeof(struct _dnode): 8 bytes
 // sizeof(sys_dlist_t): 8 bytes
 typedef struct _dnode sys_dlist_t;
@@ -196,6 +198,8 @@ typedef struct _dnode sys_dnode_t;
 // &_kernel.ready_q.q[0]
 // KID 20170527
 // &_timeout_q: &_kernel.timeout_q
+// KID 20170717
+// &queue->wait_q: &(&(&k_sys_work_q)->fifo)->wait_q
 static inline void sys_dlist_init(sys_dlist_t *list)
 {
 	// list->head: (&_kernel.ready_q.q[0])->head, list: &_kernel.ready_q.q[0]

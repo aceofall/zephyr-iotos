@@ -26,6 +26,7 @@ extern struct k_queue _k_queue_list_end[];
 
 #ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
 
+// KID 20170717
 struct k_queue *_trace_list_k_queue;
 
 /*
@@ -47,14 +48,29 @@ SYS_INIT(init_queue_module, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_OBJECTS);
 
 #endif /* CONFIG_OBJECT_TRACING */
 
+// KID 20170717
+// &work_q->fifo: &(&k_sys_work_q)->fifo
 void k_queue_init(struct k_queue *queue)
 {
+	// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q
 	sys_slist_init(&queue->data_q);
+
+	// sys_slist_init 에서 한일:
+	// (&(&(&k_sys_work_q)->fifo)->data_q)->head: NULL
+	// (&(&(&k_sys_work_q)->fifo)->data_q)->tail: NULL
+
+	// &queue->wait_q: &(&(&k_sys_work_q)->fifo)->wait_q
 	sys_dlist_init(&queue->wait_q);
 
-	_INIT_OBJ_POLL_EVENT(queue);
+	// sys_dlist_init에서 한일:
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->head: &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
 
-	SYS_TRACING_OBJ_INIT(k_queue, queue);
+	// queue: &(&k_sys_work_q)->fifo
+	_INIT_OBJ_POLL_EVENT(queue); // null function
+
+	// queue: &(&k_sys_work_q)->fifo
+	SYS_TRACING_OBJ_INIT(k_queue, queue); // null function
 }
 
 static void prepare_thread_to_run(struct k_thread *thread, void *data)

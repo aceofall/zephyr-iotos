@@ -248,14 +248,21 @@ static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 }
 #endif
 
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 
+// KID 20170717
+// &work_q->thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, work_q_main,
+// work_q: &k_sys_work_q, 0, 0, prio: -1, 0, 0
 k_tid_t k_thread_create(struct k_thread *new_thread, char *stack,
 			size_t stack_size, void (*entry)(void *, void *, void*),
 			void *p1, void *p2, void *p3,
 			int prio, u32_t options, s32_t delay)
 {
+	// _is_in_isr(): 0
 	__ASSERT(!_is_in_isr(), "Threads may not be created in ISRs");
+
+	// new_thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, entry: work_q_main,
+	// p1: &k_sys_work_q, p2: 0, p3: 0, prio: -1, options: 0
 	_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3, prio,
 		    options);
 
