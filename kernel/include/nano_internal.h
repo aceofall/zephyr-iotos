@@ -18,6 +18,7 @@
 
 // KID 20170518
 // KID 20170519
+// KID 20170718
 // CONFIG_NUM_COOP_PRIORITIES: 16
 // CONFIG_NUM_PREEMPT_PRIORITIES: 15
 // K_NUM_PRIORITIES: 32
@@ -71,6 +72,8 @@ extern void _check_stack_sentinel(void);
 
 // KID 20170618
 // irq_lock(): eflags 값
+// KID 20170718
+// key: eflags 값
 static inline unsigned int _Swap(unsigned int key)
 {
 
@@ -82,8 +85,12 @@ static inline unsigned int _Swap(unsigned int key)
 
 	// _update_time_slice_before_swap 에서 한일:
 	// _time_slice_elapsed: 0
+
+	// _update_time_slice_before_swap 에서 한일:
+	// _time_slice_elapsed: 0
 #endif
 
+	// key: eflags 값
 	// key: eflags 값
 	return __swap(key);
 }

@@ -162,20 +162,29 @@ static inline int _is_prio_higher_or_equal(int prio1, int prio2)
 // KID 20170717
 // t1->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1,
 // t2->base.prio: (&_main_thread_s)->base.prio: 0
+// KID 20170718
+// prio: -1, test_prio: 0
 static inline int _is_prio1_higher_than_prio2(int prio1, int prio2)
 {
 	// prio1: 0, prio2: 0
 	// prio1: 15, prio2: 0
 	// prio1: -1, prio2: 0
+	// prio1: -1, prio2: 0
 	return prio1 < prio2;
 	// return 0
 	// return 0
 	// return 1
+	// return 1
 }
 
+// KID 20170718
+// _get_highest_ready_prio(): -1, _current->base.prio: (&_main_thread_s)->base.prio: 0
 static inline int _is_prio_higher(int prio, int test_prio)
 {
+	// prio: -1, test_prio: 0
+	// _is_prio1_higher_than_prio2(-1, 0): 1
 	return _is_prio1_higher_than_prio2(prio, test_prio);
+	// return 1
 }
 
 // KID 20170519
@@ -269,11 +278,15 @@ static inline int _is_coop(struct k_thread *thread)
 }
 
 /* is thread currently preemptible ? */
+// KID 20170718
+// _current: _kernel.current: &_main_thread_s
 static inline int _is_preempt(struct k_thread *thread)
 {
-#ifdef CONFIG_PREEMPT_ENABLED
+#ifdef CONFIG_PREEMPT_ENABLED // CONFIG_PREEMPT_ENABLED=y
 	/* explanation in kernel_struct.h */
+	// thread->base.preempt: (&_main_thread_s)->base.preempt: 0, _PREEMPT_THRESHOLD: 0x7F
 	return thread->base.preempt <= _PREEMPT_THRESHOLD;
+	// return 1
 #else
 	return 0;
 #endif
@@ -360,13 +373,19 @@ static inline int _get_ready_q_q_index(int prio)
 
 /* find out the currently highest priority where a thread is ready to run */
 /* interrupts must be locked */
+// KID 20170718
 static inline int _get_highest_ready_prio(void)
 {
 	int bitmap = 0;
+	// bitmap: 0
+
 	u32_t ready_range;
 
+// K_NUM_PRIORITIES: 32
 #if (K_NUM_PRIORITIES <= 32)
+	// _ready_q.prio_bmap[0]: _kernel.ready_q.prio_bmap[0]: 0x80018000
 	ready_range = _ready_q.prio_bmap[0];
+	// ready_range: 0x80018000
 #else
 	for (;; bitmap++) {
 
@@ -379,11 +398,16 @@ static inline int _get_highest_ready_prio(void)
 	}
 #endif
 
+	// ready_range: 0x80018000, find_lsb_set(0x80018000): 16, bitmap: 0
 	int abs_prio = (find_lsb_set(ready_range) - 1) + (bitmap << 5);
+	// abs_prio: 15
 
+	// abs_prio: 15, K_NUM_PRIORITIES: 32
 	__ASSERT(abs_prio < K_NUM_PRIORITIES, "prio out-of-range\n");
 
+	// abs_prio: 15, _NUM_COOP_PRIO: 16
 	return abs_prio - _NUM_COOP_PRIO;
+	// return -1
 }
 
 /*
@@ -392,7 +416,10 @@ static inline int _get_highest_ready_prio(void)
  */
 static inline int _must_switch_threads(void)
 {
+	// _current: _kernel.current: &_main_thread_s
+	// _is_preempt(&_main_thread_s): 1, __must_switch_threads(): 1
 	return _is_preempt(_current) && __must_switch_threads();
+	// return 1
 }
 
 /*

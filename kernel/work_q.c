@@ -16,6 +16,7 @@
 #include <errno.h>
 
 // KID 20170717
+// KID 20170718
 static void work_q_main(void *work_q_ptr, void *p2, void *p3)
 {
 	struct k_work_q *work_q = work_q_ptr;

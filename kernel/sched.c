@@ -347,17 +347,23 @@ static void _dump_ready_q(void)
  * Check if there is a thread of higher prio than the current one. Should only
  * be called if we already know that the current thread is preemptible.
  */
+// KID 20170718
 int __must_switch_threads(void)
 {
-#ifdef CONFIG_PREEMPT_ENABLED
+#ifdef CONFIG_PREEMPT_ENABLED // CONFIG_PREEMPT_ENABLED=y
+	// _current: _kernel.current: &_main_thread_s
+	// _current->base.prio: (&_main_thread_s)->base.prio: 0, _get_highest_ready_prio(): -1
 	K_DEBUG("current prio: %d, highest prio: %d\n",
 		_current->base.prio, _get_highest_ready_prio());
 
-#ifdef CONFIG_KERNEL_DEBUG
+#ifdef CONFIG_KERNEL_DEBUG // CONFIG_KERNEL_DEBUG=n
 	_dump_ready_q();
 #endif  /* CONFIG_KERNEL_DEBUG */
 
+	// _get_highest_ready_prio(): -1, _current->base.prio: (&_main_thread_s)->base.prio: 0
+	// _is_prio_higher(-1, 0): 1
 	return _is_prio_higher(_get_highest_ready_prio(), _current->base.prio);
+	// return 1
 #else
 	return 0;
 #endif
@@ -527,6 +533,7 @@ int _is_thread_time_slicing(struct k_thread *thread)
 /* Must be called with interrupts locked */
 /* Should be called only immediately before a thread switch */
 // KID 20170618
+// KID 20170718
 void _update_time_slice_before_swap(void)
 {
 #ifdef CONFIG_TICKLESS_KERNEL // CONFIG_TICKLESS_KERNEL=n
@@ -542,6 +549,7 @@ void _update_time_slice_before_swap(void)
 #endif
 	/* Restart time slice count at new thread switch */
 	_time_slice_elapsed = 0;
+	// _time_slice_elapsed: 0
 	// _time_slice_elapsed: 0
 }
 #endif /* CONFIG_TIMESLICING */

@@ -106,6 +106,7 @@
 // KID 20170519
 // KID 20170601
 // KID 20170717
+// KID 20170718
 #define __ASSERT(test, fmt, ...) \
 	do {/* nothing */        \
 	} while ((0))

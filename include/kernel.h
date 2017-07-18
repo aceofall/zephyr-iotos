@@ -49,6 +49,7 @@ extern "C" {
 
 #if defined(CONFIG_COOP_ENABLED) && defined(CONFIG_PREEMPT_ENABLED) // CONFIG_COOP_ENABLED=y, CONFIG_PREEMPT_ENABLED=y
 // KID 20170523
+// KID 20170718
 // CONFIG_NUM_COOP_PRIORITIES: 16
 // _NUM_COOP_PRIO: 16
 #define _NUM_COOP_PRIO (CONFIG_NUM_COOP_PRIORITIES)
@@ -187,6 +188,7 @@ struct __thread_entry {
 // KID 20170522
 // KID 20170601
 // KID 20170605
+// KID 20170718
 // sizeof(struct _thread_base): 40 bytes
 struct _thread_base {
 
@@ -258,6 +260,7 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 // KID 20170601
 // KID 20170626
 // KID 20170715
+// KID 20170718
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct _thread_arch): 0 bytes
 // sizeof(struct k_thread): 56 bytes

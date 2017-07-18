@@ -66,9 +66,14 @@
 #endif
 
 /* lowest value of _thread_base.preempt at which a thread is non-preemptible */
+// KID 20170718
+// _NON_PREEMPT_THRESHOLD: 0x0080
 #define _NON_PREEMPT_THRESHOLD 0x0080
 
 /* highest value of _thread_base.preempt at which a thread is preemptible */
+// KID 20170718
+// _NON_PREEMPT_THRESHOLD: 0x0080
+// _PREEMPT_THRESHOLD: 0x7F
 #define _PREEMPT_THRESHOLD (_NON_PREEMPT_THRESHOLD - 1)
 
 #include <kernel_arch_data.h>
@@ -158,6 +163,7 @@ typedef struct _kernel _kernel_t;
 extern struct _kernel _kernel;
 
 // KID 20170518
+// KID 20170718
 // _current: _kernel.current
 #define _current _kernel.current
 // KID 20170519

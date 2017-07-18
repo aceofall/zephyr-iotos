@@ -239,7 +239,9 @@ static void start_thread(struct k_thread *thread)
 		//
 		// _kernel.ready_q.cache: &(&k_sys_work_q)->thread
 
+		// _must_switch_threads(): 1
 		if (_must_switch_threads()) {
+			// key: eflags 값
 			_Swap(key);
 			return;
 		}

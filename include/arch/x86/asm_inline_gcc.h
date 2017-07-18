@@ -107,13 +107,16 @@ static ALWAYS_INLINE void _do_irq_unlock(void)
  * after the 'cmovzl', the correct results are yielded.
  */
 
+// KID 20170718
+// ready_range: 0x80018000
 static ALWAYS_INLINE unsigned int find_lsb_set(u32_t op)
 {
 	unsigned int bitpos;
 
+	// op: 0x80018000
 	__asm__ volatile (
 
-#if defined(CONFIG_CMOV)
+#if defined(CONFIG_CMOV) // CONFIG_CMOV=n
 
 		"bsfl %1, %0;\n\t"
 		"cmovzl %2, %0;\n\t"
@@ -122,19 +125,22 @@ static ALWAYS_INLINE unsigned int find_lsb_set(u32_t op)
 		: "cc"
 
 #else
-
-		  "bsfl %1, %0;\n\t"
-		  "jnz 1f;\n\t"
-		  "movl $-1, %0;\n\t"
-		  "1:\n\t"
+                                      // op: 0x80018000
+		  "bsfl %1, %0;\n\t"  // "bsfl op, bitpos;"
+		  "jnz 1f;\n\t"       // "jnz 1f;"
+		  "movl $-1, %0;\n\t" // "movl $-1, bitpos;"
+		  "1:\n\t"            // "1:"
 		: "=r" (bitpos)
 		: "rm" (op)
 		: "cc"
 
 #endif /* CONFIG_CMOV */
 		);
+	// bitpos: 15
 
+	// bitpos: 15
 	return (bitpos + 1);
+	// return 16
 }
 
 
