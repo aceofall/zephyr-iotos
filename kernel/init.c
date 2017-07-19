@@ -40,10 +40,20 @@ const char * const build_timestamp = BUILD_TIMESTAMP;
 
 /* boot banner items */
 
+static const unsigned int boot_delay;
+#if defined(CONFIG_BOOT_DELAY) && CONFIG_BOOT_DELAY > 0
+#define BOOT_DELAY_BANNER " (delayed boot "	\
+	STRINGIFY(CONFIG_BOOT_DELAY) "ms)"
+static const unsigned int boot_delay = CONFIG_BOOT_DELAY;
+#else
+#define BOOT_DELAY_BANNER ""
+static const unsigned int boot_delay;
+#endif
 // KID 20170613
 // KERNEL_VERSION_STRING: "1.8.99"
 // BOOT_BANNER: "BOOTING ZEPHYR OS v" "1.8.99"
-#define BOOT_BANNER "BOOTING ZEPHYR OS v" KERNEL_VERSION_STRING
+#define BOOT_BANNER "BOOTING ZEPHYR OS v"	\
+	KERNEL_VERSION_STRING BOOT_DELAY_BANNER
 
 #if !defined(CONFIG_BOOT_BANNER) // CONFIG_BOOT_BANNER=y
 #define PRINT_BOOT_BANNER() do { } while (0)
@@ -251,6 +261,16 @@ static void _main(void *unused1, void *unused2, void *unused3)
 #endif
 
 	_init_static_threads();
+
+	if (boot_delay > 0) {
+		printk("***** delaying boot " STRINGIFY(CONFIG_BOOT_DELAY)
+		       "ms (per build configuration) *****\n");
+		k_sleep(CONFIG_BOOT_DELAY);
+	}
+	PRINT_BOOT_BANNER();
+
+	// PRINT_BOOT_BANNER 에서 한일:
+	// "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 
 #ifdef CONFIG_BOOT_TIME_MEASUREMENT
 	/* record timestamp for kernel's _main() function */
@@ -662,11 +682,6 @@ FUNC_NORETURN void _Cstart(void)
 #endif
 
 	/* display boot banner */
-
-	PRINT_BOOT_BANNER();
-
-	// PRINT_BOOT_BANNER 에서 한일:
-	// "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 
 	switch_to_main_thread();
 
