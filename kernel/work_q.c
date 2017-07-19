@@ -17,17 +17,24 @@
 
 // KID 20170717
 // KID 20170718
+// &k_sys_work_q, NULL, NULL
 static void work_q_main(void *work_q_ptr, void *p2, void *p3)
 {
+	// work_q_ptr: &k_sys_work_q
 	struct k_work_q *work_q = work_q_ptr;
+	// work_q: &k_sys_work_q
 
+	// p2: NULL
 	ARG_UNUSED(p2);
+
+	// p3: NULL
 	ARG_UNUSED(p3);
 
 	while (1) {
 		struct k_work *work;
 		k_work_handler_t handler;
 
+		// &work_q->fifo: &(&k_sys_work_q)->fifo, K_FOREVER: -1
 		work = k_fifo_get(&work_q->fifo, K_FOREVER);
 
 		handler = work->handler;

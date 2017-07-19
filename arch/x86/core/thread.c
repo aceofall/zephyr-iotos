@@ -339,7 +339,7 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 	*--pInitialThread = (unsigned long)parameter3;
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1024): NULL
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 256): NULL
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1024): NULL
+	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1024): &k_sys_work_q
 
 	// *pInitialThread: *(unsigned long *)(_main_stack + 1020), parameter2: NULL
 	// *pInitialThread: *(unsigned long *)(_idle_stack + 252), parameter2: NULL

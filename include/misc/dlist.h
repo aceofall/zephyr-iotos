@@ -28,6 +28,7 @@ extern "C" {
 // KID 20170527
 // KID 20170602
 // KID 20170717
+// KID 20170719
 // sizeof(struct _dnode): 8 bytes
 struct _dnode {
 	union {
@@ -47,6 +48,7 @@ struct _dnode {
 // KID 20170602
 // KID 20170715
 // KID 20170717
+// KID 20170719
 // sizeof(struct _dnode): 8 bytes
 // sizeof(sys_dlist_t): 8 bytes
 typedef struct _dnode sys_dlist_t;
@@ -517,6 +519,8 @@ static inline void sys_dlist_insert_at(sys_dlist_t *list, sys_dnode_t *node,
  * @return N/A
  */
 
+// KID 20170719
+// &thread->base.k_q_node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 static inline void sys_dlist_remove(sys_dnode_t *node)
 {
 	node->prev->next = node->next;

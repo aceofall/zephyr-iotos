@@ -202,24 +202,32 @@ void k_queue_merge_slist(struct k_queue *queue, sys_slist_t *list)
 	sys_slist_init(list);
 }
 
+// KID 20170719
+// &work_q->fifo: &(&k_sys_work_q)->fifo, K_FOREVER: -1
 void *k_queue_get(struct k_queue *queue, s32_t timeout)
 {
 	unsigned int key;
 	void *data;
 
+	// irq_lock(): eflags 값
 	key = irq_lock();
+	// key: eflags 값
 
+	// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q
+	// sys_slist_is_empty(&(&(&k_sys_work_q)->fifo)->data_q): 1
 	if (likely(!sys_slist_is_empty(&queue->data_q))) {
 		data = sys_slist_get_not_empty(&queue->data_q);
 		irq_unlock(key);
 		return data;
 	}
 
+	// timeout: -1, K_NO_WAIT: 0
 	if (timeout == K_NO_WAIT) {
 		irq_unlock(key);
 		return NULL;
 	}
 
+	// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q, timeout: -1
 	_pend_current_thread(&queue->wait_q, timeout);
 
 	return _Swap(key) ? NULL : _current->base.swap_data;

@@ -24,6 +24,7 @@ K_THREAD_STACK_DEFINE(sys_work_q_stack, CONFIG_SYSTEM_WORKQUEUE_STACK_SIZE);
 
 // KID 20170715
 // KID 20170717
+// KID 20170719
 struct k_work_q k_sys_work_q;
 
 // KID 20170715

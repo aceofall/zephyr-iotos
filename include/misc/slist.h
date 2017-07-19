@@ -22,20 +22,24 @@ extern "C" {
 
 
 // KID 20170717
+// KID 20170719
 struct _snode {
 	struct _snode *next;
 };
 
 // KID 20170717
+// KID 20170719
 typedef struct _snode sys_snode_t;
 
 // KID 20170717
+// KID 20170719
 struct _slist {
 	sys_snode_t *head;
 	sys_snode_t *tail;
 };
 
 // KID 20170717
+// KID 20170719
 typedef struct _slist sys_slist_t;
 
 /**
@@ -205,9 +209,13 @@ static inline void sys_slist_init(sys_slist_t *list)
  *
  * @return a boolean, true if it's empty, false otherwise
  */
+// KID 20170719
+// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q
 static inline bool sys_slist_is_empty(sys_slist_t *list)
 {
+	// list->head: (&(&(&k_sys_work_q)->fifo)->data_q)->head: NULL
 	return (!list->head);
+	// return 1
 }
 
 /**
@@ -365,10 +373,15 @@ static inline void sys_slist_insert(sys_slist_t *list,
  *
  * @return A pointer to the first node of the list
  */
+// KID 20170719
+// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q
 static inline sys_snode_t *sys_slist_get_not_empty(sys_slist_t *list)
 {
+	// list->head: (&(&(&k_sys_work_q)->fifo)->data_q)->head
 	sys_snode_t *node = list->head;
+	// node: (&(&(&k_sys_work_q)->fifo)->data_q)->head
 
+	// list->head: (&(&(&k_sys_work_q)->fifo)->data_q)->head
 	list->head = node->next;
 	if (list->tail == node) {
 		list->tail = list->head;

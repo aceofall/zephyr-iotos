@@ -306,7 +306,7 @@ k_tid_t k_thread_create(struct k_thread *new_thread, char *stack,
 	// (&(&k_sys_work_q)->thread)->init_data: NULL
 	// (&(&k_sys_work_q)->thread)->fn_abort: NULL
 	//
-	// *(unsigned long *)(sys_work_q_stack + 1024): NULL
+	// *(unsigned long *)(sys_work_q_stack + 1024): &k_sys_work_q
 	// *(unsigned long *)(sys_work_q_stack + 1020): NULL
 	// *(unsigned long *)(sys_work_q_stack + 1016): NULL
 	// *(unsigned long *)(sys_work_q_stack + 1016), pEntry: work_q_main

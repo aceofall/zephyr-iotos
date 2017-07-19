@@ -199,12 +199,21 @@ void _add_thread_to_ready_q(struct k_thread *thread)
  * Interrupts must be locked when calling this function.
  */
 
+// KID 20170719
+// _current: _kernel.current: &(&k_sys_work_q)->thread
 void _remove_thread_from_ready_q(struct k_thread *thread)
 {
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+	// thread->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1
+	// _get_ready_q_q_index(-1): 15
 	int q_index = _get_ready_q_q_index(thread->base.prio);
-	sys_dlist_t *q = &_ready_q.q[q_index];
+	// q_index: 15
 
+	// q_index: 15, &_ready_q.q[15]: &_kernel.ready_q.q[15]
+	sys_dlist_t *q = &_ready_q.q[q_index];
+	// q: &_kernel.ready_q.q[15]
+
+	// &thread->base.k_q_node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 	sys_dlist_remove(&thread->base.k_q_node);
 	if (sys_dlist_is_empty(q)) {
 		_clear_ready_q_prio_bit(thread->base.prio);
@@ -320,8 +329,11 @@ inserted:
 
 /* pend the current thread */
 /* must be called with interrupts locked */
+// KID 20170719
+// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q, timeout: -1
 void _pend_current_thread(_wait_q_t *wait_q, s32_t timeout)
 {
+	// _current: _kernel.current: &(&k_sys_work_q)->thread
 	_remove_thread_from_ready_q(_current);
 	_pend_thread(_current, wait_q, timeout);
 }

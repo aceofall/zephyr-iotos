@@ -360,6 +360,8 @@ static inline int _get_ready_q_prio_bit(int prio)
 // thread->base.prio: (&_idle_thread_s)->base.prio: 15
 // KID 20170717
 // thread->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1
+// KID 20170719
+// thread->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1
 static inline int _get_ready_q_q_index(int prio)
 {
 	// prio: 0, _NUM_COOP_PRIO: 16

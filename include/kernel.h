@@ -110,6 +110,7 @@ extern "C" {
 // KID 20170602
 // KID 20170715
 // KID 20170717
+// KID 20170719
 typedef sys_dlist_t _wait_q_t;
 
 #ifdef CONFIG_OBJECT_TRACING // CONFIG_OBJECT_TRACING=n
@@ -261,6 +262,7 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 // KID 20170626
 // KID 20170715
 // KID 20170718
+// KID 20170719
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct _thread_arch): 0 bytes
 // sizeof(struct k_thread): 56 bytes
@@ -877,6 +879,8 @@ extern void *k_thread_custom_data_get(void);
  *
  * @return Timeout delay value.
  */
+// KID 20170719
+// K_NO_WAIT: 0
 #define K_NO_WAIT 0
 
 /**
@@ -935,6 +939,8 @@ extern void *k_thread_custom_data_get(void);
  *
  * @return Timeout delay value.
  */
+// KID 20170719
+// K_FOREVER: -1
 #define K_FOREVER (-1)
 
 /**
@@ -1351,6 +1357,7 @@ extern u32_t k_uptime_delta_32(s64_t *reftime);
 
 // KID 20170715
 // KID 20170717
+// KID 20170719
 struct k_queue {
 	_wait_q_t wait_q;
 	sys_slist_t data_q;
@@ -1574,6 +1581,7 @@ static inline void *k_queue_peek_tail(struct k_queue *queue)
 
 // KID 20170715
 // KID 20170717
+// KID 20170719
 struct k_fifo {
 	struct k_queue _queue;
 };
@@ -1694,6 +1702,8 @@ struct k_fifo {
  * @return Address of the data item if successful; NULL if returned
  * without waiting, or waiting period timed out.
  */
+// KID 20170719
+// &work_q->fifo: &(&k_sys_work_q)->fifo, K_FOREVER: -1
 #define k_fifo_get(fifo, timeout) \
 	k_queue_get((struct k_queue *) fifo, timeout)
 
@@ -2019,6 +2029,7 @@ struct k_work;
  *
  * @return N/A
  */
+// KID 20170719
 typedef void (*k_work_handler_t)(struct k_work *work);
 
 /**
@@ -2027,6 +2038,7 @@ typedef void (*k_work_handler_t)(struct k_work *work);
 
 // KID 20170715
 // KID 20170717
+// KID 20170719
 struct k_work_q {
 	struct k_fifo fifo;
 	struct k_thread thread;
@@ -2036,6 +2048,7 @@ enum {
 	K_WORK_STATE_PENDING,	/* Work item pending state */
 };
 
+// KID 20170719
 struct k_work {
 	void *_reserved;		/* Used by k_fifo implementation. */
 	k_work_handler_t handler;

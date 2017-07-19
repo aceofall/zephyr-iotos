@@ -376,6 +376,7 @@ typedef struct nanoIsf {
 // KID 20170612
 // KID 20170618
 // KID 20170717
+// KID 20170719
 // ALWAYS_INLINE: inline __attribute__((always_inline))
 static ALWAYS_INLINE unsigned int _arch_irq_lock(void)
 {
