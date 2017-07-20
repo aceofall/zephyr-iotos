@@ -15,6 +15,13 @@ config HAS_DTS
 	This option specifies that the target platform supports device tree
 	configuration.
 
+config HAS_DTS_ADC
+	bool "ADC uses Device Tree"
+	depends on HAS_DTS
+	help
+	This option specifies that the target platform supports device tree
+	configuration for ADC.
+
 config HAS_DTS_I2C
 	bool "I2C uses Device Tree"
 	default n
@@ -205,8 +212,8 @@ config BOOT_BANNER
 	also embeds a date & time stamp in the kernel and in each USAP image.
 
 config BOOT_DELAY
-	int "milliseconds to delay boot"
-	prompt "Boot delay"
+	int
+	prompt "Boot delay in milliseconds"
 	default 0
 	help
 	This option delays bootup for the specified amount of
