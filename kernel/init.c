@@ -123,6 +123,7 @@ K_THREAD_STACK_DEFINE(_idle_stack, IDLE_STACK_SIZE);
 
 // KID 20170519
 // KID 20170712
+// KID 20170720
 static struct k_thread _main_thread_s;
 // KID 20170525
 static struct k_thread _idle_thread_s;
@@ -418,7 +419,7 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	_add_thread_to_ready_q(_main_thread);
 
 	// _add_thread_to_ready_q 에서 한일:
-	// _kernel.ready_q.prio_bmap[0]: 0x8000
+	// _kernel.ready_q.prio_bmap[0]: 0x10000
 	//
 	// (&(&_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
 	// (&(&_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
@@ -464,7 +465,7 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	_add_thread_to_ready_q(_idle_thread);
 
 	// _add_thread_to_ready_q 에서 한일:
-	// _kernel.ready_q.prio_bmap[0]: 0x80008000
+	// _kernel.ready_q.prio_bmap[0]: 0x80010000
 	//
 	// (&(&_idle_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[31]
 	// (&(&_idle_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[31])->tail
@@ -582,7 +583,7 @@ FUNC_NORETURN void _Cstart(void)
 	// (&_main_thread_s)->base.thread_state: 0
 	//
 	// _add_thread_to_ready_q 에서 한일:
-	// _kernel.ready_q.prio_bmap[0]: 0x8000
+	// _kernel.ready_q.prio_bmap[0]: 0x10000
 	//
 	// (&(&_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
 	// (&(&_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
@@ -617,7 +618,7 @@ FUNC_NORETURN void _Cstart(void)
 	// (&_idle_thread_s)->base.thread_state: 0
 	//
 	// _add_thread_to_ready_q 에서 한일:
-	// _kernel.ready_q.prio_bmap[0]: 0x80008000
+	// _kernel.ready_q.prio_bmap[0]: 0x80010000
 	//
 	// (&(&_idle_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[31]
 	// (&(&_idle_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[31])->tail

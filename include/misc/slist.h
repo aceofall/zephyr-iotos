@@ -23,16 +23,19 @@ extern "C" {
 
 // KID 20170717
 // KID 20170719
+// KID 20170720
 struct _snode {
 	struct _snode *next;
 };
 
 // KID 20170717
 // KID 20170719
+// KID 20170720
 typedef struct _snode sys_snode_t;
 
 // KID 20170717
 // KID 20170719
+// KID 20170720
 struct _slist {
 	sys_snode_t *head;
 	sys_snode_t *tail;
@@ -40,6 +43,7 @@ struct _slist {
 
 // KID 20170717
 // KID 20170719
+// KID 20170720
 typedef struct _slist sys_slist_t;
 
 /**

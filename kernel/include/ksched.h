@@ -324,12 +324,16 @@ static inline int _get_new_prio_with_ceiling(int prio)
 // prio: 15
 // KID 20170717
 // prio: -1
+// KID 20170720
+// prio: -1
 static inline int _get_ready_q_prio_bmap_index(int prio)
 {
 	// prio: 0, _NUM_COOP_PRIO: 16
 	// prio: 15, _NUM_COOP_PRIO: 16
 	// prio: -1, _NUM_COOP_PRIO: 16
+	// prio: -1, _NUM_COOP_PRIO: 16
 	return (prio + _NUM_COOP_PRIO) >> 5;
+	// return 0
 	// return 0
 	// return 0
 	// return 0
@@ -342,15 +346,19 @@ static inline int _get_ready_q_prio_bmap_index(int prio)
 // prio: 15
 // KID 20170717
 // prio: -1
+// KID 20170720
+// prio: -1
 static inline int _get_ready_q_prio_bit(int prio)
 {
 	// prio: 0, _NUM_COOP_PRIO: 16
 	// prio: 15, _NUM_COOP_PRIO: 16
 	// prio: -1, _NUM_COOP_PRIO: 16
+	// prio: -1, _NUM_COOP_PRIO: 16
 	return (1 << ((prio + _NUM_COOP_PRIO) & 0x1f));
-	// return 0x8000
-	// return 0x80000000
 	// return 0x10000
+	// return 0x80000000
+	// return 0x8000
+	// return 0x8000
 }
 
 /* find out the ready queue array index for a given prio */
@@ -362,32 +370,41 @@ static inline int _get_ready_q_prio_bit(int prio)
 // thread->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1
 // KID 20170719
 // thread->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1
+// KID 20170720
+// prio: 0
 static inline int _get_ready_q_q_index(int prio)
 {
 	// prio: 0, _NUM_COOP_PRIO: 16
 	// prio: 15, _NUM_COOP_PRIO: 16
 	// prio: -1, _NUM_COOP_PRIO: 16
+	// prio: 0, _NUM_COOP_PRIO: 16
 	return prio + _NUM_COOP_PRIO;
 	// return 16
 	// return 31
 	// return 15
+	// return 16
 }
 
 /* find out the currently highest priority where a thread is ready to run */
 /* interrupts must be locked */
 // KID 20170718
+// KID 20170720
 static inline int _get_highest_ready_prio(void)
 {
 	int bitmap = 0;
+	// bitmap: 0
 	// bitmap: 0
 
 	u32_t ready_range;
 
 // K_NUM_PRIORITIES: 32
+// K_NUM_PRIORITIES: 32
 #if (K_NUM_PRIORITIES <= 32)
 	// _ready_q.prio_bmap[0]: _kernel.ready_q.prio_bmap[0]: 0x80018000
+	// _ready_q.prio_bmap[0]: _kernel.ready_q.prio_bmap[0]: 0x80008000
 	ready_range = _ready_q.prio_bmap[0];
 	// ready_range: 0x80018000
+	// ready_range: 0x80008000
 #else
 	for (;; bitmap++) {
 
@@ -401,15 +418,20 @@ static inline int _get_highest_ready_prio(void)
 #endif
 
 	// ready_range: 0x80018000, find_lsb_set(0x80018000): 16, bitmap: 0
+	// ready_range: 0x80010000, find_lsb_set(0x80008000): 16, bitmap: 0
 	int abs_prio = (find_lsb_set(ready_range) - 1) + (bitmap << 5);
 	// abs_prio: 15
+	// abs_prio: 16
 
 	// abs_prio: 15, K_NUM_PRIORITIES: 32
+	// abs_prio: 16, K_NUM_PRIORITIES: 32
 	__ASSERT(abs_prio < K_NUM_PRIORITIES, "prio out-of-range\n");
 
 	// abs_prio: 15, _NUM_COOP_PRIO: 16
+	// abs_prio: 16, _NUM_COOP_PRIO: 16
 	return abs_prio - _NUM_COOP_PRIO;
 	// return -1
+	// return 0
 }
 
 /*

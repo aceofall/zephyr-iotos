@@ -263,6 +263,7 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 // KID 20170715
 // KID 20170718
 // KID 20170719
+// KID 20170720
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct _thread_arch): 0 bytes
 // sizeof(struct k_thread): 56 bytes
@@ -1582,6 +1583,7 @@ static inline void *k_queue_peek_tail(struct k_queue *queue)
 // KID 20170715
 // KID 20170717
 // KID 20170719
+// KID 20170720
 struct k_fifo {
 	struct k_queue _queue;
 };

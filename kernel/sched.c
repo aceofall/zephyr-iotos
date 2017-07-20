@@ -47,48 +47,72 @@ static void _set_ready_q_prio_bit(int prio)
 	// bmap: &_kernel.ready_q.prio_bmap[0]
 
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0, prio: 0,
-	// _get_ready_q_prio_bit(0): 0x8000
+	// _get_ready_q_prio_bit(0): 0x10000
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x8000, prio: 15
 	// _get_ready_q_prio_bit(15): 0x80000000
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x80008000, prio: -1
-	// _get_ready_q_prio_bit(-1): 0x10000
+	// _get_ready_q_prio_bit(-1): 0x8000
 	*bmap |= _get_ready_q_prio_bit(prio);
-	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x8000
-	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x80008000
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x10000
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x80010000
 	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x80018000
 }
 #endif
 
 /* clear the bit corresponding to prio in ready q bitmap */
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+// KID 20170720
+// thread->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1
 static void _clear_ready_q_prio_bit(int prio)
 {
+	// prio: -1, _get_ready_q_prio_bmap_index(-1): 0
 	int bmap_index = _get_ready_q_prio_bmap_index(prio);
-	u32_t *bmap = &_ready_q.prio_bmap[bmap_index];
+	// bmap_index: 0
 
+	// bmap_index: 0, &_ready_q.prio_bmap[0]: &_kernel.ready_q.prio_bmap[0]
+	u32_t *bmap = &_ready_q.prio_bmap[bmap_index];
+	// bmap: &_kernel.ready_q.prio_bmap[0]
+
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x80018000, prio: -1, _get_ready_q_prio_bit(-1): 0x8000
 	*bmap &= ~_get_ready_q_prio_bit(prio);
+	// *bmap: _kernel.ready_q.prio_bmap[0]: 0x80010000
 }
 #endif
 
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 /*
  * Find the next thread to run when there is no thread in the cache and update
  * the cache.
  */
+// KID 20170720
 static struct k_thread *_get_ready_q_head(void)
 {
+	// _get_highest_ready_prio(): 0
 	int prio = _get_highest_ready_prio();
-	int q_index = _get_ready_q_q_index(prio);
-	sys_dlist_t *list = &_ready_q.q[q_index];
+	// prio: 0
 
+	// prio: 0, _get_ready_q_q_index(0): 16
+	int q_index = _get_ready_q_q_index(prio);
+	// q_index: 16
+
+	// q_index: 16, &_ready_q.q[16]: &_kernel.ready_q.q[16]
+	sys_dlist_t *list = &_ready_q.q[q_index];
+	// list: &_kernel.ready_q.q[16]
+
+	// list: &_kernel.ready_q.q[16], sys_dlist_is_empty(&_kernel.ready_q.q[16]): 0
 	__ASSERT(!sys_dlist_is_empty(list),
 		 "no thread to run (prio: %d, queue index: %u)!\n",
 		 prio, q_index);
 
+	// list: &_kernel.ready_q.q[16],
+	// sys_dlist_peek_head_not_empty(&_kernel.ready_q.q[16]): &(&_main_thread_s)->base.k_q_node
 	struct k_thread *thread =
 		(struct k_thread *)sys_dlist_peek_head_not_empty(list);
+	// thread: &_main_thread_s
 
+	// thread: &_main_thread_s
 	return thread;
+	// return &_main_thread_s
 }
 #endif
 
@@ -136,10 +160,10 @@ void _add_thread_to_ready_q(struct k_thread *thread)
 	_set_ready_q_prio_bit(thread->base.prio);
 
 	// _set_ready_q_prio_bit 에서 한일:
-	// _kernel.ready_q.prio_bmap[0]: 0x8000
+	// _kernel.ready_q.prio_bmap[0]: 0x10000
 
 	// _set_ready_q_prio_bit 에서 한일:
-	// _kernel.ready_q.prio_bmap[0]: 0x80008000
+	// _kernel.ready_q.prio_bmap[0]: 0x80010000
 
 	// _set_ready_q_prio_bit 에서 한일:
 	// _kernel.ready_q.prio_bmap[0]: 0x80018000
@@ -215,13 +239,30 @@ void _remove_thread_from_ready_q(struct k_thread *thread)
 
 	// &thread->base.k_q_node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 	sys_dlist_remove(&thread->base.k_q_node);
+
+	// sys_dlist_remove 에서 한일:
+	// &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
+	//
+	// (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
+	// (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
+
+	// q: &_kernel.ready_q.q[15], sys_dlist_is_empty(&_kernel.ready_q.q[15]): 1
 	if (sys_dlist_is_empty(q)) {
+		// thread->base.prio: (&(&k_sys_work_q)->thread)->base.prio: -1
 		_clear_ready_q_prio_bit(thread->base.prio);
+
+		// _clear_ready_q_prio_bit 에서 한일:
+		// _kernel.ready_q.prio_bmap[0]: 0x80010000
 	}
 
+	// &_ready_q.cache: &_kernel.ready_q.cache
 	struct k_thread **cache = &_ready_q.cache;
+	// cache: &_kernel.ready_q.cache
 
+	// *cache: *(&_kernel.ready_q.cache): &(&k_sys_work_q)->thread, thread: &(&k_sys_work_q)->thread,
+	// _get_ready_q_head(): &_main_thread_s
 	*cache = *cache == thread ? _get_ready_q_head() : *cache;
+	// *cache: *(&_kernel.ready_q.cache): &_main_thread_s
 #else
 	_ready_q.prio_bmap[0] = 0;
 	_ready_q.cache = NULL;
@@ -298,13 +339,23 @@ s32_t _ms_to_ticks(s32_t ms)
 
 /* pend the specified thread: it must *not* be in the ready queue */
 /* must be called with interrupts locked */
+// KID 20170720
+// _current: _kernel.current: &(&k_sys_work_q)->thread, wait_q: &(&(&k_sys_work_q)->fifo)->data_q, timeout: -1
 void _pend_thread(struct k_thread *thread, _wait_q_t *wait_q, s32_t timeout)
 {
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+	// wait_q: &(&(&k_sys_work_q)->fifo)->data_q
 	sys_dlist_t *wait_q_list = (sys_dlist_t *)wait_q;
+	// wait_q_list: &(&(&k_sys_work_q)->fifo)->data_q
+
 	sys_dnode_t *node;
 
+	// wait_q_list: &(&(&k_sys_work_q)->fifo)->data_q
+	// sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->data_q): NULL
 	SYS_DLIST_FOR_EACH_NODE(wait_q_list, node) {
+	// for (node = sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->data_q); node;
+	//      node = sys_dlist_peek_next(&(&(&k_sys_work_q)->fifo)->data_q, node))
+
 		struct k_thread *pending = (struct k_thread *)node;
 
 		if (_is_t1_higher_prio_than_t2(thread, pending)) {
@@ -314,6 +365,8 @@ void _pend_thread(struct k_thread *thread, _wait_q_t *wait_q, s32_t timeout)
 		}
 	}
 
+	// wait_q_list: &(&(&k_sys_work_q)->fifo)->data_q,
+	// &thread->base.k_q_node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 	sys_dlist_append(wait_q_list, &thread->base.k_q_node);
 
 inserted:
@@ -335,6 +388,17 @@ void _pend_current_thread(_wait_q_t *wait_q, s32_t timeout)
 {
 	// _current: _kernel.current: &(&k_sys_work_q)->thread
 	_remove_thread_from_ready_q(_current);
+
+	// _remove_thread_from_ready_q 에서 한일:
+	// &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
+	//
+	// (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
+	// (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
+	//
+	// _kernel.ready_q.prio_bmap[0]: 0x80010000
+	// _kernel.ready_q.cache: &_main_thread_s
+
+	// _current: _kernel.current: &(&k_sys_work_q)->thread, wait_q: &(&(&k_sys_work_q)->fifo)->data_q, timeout: -1
 	_pend_thread(_current, wait_q, timeout);
 }
 

@@ -169,6 +169,7 @@ extern struct _kernel _kernel;
 // KID 20170519
 // KID 20170523
 // KID 20170719
+// KID 20170720
 // _ready_q: _kernel.ready_q
 #define _ready_q _kernel.ready_q
 // KID 20170527
