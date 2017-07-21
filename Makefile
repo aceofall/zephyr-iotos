@@ -663,6 +663,8 @@ endif
 
 # Some GCC variants don't support these
 KBUILD_CFLAGS += $(call cc-option,-fno-asynchronous-unwind-tables,)
+KBUILD_CFLAGS += $(call cc-option,-fno-pie,)
+KBUILD_CFLAGS += $(call cc-option,-fno-pic,)
 
 ifeq ($(CONFIG_STACK_CANARIES),y)
 KBUILD_CFLAGS += $(call cc-option,-fstack-protector-all,)
@@ -757,6 +759,7 @@ KBUILD_CFLAGS += $(KCFLAGS)
 
 LINKFLAGPREFIX ?= -Wl,
 LDFLAGS_zephyr += $(LDFLAGS)
+LDFLAGS_zephyr += $(call cc-ldoption,-no-pie)
 LDFLAGS_zephyr += $(call cc-ldoption,$(LINKFLAGPREFIX)-X)
 LDFLAGS_zephyr += $(call cc-ldoption,$(LINKFLAGPREFIX)-N)
 LDFLAGS_zephyr += $(call cc-ldoption,$(LINKFLAGPREFIX)--gc-sections)
