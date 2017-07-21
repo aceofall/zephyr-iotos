@@ -72,10 +72,10 @@ typedef struct _dnode sys_dnode_t;
  * @param __dn A sys_dnode_t pointer to peek each node of the list
  */
 // KID 20170720
-// wait_q_list: &(&(&k_sys_work_q)->fifo)->data_q
-// #define SYS_DLIST_FOR_EACH_NODE(&(&(&k_sys_work_q)->fifo)->data_q, node):
-// for (node = sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->data_q); node;
-// 	node = sys_dlist_peek_next(&(&(&k_sys_work_q)->fifo)->data_q, node))
+// wait_q_list: &(&(&k_sys_work_q)->fifo)->wait_q
+// #define SYS_DLIST_FOR_EACH_NODE(&(&(&k_sys_work_q)->fifo)->wait_q, node):
+// for (node = sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->wait_q); node;
+// 	node = sys_dlist_peek_next(&(&(&k_sys_work_q)->fifo)->wait_q, node))
 #define SYS_DLIST_FOR_EACH_NODE(__dl, __dn)				\
 	for (__dn = sys_dlist_peek_head(__dl); __dn;			\
 	     __dn = sys_dlist_peek_next(__dl, __dn))
@@ -271,7 +271,7 @@ static inline int sys_dlist_is_tail(sys_dlist_t *list, sys_dnode_t *node)
 // KID 20170720
 // list: &_ready_q.q[16]: &_kernel.ready_q.q[16]
 // ARM10C 20170720
-// &(&(&k_sys_work_q)->fifo)->data_q
+// &(&(&k_sys_work_q)->fifo)->wait_q
 static inline int sys_dlist_is_empty(sys_dlist_t *list)
 {
 	// list->head: (&(&pipe_async_msgs)->wait_q)->head: &pipe_async_msgs.wait_q,
@@ -280,13 +280,13 @@ static inline int sys_dlist_is_empty(sys_dlist_t *list)
 	// list: &_kernel.ready_q.q[15]
 	// list->head: (&_kernel.ready_q.q[16])->head: &(&_main_thread_s)->base.k_q_node
 	// list: &_kernel.ready_q.q[16]
-	// list->head: (&(&(&k_sys_work_q)->fifo)->data_q)->head: NULL
-	// list: &(&(&k_sys_work_q)->fifo)->data_q
+	// list->head: (&(&(&k_sys_work_q)->fifo)->wait_q)->head: &(&(&k_sys_work_q)->fifo)->wait_q
+	// list: &(&(&k_sys_work_q)->fifo)->wait_q
 	return list->head == list;
 	// return 1
 	// return 1
 	// return 0
-	// return 0
+	// return 1
 }
 
 /**
@@ -313,14 +313,13 @@ static inline int sys_dlist_has_multiple_nodes(sys_dlist_t *list)
 // KID 20170602
 // wait_q: &(&pipe_async_msgs)->wait_q
 // KID 20170720
-// &(&(&k_sys_work_q)->fifo)->data_q
+// &(&(&k_sys_work_q)->fifo)->wait_q
 static inline sys_dnode_t *sys_dlist_peek_head(sys_dlist_t *list)
 {
 	// list: &(&pipe_async_msgs)->wait_q
 	// sys_dlist_is_empty(&(&pipe_async_msgs)->wait_q): 1
-	// list: &(&(&k_sys_work_q)->fifo)->data_q
-	// sys_dlist_is_empty(&(&(&k_sys_work_q)->fifo)->data_q): 0
-	// list->head: (&(&(&k_sys_work_q)->fifo)->data_q)->head: NULL
+	// list: &(&(&k_sys_work_q)->fifo)->wait_q
+	// sys_dlist_is_empty(&(&(&k_sys_work_q)->fifo)->wait_q): 1
 	return sys_dlist_is_empty(list) ? NULL : list->head;
 	// return NULL
 	// return NULL
@@ -407,41 +406,49 @@ static inline sys_dnode_t *sys_dlist_peek_tail(sys_dlist_t *list)
 // KID 20170717
 // q: &_kernel.ready_q.q[15], &thread->base.k_q_node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 // KID 20170720
-// wait_q_list: &(&(&k_sys_work_q)->fifo)->data_q,
+// wait_q_list: &(&(&k_sys_work_q)->fifo)->wait_q,
 // &thread->base.k_q_node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 static inline void sys_dlist_append(sys_dlist_t *list, sys_dnode_t *node)
 {
 	// node->next: (&(&_main_thread_s)->base.k_q_node)->next, list: &_kernel.ready_q.q[16]
 	// node->next: (&(&_idle_thread_s)->base.k_q_node)->next, list: &_kernel.ready_q.q[31]
 	// node->next: (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, list: &_kernel.ready_q.q[15]
+	// node->next: (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, list: &(&(&k_sys_work_q)->fifo)->wait_q
 	node->next = list;
 	// node->next: (&(&_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
 	// node->next: (&(&_idle_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[31]
 	// node->next: (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next: &_kernel.ready_q.q[15]
+	// node->next: (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
 
 	// node->prev: (&(&_main_thread_s)->base.k_q_node)->prev, list->tail: (&_kernel.ready_q.q[16])->tail
 	// node->prev: (&(&_idle_thread_s)->base.k_q_node)->prev, list->tail: (&_kernel.ready_q.q[31])->tail
 	// node->prev: (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev, list->tail: (&_kernel.ready_q.q[15])->tail
+	// node->prev: (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev, list->tail: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail
 	node->prev = list->tail;
 	// node->prev: (&(&_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
 	// node->prev: (&(&_idle_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[31])->tail
 	// node->prev: (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&_kernel.ready_q.q[15])->tail
+	// node->prev: (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail
 
 	// list->tail->next: (&_kernel.ready_q.q[16])->tail->next, node: &(&_main_thread_s)->base.k_q_node
 	// list->tail->next: (&_kernel.ready_q.q[31])->tail->next, node: &(&_idle_thread_s)->base.k_q_node
 	// list->tail->next: (&_kernel.ready_q.q[15])->tail->next, node: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// list->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next, node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 	list->tail->next = node;
 	// list->tail: (&_kernel.ready_q.q[16])->tail->next: &(&_main_thread_s)->base.k_q_node
 	// list->tail: (&_kernel.ready_q.q[31])->tail->next: &(&_idle_thread_s)->base.k_q_node
 	// list->tail: (&_kernel.ready_q.q[15])->tail->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// list->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
 
 	// list->tail: (&_kernel.ready_q.q[16])->tail, node: &(&_main_thread_s)->base.k_q_node
 	// list->tail: (&_kernel.ready_q.q[31])->tail, node: &(&_idle_thread_s)->base.k_q_node
 	// list->tail: (&_kernel.ready_q.q[15])->tail, node: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// list->tail: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail, node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 	list->tail = node;
 	// list->tail: (&_kernel.ready_q.q[16])->tail: &(&_main_thread_s)->base.k_q_node
 	// list->tail: (&_kernel.ready_q.q[31])->tail: &(&_idle_thread_s)->base.k_q_node
 	// list->tail: (&_kernel.ready_q.q[15])->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// list->tail: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
 }
 
 /**

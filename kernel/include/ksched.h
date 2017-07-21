@@ -573,11 +573,15 @@ static inline int _is_thread_ready(struct k_thread *thread)
 }
 
 /* mark a thread as pending in its TCS */
+// KID 20170721
+// thread: &(&k_sys_work_q)->thread
 static inline void _mark_thread_as_pending(struct k_thread *thread)
 {
+	// thread->base.thread_state: (&(&k_sys_work_q)->thread)->base.thread_state: 0, _THREAD_PENDING: 0x2
 	thread->base.thread_state |= _THREAD_PENDING;
+	// thread->base.thread_state: (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
 
-#ifdef CONFIG_KERNEL_EVENT_LOGGER_THREAD
+#ifdef CONFIG_KERNEL_EVENT_LOGGER_THREAD // CONFIG_KERNEL_EVENT_LOGGER_THREAD=n
 	_sys_k_event_logger_thread_pend(thread);
 #endif
 }

@@ -227,8 +227,16 @@ void *k_queue_get(struct k_queue *queue, s32_t timeout)
 		return NULL;
 	}
 
-	// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q, timeout: -1
+	// &queue->wait_q: &(&(&k_sys_work_q)->fifo)->wait_q, timeout: -1
 	_pend_current_thread(&queue->wait_q, timeout);
+
+	// _pend_current_thread 에서 한일:
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	//
+	// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
 
 	return _Swap(key) ? NULL : _current->base.swap_data;
 }

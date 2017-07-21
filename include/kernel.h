@@ -941,6 +941,7 @@ extern void *k_thread_custom_data_get(void);
  * @return Timeout delay value.
  */
 // KID 20170719
+// KID 20170721
 // K_FOREVER: -1
 #define K_FOREVER (-1)
 

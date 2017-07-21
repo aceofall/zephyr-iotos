@@ -35,6 +35,7 @@
 
 /* Thread is waiting on an object */
 // KID 20170717
+// KID 20170721
 // _THREAD_PENDING: 0x2
 #define _THREAD_PENDING (1 << 1)
 

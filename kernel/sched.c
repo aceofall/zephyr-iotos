@@ -340,21 +340,21 @@ s32_t _ms_to_ticks(s32_t ms)
 /* pend the specified thread: it must *not* be in the ready queue */
 /* must be called with interrupts locked */
 // KID 20170720
-// _current: _kernel.current: &(&k_sys_work_q)->thread, wait_q: &(&(&k_sys_work_q)->fifo)->data_q, timeout: -1
+// _current: _kernel.current: &(&k_sys_work_q)->thread, wait_q: &(&(&k_sys_work_q)->fifo)->wait_q, timeout: -1
 void _pend_thread(struct k_thread *thread, _wait_q_t *wait_q, s32_t timeout)
 {
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
-	// wait_q: &(&(&k_sys_work_q)->fifo)->data_q
+	// wait_q: &(&(&k_sys_work_q)->fifo)->wait_q
 	sys_dlist_t *wait_q_list = (sys_dlist_t *)wait_q;
-	// wait_q_list: &(&(&k_sys_work_q)->fifo)->data_q
+	// wait_q_list: &(&(&k_sys_work_q)->fifo)->wait_q
 
 	sys_dnode_t *node;
 
-	// wait_q_list: &(&(&k_sys_work_q)->fifo)->data_q
-	// sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->data_q): NULL
+	// wait_q_list: &(&(&k_sys_work_q)->fifo)->wait_q
+	// sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->wait_q): NULL
 	SYS_DLIST_FOR_EACH_NODE(wait_q_list, node) {
-	// for (node = sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->data_q); node;
-	//      node = sys_dlist_peek_next(&(&(&k_sys_work_q)->fifo)->data_q, node))
+	// for (node = sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->wait_q); node;
+	//      node = sys_dlist_peek_next(&(&(&k_sys_work_q)->fifo)->wait_q, node))
 
 		struct k_thread *pending = (struct k_thread *)node;
 
@@ -365,13 +365,24 @@ void _pend_thread(struct k_thread *thread, _wait_q_t *wait_q, s32_t timeout)
 		}
 	}
 
-	// wait_q_list: &(&(&k_sys_work_q)->fifo)->data_q,
+	// wait_q_list: &(&(&k_sys_work_q)->fifo)->wait_q,
 	// &thread->base.k_q_node: &(&(&k_sys_work_q)->thread)->base.k_q_node
 	sys_dlist_append(wait_q_list, &thread->base.k_q_node);
 
+	// sys_dlist_append 에서 한일:
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+
 inserted:
+	// thread: &(&k_sys_work_q)->thread
 	_mark_thread_as_pending(thread);
 
+	// _mark_thread_as_pending 에서 한일:
+	// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
+
+	// timeout: -1, K_FOREVER: -1
 	if (timeout != K_FOREVER) {
 		s32_t ticks = _TICK_ALIGN + _ms_to_ticks(timeout);
 
@@ -383,7 +394,7 @@ inserted:
 /* pend the current thread */
 /* must be called with interrupts locked */
 // KID 20170719
-// &queue->data_q: &(&(&k_sys_work_q)->fifo)->data_q, timeout: -1
+// &queue->wait_q: &(&(&k_sys_work_q)->fifo)->wait_q, timeout: -1
 void _pend_current_thread(_wait_q_t *wait_q, s32_t timeout)
 {
 	// _current: _kernel.current: &(&k_sys_work_q)->thread
@@ -398,8 +409,16 @@ void _pend_current_thread(_wait_q_t *wait_q, s32_t timeout)
 	// _kernel.ready_q.prio_bmap[0]: 0x80010000
 	// _kernel.ready_q.cache: &_main_thread_s
 
-	// _current: _kernel.current: &(&k_sys_work_q)->thread, wait_q: &(&(&k_sys_work_q)->fifo)->data_q, timeout: -1
+	// _current: _kernel.current: &(&k_sys_work_q)->thread, wait_q: &(&(&k_sys_work_q)->fifo)->wait_q, timeout: -1
 	_pend_thread(_current, wait_q, timeout);
+
+	// _pend_thread 에서 한일:
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	//
+	// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
 }
 
 #if defined(CONFIG_PREEMPT_ENABLED) && defined(CONFIG_KERNEL_DEBUG)
