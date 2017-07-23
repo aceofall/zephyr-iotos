@@ -4,7 +4,9 @@
 / {
 	cpus {
 		cpu@0 {
+			device_type = "cpu";
 			compatible = "intel,quark";
+			reg = <0>;
 		};
 
 	};
@@ -14,6 +16,7 @@
 	};
 
 	sram0: memory@00280000 {
+		device_type = "memory";
 		compatible = "mmio-sram";
 		reg = <0x00280000 DT_SRAM_SIZE>;
 	};
