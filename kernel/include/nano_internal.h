@@ -74,6 +74,8 @@ extern void _check_stack_sentinel(void);
 // irq_lock(): eflags 값
 // KID 20170718
 // key: eflags 값
+// KID 20170724
+// key: eflags 값
 static inline unsigned int _Swap(unsigned int key)
 {
 
@@ -88,8 +90,12 @@ static inline unsigned int _Swap(unsigned int key)
 
 	// _update_time_slice_before_swap 에서 한일:
 	// _time_slice_elapsed: 0
+
+	// _update_time_slice_before_swap 에서 한일:
+	// _time_slice_elapsed: 0
 #endif
 
+	// key: eflags 값
 	// key: eflags 값
 	// key: eflags 값
 	return __swap(key);

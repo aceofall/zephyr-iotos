@@ -413,6 +413,8 @@ void _pend_current_thread(_wait_q_t *wait_q, s32_t timeout)
 	_pend_thread(_current, wait_q, timeout);
 
 	// _pend_thread 에서 한일:
+	// &(&(&k_sys_work_q)->fifo)->wait_q 에 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 tail로 추가함
+	//
 	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
 	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
 	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
@@ -629,6 +631,7 @@ int _is_thread_time_slicing(struct k_thread *thread)
 /* Should be called only immediately before a thread switch */
 // KID 20170618
 // KID 20170718
+// KID 20170724
 void _update_time_slice_before_swap(void)
 {
 #ifdef CONFIG_TICKLESS_KERNEL // CONFIG_TICKLESS_KERNEL=n
@@ -644,6 +647,7 @@ void _update_time_slice_before_swap(void)
 #endif
 	/* Restart time slice count at new thread switch */
 	_time_slice_elapsed = 0;
+	// _time_slice_elapsed: 0
 	// _time_slice_elapsed: 0
 	// _time_slice_elapsed: 0
 }

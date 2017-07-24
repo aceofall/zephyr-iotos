@@ -231,6 +231,16 @@ void *k_queue_get(struct k_queue *queue, s32_t timeout)
 	_pend_current_thread(&queue->wait_q, timeout);
 
 	// _pend_current_thread 에서 한일:
+	// &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
+	//
+	// (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
+	// (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
+	//
+	// _kernel.ready_q.prio_bmap[0]: 0x80010000
+	// _kernel.ready_q.cache: &_main_thread_s
+	//
+	// &(&(&k_sys_work_q)->fifo)->wait_q 에 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 tail로 추가함
+	//
 	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
 	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
 	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
@@ -238,5 +248,6 @@ void *k_queue_get(struct k_queue *queue, s32_t timeout)
 	//
 	// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
 
+	// key: eflags 값
 	return _Swap(key) ? NULL : _current->base.swap_data;
 }
