@@ -4012,6 +4012,12 @@ extern void _timer_expiration_handler(struct _timeout *t);
 //
 // K_THREAD_STACK_DEFINE(sys_work_q_stack, 1024):
 // char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) sys_work_q_stack[1024]
+//
+// KID 20170726
+// CONFIG_ISR_STACK_SIZE: 2048
+//
+// K_THREAD_STACK_DEFINE(_interrupt_stack, 2048):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _interrupt_stack[2048]
 #define K_THREAD_STACK_DEFINE(sym, size) \
 	char __noinit __aligned(STACK_ALIGN) sym[size]
 
@@ -4055,7 +4061,11 @@ extern void _timer_expiration_handler(struct _timeout *t);
  * (for instance a guard area).
  *
  * The value returned here is guaranteed to match the 'size' parameter
- * passed to K_THREAD_STACK_DEFINE and related macros.
+ * passed to K_THREAD_STACK_DEFINE.
+ *
+ * Do not use this for stacks declared with K_THREAD_STACK_ARRAY_DEFINE(),
+ * it is not guaranteed to return the original value since each array
+ * element must be aligned.
  *
  * @param sym Stack memory symbol
  * @return Size of the stack
@@ -4074,6 +4084,7 @@ extern void _timer_expiration_handler(struct _timeout *t);
  * @param sym Declared stack symbol name
  * @return The buffer itself, a char *
  */
+// KID 20170726
 #define K_THREAD_STACK_BUFFER(sym) sym
 
 #endif /* _ARCH_DECLARE_STACK */

@@ -417,7 +417,7 @@ exports += VERSION_MAJOR VERSION_MINOR PATCHLEVEL VERSION_RESERVED EXTRAVERSION
 exports += KERNELRELEASE KERNELVERSION
 exports += ARCH CONFIG_SHELL HOSTCC HOSTCFLAGS CROSS_COMPILE AS LD CC CXX
 exports += CPP AR NM STRIP OBJCOPY OBJDUMP GDB
-exports += MAKE AWK INSTALLKERNEL PERL PYTHON
+exports += MAKE AWK PERL PYTHON
 exports += HOSTCXX HOSTCXXFLAGS CHECK CHECKFLAGS
 
 exports += KBUILD_CPPFLAGS NOSTDINC_FLAGS ZEPHYRINCLUDE OBJCOPYFLAGS LDFLAGS
@@ -438,7 +438,9 @@ define filechk_Makefile.export
 	echo "BOARD=$(BOARD)"; \
 	echo; \
 	$(foreach e,$(exports),echo $(e)=$($(e));) echo; \
-	echo "include $(O)/include/config/auto.conf";)
+	echo "include $(O)/include/config/auto.conf"; \
+	echo "include $(O)/include/generated/generated_dts_board.conf"; \
+	echo "-include $(srctree)/boards/$(ARCH)/$(BOARD_NAME)/Makefile.board";)
 endef
 
 # Files to ignore in find ... statements
@@ -899,6 +901,9 @@ include $(srctree)/arch/x86/Makefile.idt
 ifeq ($(CONFIG_X86_MMU),y)
 include $(srctree)/arch/x86/Makefile.mmu
 endif
+ifeq ($(CONFIG_GDT_DYNAMIC),y)
+include $(srctree)/arch/x86/Makefile.gdt
+endif
 endif
 
 ifeq ($(CONFIG_GEN_ISR_TABLES),y)
@@ -1281,10 +1286,8 @@ $(help-board-dirs): help-%:
 host-tools:
 	$(Q)$(MAKE) $(build)=scripts/basic
 	$(Q)$(MAKE) $(build)=scripts/kconfig standalone
-	$(Q)$(MAKE) $(build)=scripts/gen_idt
 	@mkdir -p ${ZEPHYR_BASE}/bin
-	@cp scripts/basic/fixdep scripts/gen_idt/gen_idt scripts/kconfig/conf \
-		${ZEPHYR_BASE}/bin
+	@cp scripts/basic/fixdep scripts/kconfig/conf ${ZEPHYR_BASE}/bin
 
 
 # Documentation targets

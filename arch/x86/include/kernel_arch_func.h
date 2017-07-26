@@ -27,6 +27,13 @@ extern "C" {
 // sys_work_q_stack + 1024
 #define STACK_ROUND_DOWN(x) ROUND_DOWN(x, STACK_ALIGN_SIZE)
 
+// KID 20170726
+// CONFIG_ISR_STACK_SIZE: 2048
+//
+// K_THREAD_STACK_DEFINE(_interrupt_stack, 2048):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _interrupt_stack[2048]
+extern K_THREAD_STACK_DEFINE(_interrupt_stack, CONFIG_ISR_STACK_SIZE);
+
 /**
  *
  * @brief Performs architecture-specific initialization
@@ -40,14 +47,12 @@ extern "C" {
 // KID 20170527
 static inline void kernel_arch_init(void)
 {
-	// CONFIG_ISR_STACK_SIZE: 2048
-	extern char _interrupt_stack[CONFIG_ISR_STACK_SIZE];
-
 	_kernel.nested = 0;
 	// _kernel.nested: 0
 
-	// CONFIG_ISR_STACK_SIZE: 2048
-	_kernel.irq_stack = _interrupt_stack + CONFIG_ISR_STACK_SIZE;
+	// K_THREAD_STACK_BUFFER(_interrupt_stack): _interrupt_stack, CONFIG_ISR_STACK_SIZE: 2048
+	_kernel.irq_stack = K_THREAD_STACK_BUFFER(_interrupt_stack) +
+				CONFIG_ISR_STACK_SIZE;
 	// _kernel.irq_stack: _interrupt_stack + 2048
 }
 
