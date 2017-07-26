@@ -211,6 +211,7 @@ FUNC_NORETURN void _thread_entry(void (*entry)(void *, void *, void *),
 
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 // KID 20170717
+// KID 20170726
 // thread: &(&k_sys_work_q)->thread
 static void start_thread(struct k_thread *thread)
 {
@@ -243,7 +244,33 @@ static void start_thread(struct k_thread *thread)
 		if (_must_switch_threads()) {
 			// key: eflags 값
 			_Swap(key);
+
+			// _Swap 에서 한일:
+			// 현재 실행 중인 &_main_thread_s 보다 우선 순위가 높은 &(&k_sys_work_q)->thread 가 실행하여
+			// &_main_thread_s 는 선점됨, work_q_main이 실행 되다가 &(&k_sys_work_q)->fifo에 있는 큐에
+			// 연결되어 있는 잡이 비어 있는 상태를 확인 후 &(&(&k_sys_work_q)->fifo)->wait_q 인 웨이트 큐에
+			// &(&(&k_sys_work_q)->thread)->base.k_q_node 를 등록하고 현재 쓰레드 &(&k_sys_work_q)->thread 는
+			// _THREAD_PENDING 상태롤 변경, 변경된 이후 다시 &_main_thread_s 로 쓰레드 복귀 하여 수행 됨
+			//
+			// &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
+			//
+			// (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
+			// (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
+			//
+			// _kernel.ready_q.prio_bmap[0]: 0x80010000
+			// _kernel.ready_q.cache: &_main_thread_s
+			//
+			// &(&(&k_sys_work_q)->fifo)->wait_q 에 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 tail로 추가함
+			//
+			// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
+			// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+			// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+			// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+			//
+			// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
+
 			return;
+			// return 수행
 		}
 	}
 
@@ -253,6 +280,7 @@ static void start_thread(struct k_thread *thread)
 
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 // KID 20170717
+// KID 20170726
 // new_thread: &(&k_sys_work_q)->thread, delay: 0
 static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 {
@@ -261,6 +289,43 @@ static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 	if (delay == 0) {
 		// thread: &(&k_sys_work_q)->thread
 		start_thread(thread);
+
+		// start_thread 에서 한일:
+		// 생성된 쓰레드 &(&k_sys_work_q)->thread 을 시작 시키기 위해 레디큐에 등록함
+		//
+		// (&(&k_sys_work_q)->thread)->base.thread_state: 0
+		//
+		// _kernel.ready_q.prio_bmap[0]: 0x80018000
+		//
+		// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next: &_kernel.ready_q.q[15]
+		// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&_kernel.ready_q.q[15])->tail
+		// (&_kernel.ready_q.q[15])->tail->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+		// (&_kernel.ready_q.q[15])->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+		//
+		// _kernel.ready_q.cache: &(&k_sys_work_q)->thread
+		//
+		// 현재 실행 중인 &_main_thread_s 보다 우선 순위가 높은 &(&k_sys_work_q)->thread 가 실행하여
+		// &_main_thread_s 는 선점됨, work_q_main이 실행 되다가 &(&k_sys_work_q)->fifo에 있는 큐에
+		// 연결되어 있는 잡이 비어 있는 상태를 확인 후 &(&(&k_sys_work_q)->fifo)->wait_q 인 웨이트 큐에
+		// &(&(&k_sys_work_q)->thread)->base.k_q_node 를 등록하고 현재 쓰레드 &(&k_sys_work_q)->thread 는
+		// _THREAD_PENDING 상태롤 변경, 변경된 이후 다시 &_main_thread_s 로 쓰레드 복귀 하여 수행 됨
+		//
+		// &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
+		//
+		// (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
+		// (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
+		//
+		// _kernel.ready_q.prio_bmap[0]: 0x80010000
+		// _kernel.ready_q.cache: &_main_thread_s
+		//
+		// &(&(&k_sys_work_q)->fifo)->wait_q 에 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 tail로 추가함
+		//
+		// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
+		// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+		// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+		// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+		//
+		// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
 	} else {
 		s32_t ticks = _TICK_ALIGN + _ms_to_ticks(delay);
 		int key = irq_lock();
@@ -278,6 +343,7 @@ static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 
 // KID 20170717
+// KID 20170726
 // &work_q->thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, work_q_main,
 // work_q: &k_sys_work_q, 0, 0, prio: -1, 0, 0
 k_tid_t k_thread_create(struct k_thread *new_thread, char *stack,
@@ -317,7 +383,47 @@ k_tid_t k_thread_create(struct k_thread *new_thread, char *stack,
 
 	// new_thread: &(&k_sys_work_q)->thread, delay: 0
 	schedule_new_thread(new_thread, delay);
+
+	// schedule_new_thread 에서 한일:
+	// 생성된 쓰레드 &(&k_sys_work_q)->thread 을 시작 시키기 위해 레디큐에 등록함
+	//
+	// (&(&k_sys_work_q)->thread)->base.thread_state: 0
+	//
+	// _kernel.ready_q.prio_bmap[0]: 0x80018000
+	//
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next: &_kernel.ready_q.q[15]
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&_kernel.ready_q.q[15])->tail
+	// (&_kernel.ready_q.q[15])->tail->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// (&_kernel.ready_q.q[15])->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	//
+	// _kernel.ready_q.cache: &(&k_sys_work_q)->thread
+	//
+	// 현재 실행 중인 &_main_thread_s 보다 우선 순위가 높은 &(&k_sys_work_q)->thread 가 실행하여
+	// &_main_thread_s 는 선점됨, work_q_main이 실행 되다가 &(&k_sys_work_q)->fifo에 있는 큐에
+	// 연결되어 있는 잡이 비어 있는 상태를 확인 후 &(&(&k_sys_work_q)->fifo)->wait_q 인 웨이트 큐에
+	// &(&(&k_sys_work_q)->thread)->base.k_q_node 를 등록하고 현재 쓰레드 &(&k_sys_work_q)->thread 는
+	// _THREAD_PENDING 상태롤 변경, 변경된 이후 다시 &_main_thread_s 로 쓰레드 복귀 하여 수행 됨
+	//
+	// &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
+	//
+	// (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
+	// (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
+	//
+	// _kernel.ready_q.prio_bmap[0]: 0x80010000
+	// _kernel.ready_q.cache: &_main_thread_s
+	//
+	// &(&(&k_sys_work_q)->fifo)->wait_q 에 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 tail로 추가함
+	//
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	//
+	// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
+
+	// new_thread: &(&k_sys_work_q)->thread
 	return new_thread;
+	// return &(&k_sys_work_q)->thread
 }
 
 

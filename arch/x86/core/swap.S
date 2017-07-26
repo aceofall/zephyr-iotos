@@ -94,6 +94,8 @@
 // key: eflags 값
 // KID 20170718
 // key: eflags 값
+// KID 20170726
+// key: eflags 값
 //
 // SECTION_FUNC(TEXT, __swap):
 // .section .TEXT.__swap, "ax";
@@ -243,15 +245,19 @@ SECTION_FUNC(TEXT, __swap)
 
 	// edi: &_kernel, _kernel_offset_to_current(%edi): _kernel.current: &dummy_thread_memory
 	// edi: &_kernel, _kernel_offset_to_current(%edi): _kernel.current: &_main_thread_s
+	// edi: &_kernel, _kernel_offset_to_current(%edi): _kernel.current: &(&k_sys_work_q)->thread
 	movl	_kernel_offset_to_current(%edi), %ecx
 	// ecx: &dummy_thread_memory
 	// ecx: &_main_thread_s
+	// ecx: &(&k_sys_work_q)->thread
 
 	// esp: SP 처음위치 - 24, ecx: &dummy_thread_memory
 	// esp: SP 처음위치 - 24, ecx: &_main_thread_s
+	// esp: SP 처음위치 - 24, ecx: &&(&k_sys_work_q)->thread
 	movl	%esp, _thread_offset_to_esp(%ecx)
 	// _thread_offset_to_esp(%ecx): dummy_thread_memory.callee_saved.esp: SP 처음위치 - 24
 	// _thread_offset_to_esp(%ecx): (&_main_thread_s).callee_saved.esp: SP 처음위치 - 24
+	// _thread_offset_to_esp(%ecx): (&&(&k_sys_work_q)->thread).callee_saved.esp: SP 처음위치 - 24
 
 #ifdef CONFIG_KERNEL_EVENT_LOGGER_CONTEXT_SWITCH // CONFIG_KERNEL_EVENT_LOGGER_CONTEXT_SWITCH=n
 	/* Register the context switch */
@@ -259,9 +265,11 @@ SECTION_FUNC(TEXT, __swap)
 #endif
 	// edi: &_kernel, _kernel_offset_to_ready_q_cache(%edi): _kernel.ready_q.cache: &_main_thread_s
 	// edi: &_kernel, _kernel_offset_to_ready_q_cache(%edi): _kernel.ready_q.cache: &(&k_sys_work_q)->thread
+	// edi: &_kernel, _kernel_offset_to_ready_q_cache(%edi): _kernel.ready_q.cache: &_main_thread_s
 	movl	_kernel_offset_to_ready_q_cache(%edi), %eax
 	// eax: &_main_thread_s
 	// eax: &(&k_sys_work_q)->thread
+	// eax: &_main_thread_s
 
 	/*
 	 * At this point, the %eax register contains the 'k_thread *' of the
@@ -428,17 +436,21 @@ CROHandlingDone:
 
 	// eax: &_main_thread_s, edi: &_kernel, _kernel_offset_to_current(%edi): _kernel.current: &dummy_thread_memory
 	// eax: &(&k_sys_work_q)->thread, edi: &_kernel, _kernel_offset_to_current(%edi): _kernel.current: &_main_thread_s
+	// eax: &_main_thread_s, edi: &_kernel, _kernel_offset_to_current(%edi): _kernel.current: &(&k_sys_work_q)->thread
 	movl    %eax, _kernel_offset_to_current(%edi)
 	// _kernel_offset_to_current(%edi): _kernel.current: &_main_thread_s
 	// _kernel_offset_to_current(%edi): _kernel.current: &(&k_sys_work_q)->thread
+	// _kernel_offset_to_current(%edi): _kernel.current: &_main_thread_s
 
 	/* recover task/fiber stack pointer from k_thread */
 
 	// eax: &_main_thread_s, _thread_offset_to_esp(%eax): _main_thread_s.callee_saved.esp: _main_stack + 980
 	// eax: &(&k_sys_work_q)->thread, _thread_offset_to_esp(%eax): _main_thread_s.callee_saved.esp: sys_work_q_stack + 980
+	// eax: &_main_thread_s, _thread_offset_to_esp(%eax): _main_thread_s.callee_saved.esp: _main_stack + 980
 	movl	_thread_offset_to_esp(%eax), %esp
 	// esp: _main_stack + 980
 	// esp: sys_work_q_stack + 980
+	// esp: _main_stack + 980
 
 	/*
 	// HIGH +---------------------------------------+ <-- SP 처음위치
@@ -496,10 +508,39 @@ CROHandlingDone:
 	// ADDR +---------------------------------------+
 	*/
 
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+
+	//      |     eflag 레지스터 값 | 0x00000200    |
+	//      +---------------------------------------+
+	//      |         _thread_entry_wrapper         |
+	//      +---------------------------------------+
+	//      |                 edi                   |
+	//      +---------------------------------------+
+	//      |                 esi                   |
+	//      +---------------------------------------+
+	//      |                 ebx                   |
+	//      +---------------------------------------+
+	//      |                 ebp                   |
+	//      +---------------------------------------+
+	//      |                 eax                   |
+	//      +---------------------------------------+ <-- esp: _main_stack + 980 (현재 sp 위치)
+	// LOW  |                                       |
+	// ADDR +---------------------------------------+
+	*/
+
 	/* load return value from a possible _set_thread_return_value() */
 
 	// eax: &_main_thread_s
 	// eax: &(&k_sys_work_q)->thread
+	// eax: &_main_thread_s
 	popl	%eax
 	/*
 	// HIGH +---------------------------------------+ <-- SP 처음위치
@@ -549,6 +590,32 @@ CROHandlingDone:
 	//      +---------------------------------------+
 	//      |                 ebp                   |
 	//      +---------------------------------------+ <-- esp: sys_work_q_stack + 984 (현재 sp 위치)
+	// LOW  |                                       |
+	// ADDR +---------------------------------------+
+	*/
+
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+
+	//      |     eflag 레지스터 값 | 0x00000200    |
+	//      +---------------------------------------+
+	//      |         _thread_entry_wrapper         |
+	//      +---------------------------------------+
+	//      |                 edi                   |
+	//      +---------------------------------------+
+	//      |                 esi                   |
+	//      +---------------------------------------+
+	//      |                 ebx                   |
+	//      +---------------------------------------+
+	//      |                 ebp                   |
+	//      +---------------------------------------+ <-- esp: _main_stack + 984 (현재 sp 위치)
 	// LOW  |                                       |
 	// ADDR +---------------------------------------+
 	*/
@@ -604,6 +671,30 @@ CROHandlingDone:
 	// ADDR +---------------------------------------+
 	*/
 
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+
+	//      |     eflag 레지스터 값 | 0x00000200    |
+	//      +---------------------------------------+
+	//      |         _thread_entry_wrapper         |
+	//      +---------------------------------------+
+	//      |                 edi                   |
+	//      +---------------------------------------+
+	//      |                 esi                   |
+	//      +---------------------------------------+
+	//      |                 ebx                   |
+	//      +---------------------------------------+ <-- esp: _main_stack + 988 (현재 sp 위치)
+	// LOW  |                                       |
+	// ADDR +---------------------------------------+
+	*/
+
 	popl	%ebx
 	/*
 	// HIGH +---------------------------------------+ <-- SP 처음위치
@@ -649,6 +740,28 @@ CROHandlingDone:
 	// ADDR +---------------------------------------+
 	*/
 
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+
+	//      |     eflag 레지스터 값 | 0x00000200    |
+	//      +---------------------------------------+
+	//      |         _thread_entry_wrapper         |
+	//      +---------------------------------------+
+	//      |                 edi                   |
+	//      +---------------------------------------+
+	//      |                 esi                   |
+	//      +---------------------------------------+ <-- esp: _main_stack + 992 (현재 sp 위치)
+	// LOW  |                                       |
+	// ADDR +---------------------------------------+
+	*/
+
 	popl	%esi
 	/*
 	// HIGH +---------------------------------------+ <-- SP 처음위치
@@ -690,6 +803,26 @@ CROHandlingDone:
 	// ADDR +---------------------------------------+
 	*/
 
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+
+	//      |     eflag 레지스터 값 | 0x00000200    |
+	//      +---------------------------------------+
+	//      |         _thread_entry_wrapper         |
+	//      +---------------------------------------+
+	//      |                 edi                   |
+	//      +---------------------------------------+ <-- esp: _main_stack + 996 (현재 sp 위치)
+	// LOW  |                                       |
+	// ADDR +---------------------------------------+
+	*/
+
 	popl	%edi
 	/*
 	// HIGH +---------------------------------------+ <-- SP 처음위치
@@ -723,6 +856,24 @@ CROHandlingDone:
 	//      +---------------------------------------+
 	//      |         _thread_entry_wrapper         |
 	//      +---------------------------------------+ <-- esp: sys_work_q_stack + 996 (현재 sp 위치)
+	// LOW  |                                       |
+	// ADDR +---------------------------------------+
+	*/
+
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+
+	//      |     eflag 레지스터 값 | 0x00000200    |
+	//      +---------------------------------------+
+	//      |         _thread_entry_wrapper         |
+	//      +---------------------------------------+ <-- esp: _main_stack + 996 (현재 sp 위치)
 	// LOW  |                                       |
 	// ADDR +---------------------------------------+
 	*/
@@ -775,6 +926,24 @@ CROHandlingDone:
 	// ADDR +---------------------------------------+ <-- esp: sys_work_q_stack + 992 (현재 sp 위치)
 	*/
 
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+
+	//      |     eflag 레지스터 값 | 0x00000200    |
+	//      +---------------------------------------+
+	//      |         _thread_entry_wrapper         |
+	//      +---------------------------------------+
+	// LOW  |          _main_stack + 1000           |
+	// ADDR +---------------------------------------+ <-- esp: _main_stack + 992 (현재 sp 위치)
+	*/
+
 #ifdef CONFIG_INT_LATENCY_BENCHMARK // CONFIG_INT_LATENCY_BENCHMARK=n
 	testl	$0x200, (%esp)
 	jz	skipIntLatencyStop
@@ -824,12 +993,31 @@ skipIntLatencyStop:
 	// LOW  |                                       |
 	// ADDR +---------------------------------------+
 	*/
+
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+
+	//      |     eflag 레지스터 값 | 0x00000200    |
+	//      +---------------------------------------+ <-- esp: _main_stack + 1000 (현재 sp 위치)
+	//      |                                       |
+	//      +---------------------------------------+
+	// LOW  |                                       |
+	// ADDR +---------------------------------------+
+	*/
 #if CONFIG_X86_IAMCU // CONFIG_X86_IAMCU=y
 	/* Remember that eflags we stuck into the stack before the return
 	 * address? need to get it out of there since the calling convention
 	 * will not do that for us.
 	 */
 	popl	%edx
+	// edx: eflag 레지스터 값 | 0x00000200
 	// edx: eflag 레지스터 값 | 0x00000200
 	// edx: eflag 레지스터 값 | 0x00000200
 	/*
@@ -862,9 +1050,25 @@ skipIntLatencyStop:
 	// ADDR +---------------------------------------+
 	*/
 
+	/*
+	// HIGH +---------------------------------------+ <-- SP 처음위치
+	// ADDR |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                 NULL                  |
+	//      +---------------------------------------+
+	//      |                _main                  |
+	//      +---------------------------------------+ <-- esp: _main_stack + 1004 (현재 sp 위치)
+	// LOW  |                                       |
+	// ADDR +---------------------------------------+
+	*/
+
+	// edx: eflag 레지스터 값 | 0x00000200
 	// edx: eflag 레지스터 값 | 0x00000200
 	// edx: eflag 레지스터 값 | 0x00000200
 	movl	%edx, (%esp)
+	// esp: eflag 레지스터 값 | 0x00000200
 	// esp: eflag 레지스터 값 | 0x00000200
 	// esp: eflag 레지스터 값 | 0x00000200
 #endif

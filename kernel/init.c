@@ -239,6 +239,8 @@ void _data_copy(void)
 // KID 20170712
 // KID 20170713
 // NULL, NULL, NULL
+// KID 20170726
+// NULL, NULL, NULL
 static void _main(void *unused1, void *unused2, void *unused3)
 {
 	// unused1: NULL
