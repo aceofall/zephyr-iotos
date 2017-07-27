@@ -54,6 +54,11 @@ static inline void kernel_arch_init(void)
 	_kernel.irq_stack = K_THREAD_STACK_BUFFER(_interrupt_stack) +
 				CONFIG_ISR_STACK_SIZE;
 	// _kernel.irq_stack: _interrupt_stack + 2048
+
+#if CONFIG_X86_STACK_PROTECTION // CONFIG_X86_STACK_PROTECTION=n
+	_x86_mmu_set_flags(_interrupt_stack, MMU_PAGE_SIZE,
+			   MMU_ENTRY_NOT_PRESENT, MMU_PTE_P_MASK);
+#endif
 }
 
 /**

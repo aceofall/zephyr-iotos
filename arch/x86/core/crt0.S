@@ -198,6 +198,9 @@ __csSet:
 #ifdef CONFIG_INIT_STACKS // CONFIG_INIT_STACKS=n
 	movl $0xAAAAAAAA, %eax
 	leal _interrupt_stack, %edi
+#ifdef CONFIG_X86_STACK_PROTECTION
+	addl $4096, %edi
+#endif
 	stack_size_dwords = (CONFIG_ISR_STACK_SIZE / 4)
 	movl $stack_size_dwords, %ecx
 	rep  stosl
@@ -205,9 +208,15 @@ __csSet:
 
 	movl	$_interrupt_stack, %esp
 
+#ifdef CONFIG_X86_STACK_PROTECTION // CONFIG_X86_STACK_PROTECTION=n
+	/* In this configuration, all stacks, including IRQ stack, are declared
+	 * with a 4K non-present guard page preceding the stack buffer
+	 */
+	addl	$(CONFIG_ISR_STACK_SIZE + 4096), %esp
+#else
 	// CONFIG_ISR_STACK_SIZE: 2048
 	addl	$CONFIG_ISR_STACK_SIZE, %esp
-
+#endif
 #if defined(CONFIG_SYS_POWER_DEEP_SLEEP) && \
              !defined(CONFIG_BOOTLOADER_CONTEXT_RESTORE) // CONFIG_SYS_POWER_DEEP_SLEEP=n, CONFIG_BOOTLOADER_CONTEXT_RESTORE=n
 	/*
