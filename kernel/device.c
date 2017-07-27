@@ -97,6 +97,9 @@ void _sys_device_do_config_level(int level)
 		// info->config: (__device_sys_init_uart_console_init0))->config: &__config_sys_init_uart_console_init0
 		// info: __device_sys_init_k_sys_work_q_init0
 		// info->config: (__device_sys_init_k_sys_work_q_init0))->config: &__config_sys_init_k_sys_work_q_init0
+		//
+		// info: __device_sys_init_pinmux_initialize0
+		// info->config: (__device_sys_init_pinmux_initialize0))->config: &__config_sys_init_pinmux_initialize0
 		struct device_config *device = info->config;
 		// device: &__config_sys_init_init_static_pools0
 		// device: &__config_sys_init_init_pipes_module0
@@ -107,6 +110,8 @@ void _sys_device_do_config_level(int level)
 		// device: &__config_sys_init__ioapic_init0
 		// device: &__config_sys_init_uart_console_init0
 		// device: &__config_sys_init_k_sys_work_q_init0
+		//
+		// device: &__config_sys_init_pinmux_initialize0
 
 		// device->init: (&__config_sys_init_init_static_pools0)->init: init_static_pools,
 		// info: __device_sys_init_init_static_pools0
@@ -132,10 +137,13 @@ void _sys_device_do_config_level(int level)
 		// device->init: (&__config_sys_init_uart_console_init0)->init: uart_console_init,
 		// info: __device_sys_init_uart_console_init0
 		// uart_console_init(__device_sys_init_uart_console_init0): 0
-		//
 		// device->init: (&__config_sys_init_k_sys_work_q_init0)->init: k_sys_work_q_init,
 		// info: __device_sys_init_k_sys_work_q_init0
 		// k_sys_work_q_init(__device_sys_init_k_sys_work_q_init0): 0
+		//
+		// device->init: (&__config_sys_init_pinmux_initialize0)->init: pinmux_initialize,
+		// info: __device_sys_init_pinmux_initialize0
+		// pinmux_initialize(__device_sys_init_pinmux_initialize0): 0
 		device->init(info);
 
 		// init_static_pools 에서 한일:

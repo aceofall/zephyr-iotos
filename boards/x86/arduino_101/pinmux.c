@@ -111,6 +111,8 @@
  */
 #define PINMUX_MAX_REGISTERS	5
 
+// KID 20170726
+// PINMUX_BASE_ADDR: 0xb0800900
 static void _pinmux_defaults(u32_t base)
 {
 	u32_t mux_config[PINMUX_MAX_REGISTERS] = { 0, 0, 0, 0, 0 };
@@ -159,14 +161,34 @@ static inline void _pinmux_pullups(u32_t base_address)
 			  PINMUX_PULLUP_ENABLE);
 }
 
+// KID 20170726
+// __device_sys_init_pinmux_initialize0
 static int pinmux_initialize(struct device *port)
 {
+	// port: __device_sys_init_pinmux_initialize0
 	ARG_UNUSED(port);
 
+	// PINMUX_BASE_ADDR: 0xb0800900
 	_pinmux_defaults(PINMUX_BASE_ADDR);
 	_pinmux_pullups(PINMUX_BASE_ADDR);
 
 	return 0;
 }
 
+// KID 20170726
+// CONFIG_KERNEL_INIT_PRIORITY_DEFAULT: 40
+//
+// SYS_INIT(pinmux_initialize, POST_KERNEL, 40):
+// static struct device_config __config_sys_init_pinmux_initialize0 __used
+// __attribute__((__section__(".devconfig.init"))) = {
+// 	.name = "",
+// 	.init = (pinmux_initialize),
+// 	.config_info = (NULL)
+// };
+// static struct device __device_sys_init_pinmux_initialize0 __used
+// __attribute__((__section__(".init_" "POST_KERNEL" "40"))) = {
+// 	 .config = &__config_sys_init_pinmux_initialize0,
+// 	 .driver_api = NULL,
+// 	 .driver_data = NULL
+// }
 SYS_INIT(pinmux_initialize, POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEFAULT);

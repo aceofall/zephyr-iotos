@@ -58,6 +58,8 @@
 /*
  * PINMUX configuration settings
  */
+// KID 20170726
+// PINMUX_BASE_ADDR: 0xb0800900
 #define PINMUX_BASE_ADDR		0xb0800900
 
 #define UART_IRQ_FLAGS (IOAPIC_LEVEL | IOAPIC_HIGH)
