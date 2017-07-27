@@ -414,6 +414,8 @@ static ALWAYS_INLINE
 }
 
 // KID 20170607
+// KID 20170727
+// mux_config[0]: 0x10064555, PINMUX_SELECT_REGISTER(0xb0800900, 0): (0xb0800900 + 0x30 + (0 << 2))
 static ALWAYS_INLINE
 	void sys_write32(u32_t data, mm_reg_t addr)
 {
@@ -421,6 +423,7 @@ static ALWAYS_INLINE
 			 :
 			 : "r"(data), "m" (*(volatile u32_t *) addr)
 			 : "memory");
+	// movl	0x10064555, (*(volatile u32_t *) 0xb0800930);
 }
 
 // KID 20170607

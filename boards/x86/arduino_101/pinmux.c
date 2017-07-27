@@ -109,32 +109,92 @@
  * set.  This would be a total of 5 registers to store the configuration as per
  * the bit description from above
  */
+// KID 20170727
+// PINMUX_MAX_REGISTERS: 5
 #define PINMUX_MAX_REGISTERS	5
 
 // KID 20170726
+// KID 20170727
 // PINMUX_BASE_ADDR: 0xb0800900
 static void _pinmux_defaults(u32_t base)
 {
+	// PINMUX_MAX_REGISTERS: 5
 	u32_t mux_config[PINMUX_MAX_REGISTERS] = { 0, 0, 0, 0, 0 };
 	int i = 0;
+	// i: 0
 
-#if !defined(CONFIG_SPI_1) && !defined(CONFIG_SPI_CS_GPIO)
+#if !defined(CONFIG_SPI_1) && !defined(CONFIG_SPI_CS_GPIO) // CONFIG_SPI_1=n, CONFIG_SPI_CS_GPIO=n
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 0, 1): (mux_config[((0) / 16)] |= ((0x3 & (1)) << (((0) % 16) * 2)))
 	PIN_CONFIG(mux_config,  0,  PINMUX_FUNC_B);
+	// mux_config[0]: 1
 #endif
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 1, 1): (mux_config[((1) / 16)] |= ((0x3 & (1)) << (((1) % 16) * 2)))
 	PIN_CONFIG(mux_config,  1,  PINMUX_FUNC_B);
+	// mux_config[0]: 0x5
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 2, 1): (mux_config[((2) / 16)] |= ((0x3 & (1)) << (((2) % 16) * 2)))
 	PIN_CONFIG(mux_config,  2,  PINMUX_FUNC_B);
+	// mux_config[0]: 0x15
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 3, 1): (mux_config[((3) / 16)] |= ((0x3 & (1)) << (((3) % 16) * 2)))
 	PIN_CONFIG(mux_config,  3,  PINMUX_FUNC_B);
+	// mux_config[0]: 0x55
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 4, 1): (mux_config[((4) / 16)] |= ((0x3 & (1)) << (((4) % 16) * 2)))
 	PIN_CONFIG(mux_config,  4,  PINMUX_FUNC_B);
+	// mux_config[0]: 0x155
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 5, 1): (mux_config[((5) / 16)] |= ((0x3 & (1)) << (((5) % 16) * 2)))
 	PIN_CONFIG(mux_config,  5,  PINMUX_FUNC_B);
+	// mux_config[0]: 0x555
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 7, 1): (mux_config[((7) / 16)] |= ((0x3 & (1)) << (((7) % 16) * 2)))
 	PIN_CONFIG(mux_config,  7,  PINMUX_FUNC_B);
+	// mux_config[0]: 0x4555
+
+	// PINMUX_FUNC_C: 2
+	// PIN_CONFIG(mux_config, 8, 2): (mux_config[((8) / 16)] |= ((0x3 & (2)) << (((8) % 16) * 2)))
 	PIN_CONFIG(mux_config,  8,  PINMUX_FUNC_C);
+	// mux_config[0]: 0x24555
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 9, 1): (mux_config[((9) / 16)] |= ((0x3 & (1)) << (((9) % 16) * 2)))
 	PIN_CONFIG(mux_config,  9,  PINMUX_FUNC_B);
+	// mux_config[0]: 0x64555
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 14, 1): (mux_config[((14) / 16)] |= ((0x3 & (1)) << (((14) % 16) * 2)))
 	PIN_CONFIG(mux_config, 14,  PINMUX_FUNC_B);
+	// mux_config[0]: 0x10064555
+
+	// PINMUX_FUNC_C: 2
+	// PIN_CONFIG(mux_config, 16, 2): (mux_config[((16) / 16)] |= ((0x3 & (2)) << (((16) % 16) * 2)))
 	PIN_CONFIG(mux_config, 16,  PINMUX_FUNC_C);
+	// mux_config[1]: 0x2
+
+	// PINMUX_FUNC_C: 2
+	// PIN_CONFIG(mux_config, 17, 2): (mux_config[((17) / 16)] |= ((0x3 & (2)) << (((17) % 16) * 2)))
 	PIN_CONFIG(mux_config, 17,  PINMUX_FUNC_C);
+	// mux_config[1]: 0xA
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 40, 1): (mux_config[((40) / 16)] |= ((0x3 & (1)) << (((40) % 16) * 2)))
 	PIN_CONFIG(mux_config, 40,  PINMUX_FUNC_B);
+	// mux_config[2]: 0x10000
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 41, 1): (mux_config[((41) / 16)] |= ((0x3 & (1)) << (((41) % 16) * 2)))
 	PIN_CONFIG(mux_config, 41,  PINMUX_FUNC_B);
-#ifdef CONFIG_SPI_1
+	// mux_config[2]: 0x50000
+
+#ifdef CONFIG_SPI_1 // CONFIG_SPI_1=n
 	PIN_CONFIG(mux_config, 42,  PINMUX_FUNC_B);
 	PIN_CONFIG(mux_config, 43,  PINMUX_FUNC_B);
 	PIN_CONFIG(mux_config, 44,  PINMUX_FUNC_B);
@@ -142,23 +202,70 @@ static void _pinmux_defaults(u32_t base)
 	PIN_CONFIG(mux_config, 45,  PINMUX_FUNC_B);
 #endif
 #endif
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 55, 1): (mux_config[((55) / 16)] |= ((0x3 & (1)) << (((55) % 16) * 2)))
 	PIN_CONFIG(mux_config, 55,  PINMUX_FUNC_B);
-	PIN_CONFIG(mux_config, 56,  PINMUX_FUNC_B);
-	PIN_CONFIG(mux_config, 57,  PINMUX_FUNC_B);
-	PIN_CONFIG(mux_config, 63,  PINMUX_FUNC_B);
-	PIN_CONFIG(mux_config, 64,  PINMUX_FUNC_B);
-	PIN_CONFIG(mux_config, 65,  PINMUX_FUNC_B);
-	PIN_CONFIG(mux_config, 66,  PINMUX_FUNC_B);
+	// mux_config[3]: 0x4000
 
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 56, 1): (mux_config[((56) / 16)] |= ((0x3 & (1)) << (((56) % 16) * 2)))
+	PIN_CONFIG(mux_config, 56,  PINMUX_FUNC_B);
+	// mux_config[3]: 0x14000
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 57, 1): (mux_config[((57) / 16)] |= ((0x3 & (1)) << (((57) % 16) * 2)))
+	PIN_CONFIG(mux_config, 57,  PINMUX_FUNC_B);
+	// mux_config[3]: 0x54000
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 63, 1): (mux_config[((63) / 16)] |= ((0x3 & (1)) << (((63) % 16) * 2)))
+	PIN_CONFIG(mux_config, 63,  PINMUX_FUNC_B);
+	// mux_config[3]: 0x40054000
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 64, 1): (mux_config[((64) / 16)] |= ((0x3 & (1)) << (((64) % 16) * 2)))
+	PIN_CONFIG(mux_config, 64,  PINMUX_FUNC_B);
+	// mux_config[4]: 0x1
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 65, 1): (mux_config[((65) / 16)] |= ((0x3 & (1)) << (((65) % 16) * 2)))
+	PIN_CONFIG(mux_config, 65,  PINMUX_FUNC_B);
+	// mux_config[4]: 0x5
+
+	// PINMUX_FUNC_B: 1
+	// PIN_CONFIG(mux_config, 66, 1): (mux_config[((66) / 16)] |= ((0x3 & (1)) << (((66) % 16) * 2)))
+	PIN_CONFIG(mux_config, 66,  PINMUX_FUNC_B);
+	// mux_config[4]: 0x15
+
+	// PINMUX_MAX_REGISTERS: 5
 	for (i = 0; i < PINMUX_MAX_REGISTERS; i++) {
+		// i: 0, mux_config[0]: 0x10064555, base: 0xb0800900, PINMUX_SELECT_REGISTER(0xb0800900, 0): (0xb0800900 + 0x30 + (0 << 2))
 		sys_write32(mux_config[i], PINMUX_SELECT_REGISTER(base, i));
+
+		// sys_write32에서 한일:
+		// 0xb0800930 위치에 mux_config[0]: 0x10064555 을 write 함
+
+		// i: 1...5 loop 수행
 	}
+
+	// 위 loop에서 한일;
+	// (*(volatile u32_t *) 0xb0800930): 0x10064555
+	// (*(volatile u32_t *) 0xb0800934): 0xA
+	// (*(volatile u32_t *) 0xb0800938): 0x50000
+	// (*(volatile u32_t *) 0xb080093C): 0x40054000
+	// (*(volatile u32_t *) 0xb0800940): 0x15
 }
 
+// KID 20170727
+// PINMUX_BASE_ADDR: 0xb0800900
 static inline void _pinmux_pullups(u32_t base_address)
 {
+	// base_address: 0xb0800900, PINMUX_PULLUP_OFFSET: 0x00, PINMUX_PULLUP_ENABLE: 0x1
 	_quark_mcu_set_mux(base_address + PINMUX_PULLUP_OFFSET, 104,
 			  PINMUX_PULLUP_ENABLE);
+
+	// _quark_mcu_set_mux 에서 한일:
+	// *(0xb0800948):  0x100
 }
 
 // KID 20170726
@@ -170,9 +277,22 @@ static int pinmux_initialize(struct device *port)
 
 	// PINMUX_BASE_ADDR: 0xb0800900
 	_pinmux_defaults(PINMUX_BASE_ADDR);
+
+	// _pinmux_defaults 에서 한일:
+	// (*(volatile u32_t *) 0xb0800930): 0x10064555
+	// (*(volatile u32_t *) 0xb0800934): 0xA
+	// (*(volatile u32_t *) 0xb0800938): 0x50000
+	// (*(volatile u32_t *) 0xb080093C): 0x40054000
+	// (*(volatile u32_t *) 0xb0800940): 0x15
+
+	// PINMUX_BASE_ADDR: 0xb0800900
 	_pinmux_pullups(PINMUX_BASE_ADDR);
 
+	// _pinmux_pullups 에서 한일:
+	// *(0xb0800948):  0x100
+
 	return 0;
+	// return 0
 }
 
 // KID 20170726

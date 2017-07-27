@@ -248,6 +248,17 @@ void _sys_device_do_config_level(int level)
 		// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
 		//
 		// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
+
+		// pinmux_initialize 에서 한일:
+		// Arduino 보드에 맞는 pin 의 기능을 mux 하여 해달 gpio register에 설정함
+		//
+		// (*(volatile u32_t *) 0xb0800930): 0x10064555
+		// (*(volatile u32_t *) 0xb0800934): 0xA
+		// (*(volatile u32_t *) 0xb0800938): 0x50000
+		// (*(volatile u32_t *) 0xb080093C): 0x40054000
+		// (*(volatile u32_t *) 0xb0800940): 0x15
+		//
+		// *(0xb0800948):  0x100
 	}
 }
 
