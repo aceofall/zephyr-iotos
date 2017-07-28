@@ -255,10 +255,92 @@ static void _main(void *unused1, void *unused2, void *unused3)
 	// _SYS_INIT_LEVEL_POST_KERNEL: 2
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_POST_KERNEL);
 
+	// _sys_device_do_config_level 에서 한일:
+	// section ".init_POST_KERNEL[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
+	//
+	// k_sys_work_q_init 에서 한일
+	// 워크큐 생성 및 초기화 수행
+	// (&(&(&k_sys_work_q)->fifo)->data_q)->head: NULL
+	// (&(&(&k_sys_work_q)->fifo)->data_q)->tail: NULL
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->head: &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+	//
+	// 신규 쓰레드를 생성함
+	// (&(&(&k_sys_work_q)->thread)->base)->user_options: 0
+	// (&(&(&k_sys_work_q)->thread)->base)->thread_state: 0x4
+	// (&(&(&k_sys_work_q)->thread)->base)->prio: -1
+	// (&(&(&k_sys_work_q)->thread)->base)->sched_locked: 0
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->delta_ticks_from_prev: -1
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->wait_q: NULL
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->thread: NULL
+	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->func: NULL
+	//
+	// (&(&k_sys_work_q)->thread)->init_data: NULL
+	// (&(&k_sys_work_q)->thread)->fn_abort: NULL
+	//
+	// *(unsigned long *)(sys_work_q_stack + 1024): &k_sys_work_q
+	// *(unsigned long *)(sys_work_q_stack + 1020): NULL
+	// *(unsigned long *)(sys_work_q_stack + 1016): NULL
+	// *(unsigned long *)(sys_work_q_stack + 1016), pEntry: work_q_main
+	// *(unsigned long *)(sys_work_q_stack + 1012): eflag 레지스터 값 | 0x00000200
+	// *(unsigned long *)(sys_work_q_stack + 1008): _thread_entry_wrapper
+	//
+	// (&(&k_sys_work_q)->thread)->callee_saved.esp: sys_work_q_stack + 980
+	//
+	// 생성된 쓰레드 &(&k_sys_work_q)->thread 을 시작 시키기 위해 레디큐에 등록함
+	//
+	// (&(&k_sys_work_q)->thread)->base.thread_state: 0
+	//
+	// _kernel.ready_q.prio_bmap[0]: 0x80018000
+	//
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next: &_kernel.ready_q.q[15]
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&_kernel.ready_q.q[15])->tail
+	// (&_kernel.ready_q.q[15])->tail->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// (&_kernel.ready_q.q[15])->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	//
+	// _kernel.ready_q.cache: &(&k_sys_work_q)->thread
+	//
+	// 현재 실행 중인 &_main_thread_s 보다 우선 순위가 높은 &(&k_sys_work_q)->thread 가 실행하여
+	// &_main_thread_s 는 선점됨, work_q_main이 실행 되다가 &(&k_sys_work_q)->fifo에 있는 큐에
+	// 연결되어 있는 잡이 비어 있는 상태를 확인 후 &(&(&k_sys_work_q)->fifo)->wait_q 인 웨이트 큐에
+	// &(&(&k_sys_work_q)->thread)->base.k_q_node 를 등록하고 현재 쓰레드 &(&k_sys_work_q)->thread 는
+	// _THREAD_PENDING 상태롤 변경, 변경된 이후 다시 &_main_thread_s 로 쓰레드 복귀 하여 수행 됨
+	//
+	// &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
+	//
+	// (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
+	// (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
+	//
+	// _kernel.ready_q.prio_bmap[0]: 0x80010000
+	// _kernel.ready_q.cache: &_main_thread_s
+	//
+	// &(&(&k_sys_work_q)->fifo)->wait_q 에 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 tail로 추가함
+	//
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+	//
+	// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
+	//
+	// pinmux_initialize 에서 한일:
+	// Arduino 보드에 맞는 pin 의 기능을 mux 하여 해달 gpio register에 설정함
+	//
+	// (*(volatile u32_t *) 0xb0800930): 0x10064555
+	// (*(volatile u32_t *) 0xb0800934): 0xA
+	// (*(volatile u32_t *) 0xb0800938): 0x50000
+	// (*(volatile u32_t *) 0xb080093C): 0x40054000
+	// (*(volatile u32_t *) 0xb0800940): 0x15
+	//
+	// *(0xb0800948):  0x100
+
 	/* Final init level before app starts */
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_APPLICATION);
 
-#ifdef CONFIG_CPLUSPLUS
+	// _sys_device_do_config_level 에서 한일:
+	// 없음
+
+#ifdef CONFIG_CPLUSPLUS // CONFIG_CPLUSPLUS=n
 	/* Process the .ctors and .init_array sections */
 	extern void __do_global_ctors_aux(void);
 	extern void __do_init_array_aux(void);

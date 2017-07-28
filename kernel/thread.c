@@ -23,9 +23,11 @@
 #include <ksched.h>
 #include <wait_q.h>
 
+// KID 20170728
 extern struct _static_thread_data _static_thread_data_list_start[];
 extern struct _static_thread_data _static_thread_data_list_end[];
 
+// KID 20170728
 #define _FOREACH_STATIC_THREAD(thread_data)              \
 	for (struct _static_thread_data *thread_data =   \
 	     _static_thread_data_list_start;             \
@@ -567,12 +569,16 @@ void _k_thread_single_abort(struct k_thread *thread)
 	_mark_thread_as_dead(thread);
 }
 
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+// KID 20170728
 void _init_static_threads(void)
 {
 	unsigned int  key;
 
 	_FOREACH_STATIC_THREAD(thread_data) {
+	// for (struct _static_thread_data *thread_data = _static_thread_data_list_start;
+	//      thread_data < _static_thread_data_list_end; thread_data++)
+
 		_new_thread(
 			thread_data->init_thread,
 			thread_data->init_stack,

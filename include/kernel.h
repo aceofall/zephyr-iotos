@@ -580,6 +580,7 @@ extern void k_thread_abort(k_tid_t thread);
 // _INACTIVE: -1
 #define _INACTIVE (-1)
 
+// KID 20170728
 struct _static_thread_data {
 	struct k_thread *init_thread;
 	char *init_stack;
@@ -644,6 +645,7 @@ struct _static_thread_data {
  * these _static_thread_data structures to 32-byte boundaries, thereby
  * wasting space. To work around this, force a 4-byte alignment.
  */
+// KID 20170728
 #define K_THREAD_DEFINE(name, stack_size,                                \
 			entry, p1, p2, p3,                               \
 			prio, options, delay)                            \
@@ -3953,7 +3955,8 @@ extern void _sys_power_save_idle_exit(s32_t ticks);
  * private APIs that are utilized by one or more public APIs
  */
 
-#ifdef CONFIG_MULTITHREADING
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+// KID 20170728
 extern void _init_static_threads(void);
 #else
 #define _init_static_threads() do { } while ((0))

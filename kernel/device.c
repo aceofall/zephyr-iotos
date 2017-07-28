@@ -58,6 +58,8 @@ extern u32_t __device_busy_end[];
 // _SYS_INIT_LEVEL_POST_KERNEL: 2
 // KID 20170726
 // _SYS_INIT_LEVEL_POST_KERNEL: 2
+// KID 20170728
+// _SYS_INIT_LEVEL_APPLICATION: 3
 void _sys_device_do_config_level(int level)
 {
 	struct device *info;
@@ -73,6 +75,10 @@ void _sys_device_do_config_level(int level)
 	// NOTE:
 	// include/arch/x86/linker.ld 파일 참고
 	// section ".init_POST_KERNEL[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
+
+	// NOTE:
+	// include/arch/x86/linker.ld 파일 참고
+	// section ".init_APPLICATION[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
 
 	// level: 0, config_levels[0]: __device_PRE_KERNEL_1_start, config_levels[1]: __device_PRE_KERNEL_2_start
 	// level: 1, config_levels[1]: __device_PRE_KERNEL_2_start, config_levels[2]: __device_POST_KERNEL_start
@@ -97,7 +103,6 @@ void _sys_device_do_config_level(int level)
 		// info->config: (__device_sys_init_uart_console_init0))->config: &__config_sys_init_uart_console_init0
 		// info: __device_sys_init_k_sys_work_q_init0
 		// info->config: (__device_sys_init_k_sys_work_q_init0))->config: &__config_sys_init_k_sys_work_q_init0
-		//
 		// info: __device_sys_init_pinmux_initialize0
 		// info->config: (__device_sys_init_pinmux_initialize0))->config: &__config_sys_init_pinmux_initialize0
 		struct device_config *device = info->config;
@@ -110,7 +115,6 @@ void _sys_device_do_config_level(int level)
 		// device: &__config_sys_init__ioapic_init0
 		// device: &__config_sys_init_uart_console_init0
 		// device: &__config_sys_init_k_sys_work_q_init0
-		//
 		// device: &__config_sys_init_pinmux_initialize0
 
 		// device->init: (&__config_sys_init_init_static_pools0)->init: init_static_pools,
@@ -140,7 +144,6 @@ void _sys_device_do_config_level(int level)
 		// device->init: (&__config_sys_init_k_sys_work_q_init0)->init: k_sys_work_q_init,
 		// info: __device_sys_init_k_sys_work_q_init0
 		// k_sys_work_q_init(__device_sys_init_k_sys_work_q_init0): 0
-		//
 		// device->init: (&__config_sys_init_pinmux_initialize0)->init: pinmux_initialize,
 		// info: __device_sys_init_pinmux_initialize0
 		// pinmux_initialize(__device_sys_init_pinmux_initialize0): 0
