@@ -55,7 +55,7 @@ static void work_q_main(void *work_q_ptr, void *p2, void *p3)
 // KID 20170715
 // KID 20170726
 // &k_sys_work_q, sys_work_q_stack, K_THREAD_STACK_SIZEOF(sys_work_q_stack): 1024, CONFIG_SYSTEM_WORKQUEUE_PRIORITY: -1
-void k_work_q_start(struct k_work_q *work_q, char *stack,
+void k_work_q_start(struct k_work_q *work_q, k_thread_stack_t stack,
 		    size_t stack_size, int prio)
 {
 	// &work_q->fifo: &(&k_sys_work_q)->fifo

@@ -243,11 +243,14 @@ __asm__("\t.globl _thread_entry\n"
 // KID 20170717
 // new_thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, entry: work_q_main,
 // p1: &k_sys_work_q, p2: 0, p3: 0, prio: -1, options: 0
-void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
+void _new_thread(struct k_thread *thread, k_thread_stack_t stack,
+		 size_t stackSize,
 		 _thread_entry_t pEntry,
 		 void *parameter1, void *parameter2, void *parameter3,
 		 int priority, unsigned int options)
 {
+	char *pStackMem;
+
 	// priority: 0, pEntry: _main
 	// _is_idle_thread(_main): 0, _is_prio_higher_or_equal((0), 14): 1, _is_prio_lower_or_equal((0), -16): 1
 	//
@@ -273,12 +276,10 @@ void _new_thread(struct k_thread *thread, char *pStackMem, size_t stackSize,
 	unsigned long *pInitialThread;
 
 #if CONFIG_X86_STACK_PROTECTION // CONFIG_X86_STACK_PROTECTION=n
-	_x86_mmu_set_flags(pStackMem, MMU_PAGE_SIZE, MMU_ENTRY_NOT_PRESENT,
+	_x86_mmu_set_flags(stack, MMU_PAGE_SIZE, MMU_ENTRY_NOT_PRESENT,
 			   MMU_PTE_P_MASK);
 #endif
-#if _STACK_GUARD_SIZE
-	pStackMem += _STACK_GUARD_SIZE;
-#endif
+	pStackMem = K_THREAD_STACK_BUFFER(stack);
 
 	// thread: &_main_thread_s, pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1
 	// thread: &_idle_thread_s, pStackMem: _idle_stack, stackSize: 256, priority: 15, options: 0x1
