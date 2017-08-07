@@ -602,6 +602,7 @@ extern void k_thread_abort(k_tid_t thread);
 #define _INACTIVE (-1)
 
 // KID 20170728
+// KID 20170807
 struct _static_thread_data {
 	struct k_thread *init_thread;
 	k_thread_stack_t init_stack;
@@ -667,6 +668,7 @@ struct _static_thread_data {
  * wasting space. To work around this, force a 4-byte alignment.
  */
 // KID 20170728
+// KID 20170807
 #define K_THREAD_DEFINE(name, stack_size,                                \
 			entry, p1, p2, p3,                               \
 			prio, options, delay)                            \

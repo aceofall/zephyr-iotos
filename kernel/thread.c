@@ -24,6 +24,7 @@
 #include <wait_q.h>
 
 // KID 20170728
+// KID 20170807
 extern struct _static_thread_data _static_thread_data_list_start[];
 extern struct _static_thread_data _static_thread_data_list_end[];
 
@@ -574,6 +575,7 @@ void _k_thread_single_abort(struct k_thread *thread)
 
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 // KID 20170728
+// KID 20170807
 void _init_static_threads(void)
 {
 	unsigned int  key;
