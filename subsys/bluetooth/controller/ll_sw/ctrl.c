@@ -622,6 +622,14 @@ static inline void isr_radio_state_tx(void)
 		/* assert if radio packet ptr is not set and radio started rx */
 		LL_ASSERT(!radio_is_ready());
 
+#if defined(CONFIG_BLUETOOTH_CONTROLLER_PRIVACY)
+		if (ctrl_rl_enabled()) {
+			u8_t count, *irks = ctrl_irks_get(&count);
+
+			radio_ar_configure(count, irks);
+		}
+#endif /* CONFIG_BLUETOOTH_CONTROLLER_PRIVACY */
+
 		hcto += radio_rx_chain_delay_get(0, 0);
 		hcto += addr_us_get(0);
 		hcto -= radio_tx_chain_delay_get(0, 0);
@@ -736,7 +744,8 @@ static inline bool isr_adv_sr_check(struct pdu_adv *adv, struct pdu_adv *sr,
 		 ctrl_rl_addr_allowed(sr->tx_addr,
 				      sr->payload.scan_req.scan_addr,
 				      rl_idx)) ||
-		(devmatch_ok) || (ctrl_irk_whitelisted(*rl_idx))) &&
+		(((_radio.advertiser.filter_policy & 0x01) != 0) &&
+		 (devmatch_ok || ctrl_irk_whitelisted(*rl_idx)))) &&
 		isr_adv_sr_adva_check(adv, sr);
 #else
 	return (((_radio.advertiser.filter_policy & 0x01) == 0) ||
@@ -790,7 +799,8 @@ static inline bool isr_adv_ci_check(struct pdu_adv *adv, struct pdu_adv *ci,
 		 ctrl_rl_addr_allowed(ci->tx_addr,
 				      ci->payload.connect_ind.init_addr,
 				      rl_idx)) ||
-		(devmatch_ok) || (ctrl_irk_whitelisted(*rl_idx))) &&
+		(((_radio.advertiser.filter_policy & 0x02) != 0) &&
+		 (devmatch_ok || ctrl_irk_whitelisted(*rl_idx)))) &&
 	       isr_adv_ci_adva_check(adv, ci);
 #else
 	return (((_radio.advertiser.filter_policy & 0x02) == 0) ||
@@ -1140,9 +1150,10 @@ static inline bool isr_rx_scan_check(u8_t irkmatch_ok, u8_t devmatch_ok,
 				     u8_t rl_idx)
 {
 #if defined(CONFIG_BLUETOOTH_CONTROLLER_PRIVACY)
-	return ((((_radio.scanner.filter_policy & 0x01) == 0) &&
+	return (((_radio.scanner.filter_policy & 0x01) == 0) &&
 		 (!devmatch_ok || ctrl_rl_idx_allowed(irkmatch_ok, rl_idx))) ||
-		devmatch_ok || ctrl_irk_whitelisted(rl_idx));
+		(((_radio.scanner.filter_policy & 0x01) != 0) &&
+		 (devmatch_ok || ctrl_irk_whitelisted(rl_idx)));
 #else
 	return ((_radio.scanner.filter_policy & 0x01) == 0) ||
 		devmatch_ok;
