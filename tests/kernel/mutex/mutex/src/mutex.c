@@ -49,6 +49,8 @@
 #include <tc_util.h>
 #include <zephyr.h>
 
+// KID 20170808
+// STACKSIZE: 512
 #define STACKSIZE 512
 
 static int tc_rc = TC_PASS;         /* test case return code */
@@ -68,6 +70,7 @@ K_MUTEX_DEFINE(mutex4);
  * @return  N/A
  */
 
+// KID 20170808
 void task05(void)
 {
 	int rv;
@@ -393,23 +396,184 @@ error_return:
 }  /* RegressionTask */
 
 
+// KID 20170808
+// STACKSIZE: 512, K_NO_WAIT: 0
+//
+// K_THREAD_DEFINE(TASK05, 512, task05, NULL, NULL, NULL, 5, 0, 0):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _k_thread_stack_TASK05[512];
+// struct k_thread _k_thread_obj_TASK05;
+// struct _static_thread_data _k_thread_data_TASK05 __aligned(4)
+// __attribute__((section("." "_static_thread_data" "." "static" "." "TASK05"))) =
+// {
+//     .init_thread = (&_k_thread_obj_TASK05),
+//     .init_stack = (_k_thread_stack_TASK05),
+//     .init_stack_size = (512),
+//     .init_entry = (void (*)(void *, void *, void *))task05,
+//     .init_p1 = (void *)NULL,
+//     .init_p2 = (void *)NULL,
+//     .init_p3 = (void *)NULL,
+//     .init_prio = (5),
+//     .init_options = (0),
+//     .init_delay = (0),
+//     .init_abort = (NULL),
+//     .init_groups = (0),
+// }
+// const k_tid_t TASK05 = (k_tid_t)&_k_thread_obj_TASK05
 K_THREAD_DEFINE(TASK05, STACKSIZE, task05, NULL, NULL, NULL,
 		5, 0, K_NO_WAIT);
 
+// KID 20170808
+// STACKSIZE: 512, K_NO_WAIT: 0
+//
+// K_THREAD_DEFINE(TASK06, 512, task06, NULL, NULL, NULL, 6, 0, 0):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _k_thread_stack_TASK06[512];
+// struct k_thread _k_thread_obj_TASK06;
+// struct _static_thread_data _k_thread_data_TASK06 __aligned(4)
+// __attribute__((section("." "_static_thread_data" "." "static" "." "TASK06"))) =
+// {
+//     .init_thread = (&_k_thread_obj_TASK06),
+//     .init_stack = (_k_thread_stack_TASK06),
+//     .init_stack_size = (512),
+//     .init_entry = (void (*)(void *, void *, void *))task06,
+//     .init_p1 = (void *)NULL,
+//     .init_p2 = (void *)NULL,
+//     .init_p3 = (void *)NULL,
+//     .init_prio = (6),
+//     .init_options = (0),
+//     .init_delay = (0),
+//     .init_abort = (NULL),
+//     .init_groups = (0),
+// }
+// const k_tid_t TASK06 = (k_tid_t)&_k_thread_obj_TASK06
 K_THREAD_DEFINE(TASK06, STACKSIZE, task06, NULL, NULL, NULL,
 		6, 0, K_NO_WAIT);
 
+// KID 20170808
+// STACKSIZE: 512, K_NO_WAIT: 0
+//
+// K_THREAD_DEFINE(TASK07, 512, task07, NULL, NULL, NULL, 7, 0, 0):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _k_thread_stack_TASK07[512];
+// struct k_thread _k_thread_obj_TASK07;
+// struct _static_thread_data _k_thread_data_TASK07 __aligned(4)
+// __attribute__((section("." "_static_thread_data" "." "static" "." "TASK07"))) =
+// {
+//     .init_thread = (&_k_thread_obj_TASK07),
+//     .init_stack = (_k_thread_stack_TASK07),
+//     .init_stack_size = (512),
+//     .init_entry = (void (*)(void *, void *, void *))task07,
+//     .init_p1 = (void *)NULL,
+//     .init_p2 = (void *)NULL,
+//     .init_p3 = (void *)NULL,
+//     .init_prio = (7),
+//     .init_options = (0),
+//     .init_delay = (0),
+//     .init_abort = (NULL),
+//     .init_groups = (0),
+// }
+// const k_tid_t TASK07 = (k_tid_t)&_k_thread_obj_TASK07
 K_THREAD_DEFINE(TASK07, STACKSIZE, task07, NULL, NULL, NULL,
 		7, 0, K_NO_WAIT);
 
+// KID 20170808
+// STACKSIZE: 512, K_NO_WAIT: 0
+//
+// K_THREAD_DEFINE(TASK08, 512, task08, NULL, NULL, NULL, 8, 0, 0):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _k_thread_stack_TASK08[512];
+// struct k_thread _k_thread_obj_TASK08;
+// struct _static_thread_data _k_thread_data_TASK08 __aligned(4)
+// __attribute__((section("." "_static_thread_data" "." "static" "." "TASK08"))) =
+// {
+//     .init_thread = (&_k_thread_obj_TASK08),
+//     .init_stack = (_k_thread_stack_TASK08),
+//     .init_stack_size = (512),
+//     .init_entry = (void (*)(void *, void *, void *))task08,
+//     .init_p1 = (void *)NULL,
+//     .init_p2 = (void *)NULL,
+//     .init_p3 = (void *)NULL,
+//     .init_prio = (8),
+//     .init_options = (0),
+//     .init_delay = (0),
+//     .init_abort = (NULL),
+//     .init_groups = (0),
+// }
+// const k_tid_t TASK08 = (k_tid_t)&_k_thread_obj_TASK08
 K_THREAD_DEFINE(TASK08, STACKSIZE, task08, NULL, NULL, NULL,
 		8, 0, K_NO_WAIT);
 
+// KID 20170808
+// STACKSIZE: 512, K_NO_WAIT: 0
+//
+// K_THREAD_DEFINE(TASK09, 512, task09, NULL, NULL, NULL, 9, 0, 0):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _k_thread_stack_TASK09[512];
+// struct k_thread _k_thread_obj_TASK09;
+// struct _static_thread_data _k_thread_data_TASK09 __aligned(4)
+// __attribute__((section("." "_static_thread_data" "." "static" "." "TASK09"))) =
+// {
+//     .init_thread = (&_k_thread_obj_TASK09),
+//     .init_stack = (_k_thread_stack_TASK09),
+//     .init_stack_size = (512),
+//     .init_entry = (void (*)(void *, void *, void *))task09,
+//     .init_p1 = (void *)NULL,
+//     .init_p2 = (void *)NULL,
+//     .init_p3 = (void *)NULL,
+//     .init_prio = (9),
+//     .init_options = (0),
+//     .init_delay = (0),
+//     .init_abort = (NULL),
+//     .init_groups = (0),
+// }
+// const k_tid_t TASK09 = (k_tid_t)&_k_thread_obj_TASK09
 K_THREAD_DEFINE(TASK09, STACKSIZE, task09, NULL, NULL, NULL,
 		9, 0, K_NO_WAIT);
 
+// KID 20170808
+// STACKSIZE: 512, K_NO_WAIT: 0
+//
+// K_THREAD_DEFINE(TASK11, 512, task11, NULL, NULL, NULL, 11, 0, 0):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _k_thread_stack_TASK11[512];
+// struct k_thread _k_thread_obj_TASK11;
+// struct _static_thread_data _k_thread_data_TASK11 __aligned(4)
+// __attribute__((section("." "_static_thread_data" "." "static" "." "TASK11"))) =
+// {
+//     .init_thread = (&_k_thread_obj_TASK11),
+//     .init_stack = (_k_thread_stack_TASK11),
+//     .init_stack_size = (512),
+//     .init_entry = (void (*)(void *, void *, void *))task11,
+//     .init_p1 = (void *)NULL,
+//     .init_p2 = (void *)NULL,
+//     .init_p3 = (void *)NULL,
+//     .init_prio = (11),
+//     .init_options = (0),
+//     .init_delay = (0),
+//     .init_abort = (NULL),
+//     .init_groups = (0),
+// }
+// const k_tid_t TASK11 = (k_tid_t)&_k_thread_obj_TASK11
 K_THREAD_DEFINE(TASK11, STACKSIZE, task11, NULL, NULL, NULL,
 		11, 0, K_NO_WAIT);
 
+// KID 20170808
+// STACKSIZE: 512, K_NO_WAIT: 0
+//
+// K_THREAD_DEFINE(REGRESSTASK, 512, regression_task, NULL, NULL, NULL, 11, 0, 0):
+// char __attribute__((section("." "noinit" "." "_FILE_PATH_HASH" "." "__COUNTER__"))) __aligned(4) _k_thread_stack_REGRESSTASK[512];
+// struct k_thread _k_thread_obj_REGRESSTASK;
+// struct _static_thread_data _k_thread_data_REGRESSTASK __aligned(4)
+// __attribute__((section("." "_static_thread_data" "." "static" "." "REGRESSTASK"))) =
+// {
+//     .init_thread = (&_k_thread_obj_REGRESSTASK),
+//     .init_stack = (_k_thread_stack_REGRESSTASK),
+//     .init_stack_size = (512),
+//     .init_entry = (void (*)(void *, void *, void *))regression_task,
+//     .init_p1 = (void *)NULL,
+//     .init_p2 = (void *)NULL,
+//     .init_p3 = (void *)NULL,
+//     .init_prio = (11),
+//     .init_options = (0),
+//     .init_delay = (0),
+//     .init_abort = (NULL),
+//     .init_groups = (0),
+// }
+// const k_tid_t REGRESSTASK = (k_tid_t)&_k_thread_obj_REGRESSTASK
 K_THREAD_DEFINE(REGRESSTASK, STACKSIZE, regression_task, NULL, NULL, NULL,
 		10, 0, K_NO_WAIT);

@@ -81,6 +81,9 @@ do {                                                                    \
 // KID 20170601
 // __in_section(_k_stack, static, pipe_async_msgs):
 // __attribute__((section("." "_k_stack" "." "static" "." "pipe_async_msgs")))
+// KID 20170808
+// __in_section(_static_thread_data, static, TASK05):
+// __attribute__((section("." "_static_thread_data" "." "static" "." "TASK05")))
 #define __in_section(a, b, c) ___in_section(a, b, c)
 
 // KID 20170519
