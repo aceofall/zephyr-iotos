@@ -1160,6 +1160,15 @@ static inline bool isr_rx_scan_check(u8_t irkmatch_ok, u8_t devmatch_ok,
 #endif /* CONFIG_BLUETOOTH_CONTROLLER_PRIVACY */
 }
 
+static inline bool isr_scan_rsp_adva_matches(struct pdu_adv *srsp)
+{
+	struct pdu_adv *sreq = (struct pdu_adv *)radio_pkt_scratch_get();
+
+	return ((sreq->rx_addr == srsp->tx_addr) &&
+		(memcmp(&sreq->payload.scan_req.adv_addr[0],
+			&srsp->payload.scan_rsp.addr[0], BDADDR_SIZE) == 0));
+}
+
 static inline bool isr_scan_init_adva_check(struct pdu_adv *pdu,
 					    u8_t rl_idx)
 {
@@ -1181,23 +1190,24 @@ static inline bool isr_scan_tgta_check(bool init, struct pdu_adv *pdu,
 	if (ctrl_rl_addr_resolve(pdu->rx_addr,
 				 pdu->payload.direct_ind.tgt_addr, rl_idx)) {
 		return true;
+	} else if (init && _radio.scanner.rpa_gen && ctrl_lrpa_get(rl_idx)) {
+		/* Initiator generating RPAs, and could not resolve TargetA:
+		 * discard
+		 */
+		return false;
 	}
-
-	return (((!init || _radio.scanner.rl_idx == FILTER_IDX_NONE) &&
-#else
-	return (((1) &&
 #endif /* CONFIG_BLUETOOTH_CONTROLLER_PRIVACY */
-		((_radio.scanner.init_addr_type == pdu->rx_addr) &&
-		   (memcmp(&_radio.scanner.init_addr[0],
-			   &pdu->payload.direct_ind.tgt_addr[0],
-			   BDADDR_SIZE) == 0))) ||
+
+	return (((_radio.scanner.init_addr_type == pdu->rx_addr) &&
+		(memcmp(&_radio.scanner.init_addr[0],
+			&pdu->payload.direct_ind.tgt_addr[0],
+			BDADDR_SIZE) == 0))) ||
 		  /* allow directed adv packets where TargetA address
 		   * is resolvable private address (scanner only)
 		   */
-		  (((_radio.scanner.filter_policy & 0x02) != 0) &&
-		   (pdu->rx_addr != 0) &&
-		   ((pdu->payload.direct_ind.tgt_addr[5] & 0xc0) ==
-		    0x40)));
+	       (((_radio.scanner.filter_policy & 0x02) != 0) &&
+		(pdu->rx_addr != 0) &&
+		((pdu->payload.direct_ind.tgt_addr[5] & 0xc0) == 0x40));
 }
 
 static inline bool isr_scan_init_check(struct pdu_adv *pdu, u8_t rl_idx)
@@ -1551,7 +1561,8 @@ static inline u32_t isr_rx_scan(u8_t devmatch_ok, u8_t devmatch_id,
 		   (_radio.scanner.phy)) ||
 #endif /* CONFIG_BLUETOOTH_CONTROLLER_ADV_EXT */
 		  ((pdu_adv_rx->type == PDU_ADV_TYPE_SCAN_RSP) &&
-		   (_radio.scanner.state != 0))) &&
+		   (_radio.scanner.state != 0) &&
+		   isr_scan_rsp_adva_matches(pdu_adv_rx))) &&
 		 (pdu_adv_rx->len != 0) && (!_radio.scanner.conn)) {
 		u32_t err;
 
@@ -3226,8 +3237,9 @@ static inline u32_t isr_close_adv(void)
 			u32_t ticker_status;
 			u8_t random_delay;
 
-			/** @todo use random 0-10 */
-			random_delay = 10;
+			rand_isr_get(sizeof(random_delay), &random_delay);
+			random_delay %= 10;
+			random_delay += 1;
 
 			/* Call to ticker_update can fail under the race
 			 * condition where in the Adv role is being stopped but
@@ -8094,12 +8106,11 @@ static void enc_req_reused_send(struct connection *conn,
 		conn->llcp.encryption.ediv[0];
 	pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.ediv[1] =
 		conn->llcp.encryption.ediv[1];
-	/** @todo */
-	memset(&pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.skdm[0], 0xcc,
-		sizeof(pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.skdm));
-	/** @todo */
-	memset(&pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.ivm[0], 0xdd,
-	       sizeof(pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.ivm));
+	/* NOTE: if not sufficient random numbers, ignore waiting */
+	rand_isr_get(sizeof(pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.skdm),
+		     pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.skdm);
+	rand_isr_get(sizeof(pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.ivm),
+		     pdu_ctrl_tx->payload.llctrl.ctrldata.enc_req.ivm);
 }
 
 static void enc_rsp_send(struct connection *conn)
@@ -8116,12 +8127,11 @@ static void enc_rsp_send(struct connection *conn)
 	pdu_ctrl_tx->len = offsetof(struct pdu_data_llctrl, ctrldata)
 		+ sizeof(struct pdu_data_llctrl_enc_rsp);
 	pdu_ctrl_tx->payload.llctrl.opcode = PDU_DATA_LLCTRL_TYPE_ENC_RSP;
-	/** @todo */
-	memset(&pdu_ctrl_tx->payload.llctrl.ctrldata.enc_rsp.skds[0], 0xaa,
-		sizeof(pdu_ctrl_tx->payload.llctrl.ctrldata.enc_rsp.skds));
-	/** @todo */
-	memset(&pdu_ctrl_tx->payload.llctrl.ctrldata.enc_rsp.ivs[0], 0xbb,
-	       sizeof(pdu_ctrl_tx->payload.llctrl.ctrldata.enc_rsp.ivs));
+	/* NOTE: if not sufficient random numbers, ignore waiting */
+	rand_isr_get(sizeof(pdu_ctrl_tx->payload.llctrl.ctrldata.enc_rsp.skds),
+		     pdu_ctrl_tx->payload.llctrl.ctrldata.enc_rsp.skds);
+	rand_isr_get(sizeof(pdu_ctrl_tx->payload.llctrl.ctrldata.enc_rsp.ivs),
+		     pdu_ctrl_tx->payload.llctrl.ctrldata.enc_rsp.ivs);
 
 	/* things from slave stored for session key calculation */
 	memcpy(&conn->llcp.encryption.skd[8],
@@ -9341,30 +9351,21 @@ u32_t ll_enc_req_send(u16_t handle, u8_t *rand, u8_t *ediv, u8_t *ltk)
 		       sizeof(conn->llcp.encryption.ltk));
 
 		if ((conn->enc_rx == 0) && (conn->enc_tx == 0)) {
+			struct pdu_data_llctrl_enc_req *enc_req;
+
 			pdu_data_tx->ll_id = PDU_DATA_LLID_CTRL;
 			pdu_data_tx->len = offsetof(struct pdu_data_llctrl,
 						    ctrldata) +
 				sizeof(struct pdu_data_llctrl_enc_req);
 			pdu_data_tx->payload.llctrl.opcode =
 				PDU_DATA_LLCTRL_TYPE_ENC_REQ;
-			memcpy(&pdu_data_tx->payload.llctrl.ctrldata.
-			       enc_req.rand[0], rand,
-			       sizeof(pdu_data_tx->payload.llctrl.ctrldata.
-				      enc_req.rand));
-			pdu_data_tx->payload.llctrl.ctrldata.enc_req.ediv[0] =
-				ediv[0];
-			pdu_data_tx->payload.llctrl.ctrldata.enc_req.ediv[1] =
-				ediv[1];
-			memset(&pdu_data_tx->payload.llctrl.ctrldata.enc_req.
-				skdm[0], 0xcc,
-				/** @todo */
-				sizeof(pdu_data_tx->payload.llctrl.ctrldata.
-				       enc_req.skdm));
-			memset(&pdu_data_tx->payload.llctrl.ctrldata.enc_req.
-				ivm[0], 0xdd,
-				/** @todo */
-				sizeof(pdu_data_tx->payload.llctrl.ctrldata.
-				       enc_req.ivm));
+			enc_req = (void *)
+				&pdu_data_tx->payload.llctrl.ctrldata.enc_req;
+			memcpy(enc_req->rand, rand, sizeof(enc_req->rand));
+			enc_req->ediv[0] = ediv[0];
+			enc_req->ediv[1] = ediv[1];
+			bt_rand(enc_req->skdm, sizeof(enc_req->skdm));
+			bt_rand(enc_req->ivm, sizeof(enc_req->ivm));
 		} else if ((conn->enc_rx != 0) && (conn->enc_tx != 0)) {
 			memcpy(&conn->llcp.encryption.rand[0], rand,
 			       sizeof(conn->llcp.encryption.rand));
