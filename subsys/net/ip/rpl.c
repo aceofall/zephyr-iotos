@@ -193,7 +193,7 @@ void net_rpl_set_mode(enum net_rpl_mode new_mode)
 }
 
 static inline u32_t net_rpl_lifetime(struct net_rpl_instance *instance,
-					u8_t lifetime)
+				     u8_t lifetime)
 {
 	return (u32_t)instance->lifetime_unit * (u32_t)lifetime;
 }
@@ -345,7 +345,26 @@ struct in6_addr *net_rpl_get_parent_addr(struct net_if *iface,
 	return net_ipv6_nbr_lookup_by_index(iface, nbr->idx);
 }
 
-#if defined(CONFIG_NET_DEBUG_RPL)
+int net_rpl_foreach_parent(net_rpl_parent_cb_t cb, void *user_data)
+{
+	int i, ret = 0;
+
+	for (i = 0; i < CONFIG_NET_IPV6_MAX_NEIGHBORS; i++) {
+		struct net_nbr *nbr = get_nbr(i);
+
+		if (!nbr->ref) {
+			continue;
+		}
+
+		cb(nbr_data(nbr), user_data);
+
+		ret++;
+	}
+
+	return ret;
+}
+
+#if defined(CONFIG_NET_DEBUG_RPL) && (CONFIG_SYS_LOG_NET_LEVEL > 3)
 static void net_rpl_print_neighbors(void)
 {
 	if (rpl_default_instance && rpl_default_instance->current_dag) {
@@ -456,7 +475,7 @@ int net_rpl_dio_send(struct net_if *iface,
 	int ret;
 
 	pkt = net_pkt_get_reserve_tx(net_if_get_ll_reserve(iface, dst),
-				      K_FOREVER);
+				     K_FOREVER);
 	if (!pkt) {
 		return -ENOMEM;
 	}
@@ -492,7 +511,7 @@ int net_rpl_dio_send(struct net_if *iface,
 	net_pkt_append_be16(pkt, 0);
 
 	net_pkt_append_all(pkt, sizeof(struct in6_addr), dag->dag_id.s6_addr,
-		       K_FOREVER);
+			   K_FOREVER);
 
 	if (instance->mc.type != NET_RPL_MC_NONE) {
 		net_rpl_of_update_mc(instance);
@@ -740,7 +759,7 @@ int net_rpl_dis_send(struct in6_addr *dst, struct net_if *iface)
 	}
 
 	pkt = net_pkt_get_reserve_tx(net_if_get_ll_reserve(iface, dst_addr),
-				      K_FOREVER);
+				     K_FOREVER);
 	if (!pkt) {
 		return -ENOMEM;
 	}
@@ -1285,7 +1304,6 @@ static void net_rpl_reset_dio_timer(struct net_rpl_instance *instance)
 	net_stats_update_rpl_resets();
 }
 
-static
 struct net_rpl_dag *net_rpl_set_root_with_version(struct net_if *iface,
 						  u8_t instance_id,
 						  struct in6_addr *dag_id,
@@ -1460,7 +1478,7 @@ static void net_rpl_nullify_parent(struct net_if *iface,
 				   struct net_rpl_parent *parent)
 {
 	struct net_rpl_dag *dag = parent->dag;
-#if defined(CONFIG_NET_DEBUG_RPL)
+#if defined(CONFIG_NET_DEBUG_RPL) && (CONFIG_SYS_LOG_NET_LEVEL > 3)
 	struct in6_addr *addr = net_rpl_get_parent_addr(iface, parent);
 #endif
 
@@ -2044,7 +2062,7 @@ static bool net_rpl_process_parent_event(struct net_if *iface,
 	return ret;
 }
 
-static bool net_rpl_repair_root(u8_t instance_id)
+bool net_rpl_repair_root(u8_t instance_id)
 {
 	struct net_rpl_instance *instance;
 
@@ -3287,13 +3305,30 @@ static int forwarding_dao(struct net_rpl_instance *instance,
 	return r;
 }
 
+static bool is_root(struct net_rpl_instance *instance)
+{
+	if (!(instance && instance->current_dag)) {
+		return false;
+	}
+
+	if (instance->current_dag->preferred_parent) {
+		return false;
+	}
+
+	if (instance->current_dag->rank != NET_RPL_ROOT_RANK(instance)) {
+		return false;
+	}
+
+	return true;
+}
+
 static enum net_verdict handle_dao(struct net_pkt *pkt)
 {
 	struct in6_addr *dao_sender = &NET_IPV6_HDR(pkt)->src;
+	struct net_rpl_route_entry *extra = NULL;
 	struct net_rpl_parent *parent = NULL;
 	enum net_rpl_route_source learned_from;
 	struct net_rpl_instance *instance;
-	struct net_rpl_route_entry *extra;
 	struct net_route_entry *route;
 	struct net_rpl_dag *dag;
 	struct net_buf *frag;
@@ -3458,24 +3493,16 @@ static enum net_verdict handle_dao(struct net_pkt *pkt)
 	}
 #endif
 
-	route = net_route_lookup(net_pkt_iface(pkt), &addr);
-	if (!route) {
-		NET_DBG("No route to %s for iface %p",
-			net_sprint_ipv6_addr(&addr), net_pkt_iface(pkt));
-		return NET_DROP;
-	}
-
-	nbr = net_route_get_nbr(route);
-	if (!nbr) {
-		return NET_DROP;
-	}
-
-	extra = net_nbr_extra_data(nbr);
-
 	if (lifetime == NET_RPL_ZERO_LIFETIME) {
 		struct in6_addr *nexthop;
 
 		NET_DBG("No-Path DAO received");
+
+		route = net_route_lookup(net_pkt_iface(pkt), &addr);
+		nbr = net_route_get_nbr(route);
+		if (nbr) {
+			extra = net_nbr_extra_data(nbr);
+		}
 
 		nexthop = net_route_get_nexthop(route);
 
@@ -3551,6 +3578,7 @@ static enum net_verdict handle_dao(struct net_pkt *pkt)
 		return NET_DROP;
 	}
 
+	extra = net_nbr_extra_data(nbr);
 	if (extra) {
 		extra->lifetime = net_rpl_lifetime(instance, lifetime);
 		extra->route_source = learned_from;
@@ -3574,6 +3602,22 @@ fwd_dao:
 			if (r >= 0) {
 				net_pkt_unref(pkt);
 				return NET_OK;
+			}
+		} else {
+			if (IS_ENABLED(CONFIG_NET_RPL_DAO_ACK) &&
+			    (flags & NET_RPL_DAO_K_FLAG) &&
+			    is_root(instance)) {
+				r = dao_ack_send(&NET_IPV6_HDR(pkt)->dst,
+						 &NET_IPV6_HDR(pkt)->src,
+						 net_pkt_iface(pkt),
+						 instance, sequence, 0);
+				if (r >= 0) {
+					NET_DBG("Sending DAO-ACK to %s",
+						net_sprint_ipv6_addr(
+						     &NET_IPV6_HDR(pkt)->src));
+					net_pkt_unref(pkt);
+					return NET_OK;
+				}
 			}
 		}
 	}
