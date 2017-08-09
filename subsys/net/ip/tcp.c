@@ -126,7 +126,7 @@ static inline u32_t retry_timeout(const struct net_tcp *tcp)
 
 #define is_6lo_technology(pkt)						    \
 	(IS_ENABLED(CONFIG_NET_IPV6) &&	net_pkt_family(pkt) == AF_INET6 &&  \
-	 ((IS_ENABLED(CONFIG_NET_L2_BLUETOOTH) &&			    \
+	 ((IS_ENABLED(CONFIG_NET_L2_BT) &&			    \
 	   net_pkt_ll_dst(pkt)->type == NET_LINK_BLUETOOTH) ||		    \
 	  (IS_ENABLED(CONFIG_NET_L2_IEEE802154) &&			    \
 	   net_pkt_ll_dst(pkt)->type == NET_LINK_IEEE802154)))
@@ -277,7 +277,7 @@ int net_tcp_release(struct net_tcp *tcp)
 }
 
 static inline u8_t net_tcp_add_options(struct net_buf *header, size_t len,
-					  void *data)
+				       void *data)
 {
 	u8_t optlen;
 

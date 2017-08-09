@@ -39,6 +39,10 @@
 #include <net/net_app.h>
 #endif
 
+#if defined(CONFIG_NET_RPL)
+#include "rpl.h"
+#endif
+
 #include "net_shell.h"
 #include "net_stats.h"
 
@@ -265,16 +269,11 @@ static void route_cb(struct net_route_entry *entry, void *user_data)
 		return;
 	}
 
-	printk("IPv6 Route %p for interface %p\n", entry, iface);
-	printk("==============================================\n");
-
 	printk("IPv6 prefix : %s/%d\n",
 	       net_sprint_ipv6_addr(&entry->addr),
 	       entry->prefix_len);
 
 	count = 0;
-
-	printk("Next hops   :\n");
 
 	SYS_SLIST_FOR_EACH_CONTAINER(&entry->nexthop, nexthop_route, node) {
 		struct net_linkaddr_storage *lladdr;
@@ -306,6 +305,9 @@ static void route_cb(struct net_route_entry *entry, void *user_data)
 static void iface_per_route_cb(struct net_if *iface, void *user_data)
 {
 	ARG_UNUSED(user_data);
+
+	printk("IPv6 routes for interface %p\n", iface);
+	printk("====================================\n");
 
 	net_route_foreach(route_cb, iface);
 }
@@ -1391,8 +1393,14 @@ static void nbr_cb(struct net_nbr *nbr, void *user_data)
 	int *count = user_data;
 
 	if (*count == 0) {
+		char *padding = "";
+
+		if (net_nbr_get_lladdr(nbr->idx)->len == 8) {
+			padding = "      ";
+		}
+
 		printk("     Neighbor   Flags   Interface  State\t"
-		       "Remain\tLink              Address\n");
+		       "Remain\tLink              %sAddress\n", padding);
 	}
 
 	(*count)++;
@@ -1643,6 +1651,184 @@ int net_shell_cmd_route(int argc, char *argv[])
 
 #if defined(CONFIG_NET_ROUTE_MCAST)
 	net_if_foreach(iface_per_mcast_route_cb, NULL);
+#endif
+
+	return 0;
+}
+
+#if defined(CONFIG_NET_RPL)
+static int power(int base, unsigned int exp)
+{
+	int i, result = 1;
+
+	for (i = 0; i < exp; i++) {
+		result *= base;
+	}
+
+	return result;
+}
+
+static void rpl_parent(struct net_rpl_parent *parent, void *user_data)
+{
+	int *count = user_data;
+
+	if (*count == 0) {
+		printk("   Parent  Last TX    Rank DTSN Flags\tAddress\n");
+	}
+
+	(*count)++;
+
+	if (parent->dag) {
+		printk("[%2d] %p %10d %2d   %d    0x%08x %s\n",
+		       *count, parent, parent->last_tx_time, parent->rank,
+		       parent->dtsn, parent->flags,
+		       net_sprint_ipv6_addr(&parent->dag->dag_id));
+	}
+}
+
+#endif /* CONFIG_NET_RPL */
+
+int net_shell_cmd_rpl(int argc, char *argv[])
+{
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+#if defined(CONFIG_NET_RPL)
+	struct net_rpl_instance *instance;
+	enum net_rpl_mode mode;
+	int i, count;
+
+	mode = net_rpl_get_mode();
+	printk("RPL Configuration\n");
+	printk("=================\n");
+	printk("RPL mode                     : %s\n",
+	       mode == NET_RPL_MODE_MESH ? "mesh" :
+	       (mode == NET_RPL_MODE_FEATHER ? "feather" :
+		(mode == NET_RPL_MODE_LEAF ? "leaf" : "<unknown>")));
+	printk("Used objective function      : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_MRHOF) ? "MRHOF" :
+	       (IS_ENABLED(CONFIG_NET_RPL_OF0) ? "OF0" : "<unknown>"));
+	printk("Used routing metric          : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_MC_NONE) ? "none" :
+	       (IS_ENABLED(CONFIG_NET_RPL_MC_ETX) ? "estimated num of TX" :
+		(IS_ENABLED(CONFIG_NET_RPL_MC_ENERGY) ? "energy based" :
+		 "<unknown>")));
+	printk("Mode of operation (MOP)      : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_MOP2) ? "Storing, no mcast (MOP2)" :
+	       (IS_ENABLED(CONFIG_NET_RPL_MOP3) ? "Storing (MOP3)" :
+		"<unknown>"));
+	printk("Send probes to nodes         : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_PROBING) ? "enabled" : "disabled");
+	printk("Max instances                : %d\n",
+	       CONFIG_NET_RPL_MAX_INSTANCES);
+	printk("Max DAG / instance           : %d\n",
+	       CONFIG_NET_RPL_MAX_DAG_PER_INSTANCE);
+
+	printk("Min hop rank increment       : %d\n",
+	       CONFIG_NET_RPL_MIN_HOP_RANK_INC);
+	printk("Initial link metric          : %d\n",
+	       CONFIG_NET_RPL_INIT_LINK_METRIC);
+	printk("RPL preference value         : %d\n",
+	       CONFIG_NET_RPL_PREFERENCE);
+	printk("DAG grounded by default      : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_GROUNDED) ? "yes" : "no");
+	printk("Default instance id          : %d (0x%02x)\n",
+	       CONFIG_NET_RPL_DEFAULT_INSTANCE,
+	       CONFIG_NET_RPL_DEFAULT_INSTANCE);
+	printk("Insert Hop-by-hop option     : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_INSERT_HBH_OPTION) ? "yes" : "no");
+
+	printk("Specify DAG when sending DAO : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_DAO_SPECIFY_DAG) ? "yes" : "no");
+	printk("DIO min interval             : %d (%d ms)\n",
+	       CONFIG_NET_RPL_DIO_INTERVAL_MIN,
+	       power(2, CONFIG_NET_RPL_DIO_INTERVAL_MIN));
+	printk("DIO doublings interval       : %d\n",
+	       CONFIG_NET_RPL_DIO_INTERVAL_DOUBLINGS);
+	printk("DIO redundancy value         : %d\n",
+	       CONFIG_NET_RPL_DIO_REDUNDANCY);
+
+	printk("DAO sending timer value      : %d sec\n",
+	       CONFIG_NET_RPL_DAO_TIMER);
+	printk("DAO max retransmissions      : %d\n",
+	       CONFIG_NET_RPL_DAO_MAX_RETRANSMISSIONS);
+	printk("Node expecting DAO ack       : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_DAO_ACK) ? "yes" : "no");
+
+	printk("Send DIS periodically        : %s\n",
+	       IS_ENABLED(CONFIG_NET_RPL_DIS_SEND) ? "yes" : "no");
+#if defined(CONFIG_NET_RPL_DIS_SEND)
+	printk("DIS interval                 : %d sec\n",
+	       CONFIG_NET_RPL_DIS_INTERVAL);
+#endif
+
+	printk("Default route lifetime unit  : %d sec\n",
+	       CONFIG_NET_RPL_DEFAULT_LIFETIME_UNIT);
+	printk("Default route lifetime       : %d\n",
+	       CONFIG_NET_RPL_DEFAULT_LIFETIME);
+#if defined(CONFIG_NET_RPL_MOP3)
+	printk("Multicast route lifetime     : %d\n",
+	       CONFIG_NET_RPL_MCAST_LIFETIME);
+#endif
+	printk("\nRuntime status\n");
+	printk("==============\n");
+
+	instance = net_rpl_get_default_instance();
+	if (!instance) {
+		printk("No default RPL instance found.\n");
+		return 0;
+	}
+
+	printk("Default instance (id %d) : %p (%s)\n", instance->instance_id,
+	       instance, instance->is_used ? "active" : "disabled");
+
+	if (instance->default_route) {
+		printk("Default route    : %s\n",
+		       net_sprint_ipv6_addr(
+			       &instance->default_route->address.in6_addr));
+	}
+
+#if defined(CONFIG_NET_STATISTICS_RPL)
+	printk("DIO statistics  : intervals %d sent %d recv %d\n",
+	       instance->dio_intervals, instance->dio_send_pkt,
+	       instance->dio_recv_pkt);
+#endif /* CONFIG_NET_STATISTICS_RPL */
+
+	printk("Instance DAGs   :\n");
+	for (i = 0, count = 0; i < CONFIG_NET_RPL_MAX_DAG_PER_INSTANCE; i++) {
+		char prefix[NET_IPV6_ADDR_LEN];
+
+		if (!instance->dags[i].is_used) {
+			continue;
+		}
+
+		snprintk(prefix, sizeof(prefix), "%s",
+			 net_sprint_ipv6_addr(
+				 &instance->dags[i].prefix_info.prefix));
+
+		printk("[%2d]%s %s prefix %s/%d rank %d/%d ver %d flags %c%c "
+		       "parent %p\n",
+		       ++count,
+		       &instance->dags[i] == instance->current_dag ? "*" : " ",
+		       net_sprint_ipv6_addr(&instance->dags[i].dag_id),
+		       prefix, instance->dags[i].prefix_info.length,
+		       instance->dags[i].rank, instance->dags[i].min_rank,
+		       instance->dags[i].version,
+		       instance->dags[i].is_grounded ? 'G' : 'g',
+		       instance->dags[i].is_joined ? 'J' : 'j',
+		       instance->dags[i].preferred_parent);
+	}
+	printk("\n");
+
+	count = 0;
+	i = net_rpl_foreach_parent(rpl_parent, &count);
+	if (i == 0) {
+		printk("No parents found.\n");
+	}
+
+	printk("\n");
+#else
+	printk("RPL not enabled, set CONFIG_NET_RPL to enable it.\n");
 #endif
 
 	return 0;
@@ -1939,7 +2125,8 @@ int net_shell_cmd_tcp(int argc, char *argv[])
 			}
 
 			ret = net_pkt_append_all(pkt, strlen(argv[arg]),
-					      argv[arg], TCP_TIMEOUT);
+						 (u8_t *)argv[arg],
+						 TCP_TIMEOUT);
 			if (!ret) {
 				printk("Cannot build msg (out of pkts)\n");
 				net_pkt_unref(pkt);
@@ -2018,6 +2205,7 @@ static struct shell_cmd net_commands[] = {
 		"nbr rm <IPv6 address>\n\tRemove neighbor from cache" },
 	{ "ping", net_shell_cmd_ping, "<host>\n\tPing a network host" },
 	{ "route", net_shell_cmd_route, "\n\tShow network route" },
+	{ "rpl", net_shell_cmd_rpl, "\n\tShow RPL mesh routing status" },
 	{ "stacks", net_shell_cmd_stacks,
 		"\n\tShow network stacks information" },
 	{ "stats", net_shell_cmd_stats, "\n\tShow network statistics" },

@@ -34,6 +34,8 @@ extern "C" {
 // PINMUX_FUNC_C: 2
 #define PINMUX_FUNC_C		2
 #define PINMUX_FUNC_D		3
+#define PINMUX_FUNC_E		4
+#define PINMUX_FUNC_F		5
 
 // KID 20170727
 // PINMUX_PULLUP_ENABLE: 0x1
