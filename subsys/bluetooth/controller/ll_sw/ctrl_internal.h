@@ -66,6 +66,12 @@ struct connection {
 	u16_t default_tx_octets;
 	u16_t max_tx_octets;
 	u16_t max_rx_octets;
+
+#if defined(CONFIG_BT_CONTROLLER_PHY)
+	u16_t default_tx_time;
+	u16_t max_tx_time;
+	u16_t max_rx_time;
+#endif /* CONFIG_BT_CONTROLLER_PHY */
 #endif /* CONFIG_BT_CONTROLLER_DATA_LENGTH */
 
 #if defined(CONFIG_BT_CONTROLLER_PHY)
@@ -73,6 +79,8 @@ struct connection {
 	u8_t phy_tx:3;
 	u8_t phy_pref_flags:1;
 	u8_t phy_flags:1;
+	u8_t phy_tx_time:3;
+
 	u8_t phy_pref_rx:3;
 	u8_t phy_rx:3;
 #endif /* CONFIG_BT_CONTROLLER_PHY */
@@ -209,6 +217,10 @@ struct connection {
 #define LLCP_LENGTH_STATE_RESIZE     3
 		u16_t rx_octets;
 		u16_t tx_octets;
+#if defined(CONFIG_BT_CONTROLLER_PHY)
+		u16_t rx_time;
+		u16_t tx_time;
+#endif /* CONFIG_BT_CONTROLLER_PHY */
 	} llcp_length;
 #endif /* CONFIG_BT_CONTROLLER_DATA_LENGTH */
 
@@ -261,9 +273,11 @@ struct pdu_data_q_tx {
 	struct radio_pdu_node_tx *node_tx;
 };
 
-/* Extra bytes for enqueued rx_node metadata: rssi and resolving index */
+/* Extra bytes for enqueued rx_node metadata: rssi (always) and resolving
+ * index and directed adv report (with privacy enabled).
+ */
 #if defined(CONFIG_BT_CONTROLLER_PRIVACY)
-#define PDU_AC_SIZE_EXTRA 2
+#define PDU_AC_SIZE_EXTRA 3
 #else
 #define PDU_AC_SIZE_EXTRA 1
 #endif /* CONFIG_BT_CONTROLLER_PRIVACY */

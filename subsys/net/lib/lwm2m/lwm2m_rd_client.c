@@ -204,6 +204,9 @@ static int do_bootstrap_reply_cb(const struct zoap_packet *response,
 	} else if (code == ZOAP_RESPONSE_CODE_NOT_FOUND) {
 		SYS_LOG_ERR("Failed: NOT_FOUND.  Not Retrying.");
 		set_sm_state(index, ENGINE_DO_REGISTRATION);
+	} else if (code == ZOAP_RESPONSE_CODE_FORBIDDEN) {
+		SYS_LOG_ERR("Failed: 4.03 - Forbidden.  Not Retrying.");
+		set_sm_state(index, ENGINE_DO_REGISTRATION);
 	} else {
 		/* TODO: Read payload for error message? */
 		SYS_LOG_ERR("Failed with code %u.%u. Retrying ...",
@@ -270,10 +273,14 @@ static int do_registration_reply_cb(const struct zoap_packet *response,
 		SYS_LOG_ERR("Failed: NOT_FOUND.  Not Retrying.");
 		set_sm_state(index, ENGINE_REGISTRATION_DONE);
 		return 0;
+	} else if (code == ZOAP_RESPONSE_CODE_FORBIDDEN) {
+		SYS_LOG_ERR("Failed: 4.03 - Forbidden.  Not Retrying.");
+		set_sm_state(index, ENGINE_REGISTRATION_DONE);
+		return 0;
 	}
 
 	/* TODO: Read payload for error message? */
-	/* Possible error response codes: 4.00 Bad request & 4.03 Forbidden */
+	/* Possible error response codes: 4.00 Bad request */
 	SYS_LOG_ERR("failed with code %u.%u. Re-init network",
 		    ZOAP_RESPONSE_CODE_CLASS(code),
 		    ZOAP_RESPONSE_CODE_DETAIL(code));
@@ -433,9 +440,7 @@ static int sm_do_bootstrap(int index)
 			    lwm2m_sprint_ip_addr(&clients[index].bs_server),
 			    query_buffer);
 
-		ret = net_context_sendto(pkt, &clients[index].bs_server,
-					 NET_SOCKADDR_MAX_SIZE,
-					 NULL, 0, NULL, NULL);
+		ret = lwm2m_udp_sendto(pkt, &clients[index].bs_server);
 		if (ret < 0) {
 			SYS_LOG_ERR("Error sending LWM2M packet (err:%d).",
 				    ret);
@@ -580,9 +585,7 @@ static int sm_send_registration(int index, bool send_obj_support_data,
 	SYS_LOG_DBG("registration sent [%s]",
 		    lwm2m_sprint_ip_addr(&clients[index].reg_server));
 
-	ret = net_context_sendto(pkt, &clients[index].reg_server,
-				 NET_SOCKADDR_MAX_SIZE,
-				 NULL, 0, NULL, NULL);
+	ret = lwm2m_udp_sendto(pkt, &clients[index].reg_server);
 	if (ret < 0) {
 		SYS_LOG_ERR("Error sending LWM2M packet (err:%d).",
 			    ret);
@@ -680,9 +683,7 @@ static int sm_do_deregister(int index)
 
 	SYS_LOG_INF("Deregister from '%s'", clients[index].server_ep);
 
-	ret = net_context_sendto(pkt, &clients[index].reg_server,
-				 NET_SOCKADDR_MAX_SIZE,
-				 NULL, 0, NULL, NULL);
+	ret = lwm2m_udp_sendto(pkt, &clients[index].reg_server);
 	if (ret < 0) {
 		SYS_LOG_ERR("Error sending LWM2M packet (err:%d).",
 			    ret);
