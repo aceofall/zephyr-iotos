@@ -126,6 +126,7 @@ char *lwm2m_sprint_ip_addr(const struct sockaddr *addr)
 	return NULL;
 }
 
+#if CONFIG_SYS_LOG_LWM2M_LEVEL > 3
 static char *sprint_token(const u8_t *token, u8_t tkl)
 {
 	int i;
@@ -138,6 +139,7 @@ static char *sprint_token(const u8_t *token, u8_t tkl)
 	buf[pos] = '\0';
 	return buf;
 }
+#endif
 
 /* observer functions */
 
@@ -261,7 +263,7 @@ static int engine_remove_observer(const u8_t *token, u8_t tkl)
 
 	sys_slist_remove(&engine_observer_list, NULL, &found_obj->node);
 
-	SYS_LOG_DBG("oberver '%s' removed", sprint_token(token, tkl));
+	SYS_LOG_DBG("observer '%s' removed", sprint_token(token, tkl));
 
 	return 0;
 }
@@ -2145,9 +2147,16 @@ static int handle_request(struct zoap_packet *request,
 	return r;
 }
 
+int lwm2m_udp_sendto(struct net_pkt *pkt, const struct sockaddr *dst_addr)
+{
+	return net_context_sendto(pkt, dst_addr, NET_SOCKADDR_MAX_SIZE,
+				  NULL, K_NO_WAIT, NULL, NULL);
+}
+
 void lwm2m_udp_receive(struct net_context *ctx, struct net_pkt *pkt,
 		       struct zoap_pending *zpendings, int num_zpendings,
 		       struct zoap_reply *zreplies, int num_zreplies,
+		       bool handle_separate_response,
 		       int (*udp_request_handler)(struct zoap_packet *,
 						  struct zoap_packet *,
 						  struct sockaddr *))
@@ -2240,10 +2249,7 @@ void lwm2m_udp_receive(struct net_context *ctx, struct net_pkt *pkt,
 			if (r < 0) {
 				SYS_LOG_ERR("Request handler error: %d", r);
 			} else {
-				r = net_context_sendto(pkt2, &from_addr,
-						       NET_SOCKADDR_MAX_SIZE,
-						       NULL, K_NO_WAIT, NULL,
-						       NULL);
+				r = lwm2m_udp_sendto(pkt2, &from_addr);
 				if (r < 0) {
 					SYS_LOG_ERR("Err sending response: %d",
 						    r);
@@ -2253,8 +2259,23 @@ void lwm2m_udp_receive(struct net_context *ctx, struct net_pkt *pkt,
 			SYS_LOG_ERR("No handler for response");
 		}
 	} else {
-		SYS_LOG_DBG("reply handled reply:%p", reply);
-		zoap_reply_clear(reply);
+		/*
+		 * Separate response is composed of 2 messages, empty ACK with
+		 * no token and an additional message with a matching token id
+		 * (based on the token used by the CON request).
+		 *
+		 * Since the ACK received by the notify CON messages are also
+		 * empty with no token (consequence of always using the same
+		 * token id for all notifications), we have to use an
+		 * additional flag to decide when to clear the reply callback.
+		 */
+		if (handle_separate_response && !tkl &&
+			zoap_header_get_type(&response) == ZOAP_TYPE_ACK) {
+			SYS_LOG_DBG("separated response, not removing reply");
+		} else {
+			SYS_LOG_DBG("reply %p handled and removed", reply);
+			zoap_reply_clear(reply);
+		}
 	}
 
 cleanup:
@@ -2267,7 +2288,7 @@ static void udp_receive(struct net_context *ctx, struct net_pkt *pkt,
 			int status, void *user_data)
 {
 	lwm2m_udp_receive(ctx, pkt, pendings, NUM_PENDINGS,
-			  replies, NUM_REPLIES, handle_request);
+			  replies, NUM_REPLIES, false, handle_request);
 }
 
 static void retransmit_request(struct k_work *work)
@@ -2280,9 +2301,7 @@ static void retransmit_request(struct k_work *work)
 		return;
 	}
 
-	r = net_context_sendto(pending->pkt, &pending->addr,
-			       NET_SOCKADDR_MAX_SIZE,
-			       NULL, K_NO_WAIT, NULL, NULL);
+	r = lwm2m_udp_sendto(pending->pkt, &pending->addr);
 	if (r < 0) {
 		return;
 	}
@@ -2427,8 +2446,7 @@ static int generate_notify_message(struct observe_node *obs,
 	zoap_reply_init(reply, &request);
 	reply->reply = notify_message_reply_cb;
 
-	ret = net_context_sendto(pkt, &obs->addr, NET_SOCKADDR_MAX_SIZE,
-				 NULL, 0, NULL, NULL);
+	ret = lwm2m_udp_sendto(pkt, &obs->addr);
 	if (ret < 0) {
 		SYS_LOG_ERR("Error sending LWM2M packet (err:%d).", ret);
 		goto cleanup;
