@@ -35,13 +35,16 @@ static void work_q_main(void *work_q_ptr, void *p2, void *p3)
 		k_work_handler_t handler;
 
 		// &work_q->fifo: &(&k_sys_work_q)->fifo, K_FOREVER: -1
-		work = k_fifo_get(&work_q->fifo, K_FOREVER);
+		work = k_queue_get(&work_q->queue, K_FOREVER);
+		if (!work) {
+			continue;
+		}
 
 		handler = work->handler;
 
 		/* Reset pending state so it can be resubmitted by handler */
 		if (atomic_test_and_clear_bit(work->flags,
-					       K_WORK_STATE_PENDING)) {
+					      K_WORK_STATE_PENDING)) {
 			handler(work);
 		}
 
@@ -59,7 +62,7 @@ void k_work_q_start(struct k_work_q *work_q, k_thread_stack_t stack,
 		    size_t stack_size, int prio)
 {
 	// &work_q->fifo: &(&k_sys_work_q)->fifo
-	k_fifo_init(&work_q->fifo);
+	k_queue_init(&work_q->queue);
 
 	// k_fifo_init 에서 한일:
 	// (&(&(&k_sys_work_q)->fifo)->data_q)->head: NULL
@@ -140,8 +143,6 @@ static void work_timeout(struct _timeout *t)
 
 	/* submit work to workqueue */
 	k_work_submit_to_queue(w->work_q, &w->work);
-	/* detach from workqueue, for cancel to return appropriate status */
-	w->work_q = NULL;
 }
 
 void k_delayed_work_init(struct k_delayed_work *work, k_work_handler_t handler)
@@ -196,18 +197,20 @@ int k_delayed_work_cancel(struct k_delayed_work *work)
 {
 	int key = irq_lock();
 
-	if (k_work_pending(&work->work)) {
-		irq_unlock(key);
-		return -EINPROGRESS;
-	}
-
 	if (!work->work_q) {
 		irq_unlock(key);
 		return -EINVAL;
 	}
 
-	/* Abort timeout, if it has expired this will do nothing */
-	_abort_timeout(&work->timeout);
+	if (k_work_pending(&work->work)) {
+		/* Remove from the queue if already submitted */
+		if (!k_queue_remove(&work->work_q->queue, &work->work)) {
+			irq_unlock(key);
+			return -EINVAL;
+		}
+	} else {
+		_abort_timeout(&work->timeout);
+	}
 
 	/* Detach from workqueue */
 	work->work_q = NULL;

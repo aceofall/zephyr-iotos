@@ -91,6 +91,65 @@ static inline const char *addrstate2str(enum net_addr_state addr_state)
 	return "<invalid state>";
 }
 
+static const char *iface2str(struct net_if *iface, const char **extra)
+{
+#ifdef CONFIG_NET_L2_IEEE802154
+	if (iface->l2 == &NET_L2_GET_NAME(IEEE802154)) {
+		if (extra) {
+			*extra = "=============";
+		}
+
+		return "IEEE 802.15.4";
+	}
+#endif
+
+#ifdef CONFIG_NET_L2_ETHERNET
+	if (iface->l2 == &NET_L2_GET_NAME(ETHERNET)) {
+		if (extra) {
+			*extra = "========";
+		}
+
+		return "Ethernet";
+	}
+#endif
+
+#ifdef CONFIG_NET_L2_DUMMY
+	if (iface->l2 == &NET_L2_GET_NAME(DUMMY)) {
+		if (extra) {
+			*extra = "=====";
+		}
+
+		return "Dummy";
+	}
+#endif
+
+#ifdef CONFIG_NET_L2_BT
+	if (iface->l2 == &NET_L2_GET_NAME(BLUETOOTH)) {
+		if (extra) {
+			*extra = "=========";
+		}
+
+		return "Bluetooth";
+	}
+#endif
+
+#ifdef CONFIG_NET_L2_OFFLOAD
+	if (iface->l2 == &NET_L2_GET_NAME(OFFLOAD_IP)) {
+		if (extra) {
+			*extra = "==========";
+		}
+
+		return "IP Offload";
+	}
+#endif
+
+	if (extra) {
+		*extra = "==============";
+	}
+
+	return "<unknown type>";
+}
+
 static void iface_cb(struct net_if *iface, void *user_data)
 {
 #if defined(CONFIG_NET_IPV6)
@@ -99,12 +158,13 @@ static void iface_cb(struct net_if *iface, void *user_data)
 #endif
 	struct net_if_addr *unicast;
 	struct net_if_mcast_addr *mcast;
+	const char *extra;
 	int i, count;
 
 	ARG_UNUSED(user_data);
 
-	printk("Interface %p\n", iface);
-	printk("====================\n");
+	printk("Interface %p (%s)\n", iface, iface2str(iface, &extra));
+	printk("=======================%s\n", extra);
 
 	if (!net_if_is_up(iface)) {
 		printk("Interface is down.\n");
@@ -304,10 +364,13 @@ static void route_cb(struct net_route_entry *entry, void *user_data)
 
 static void iface_per_route_cb(struct net_if *iface, void *user_data)
 {
+	const char *extra;
+
 	ARG_UNUSED(user_data);
 
-	printk("IPv6 routes for interface %p\n", iface);
-	printk("====================================\n");
+	printk("IPv6 routes for interface %p (%s)\n", iface,
+	       iface2str(iface, &extra));
+	printk("=======================================%s\n", extra);
 
 	net_route_foreach(route_cb, iface);
 }
@@ -318,13 +381,16 @@ static void route_mcast_cb(struct net_route_entry_mcast *entry,
 			   void *user_data)
 {
 	struct net_if *iface = user_data;
+	const char *extra;
 
 	if (entry->iface != iface) {
 		return;
 	}
 
-	printk("IPv6 multicast route %p for interface %p\n", entry, iface);
-	printk("========================================================\n");
+	printk("IPv6 multicast route %p for interface %p (%s)\n", entry,
+	       iface, iface2str(iface, &extra));
+	printk("==========================================================="
+	       "%s\n", extra);
 
 	printk("IPv6 group : %s\n", net_sprint_ipv6_addr(&entry->group));
 	printk("Lifetime   : %u\n", entry->lifetime);
@@ -1673,16 +1739,31 @@ static void rpl_parent(struct net_rpl_parent *parent, void *user_data)
 	int *count = user_data;
 
 	if (*count == 0) {
-		printk("   Parent  Last TX    Rank DTSN Flags\tAddress\n");
+		printk("      Parent     Last TX   Rank  DTSN  Flags DAG\t\t\t"
+		       "Address\n");
 	}
 
 	(*count)++;
 
 	if (parent->dag) {
-		printk("[%2d] %p %10d %2d   %d    0x%08x %s\n",
-		       *count, parent, parent->last_tx_time, parent->rank,
+		struct net_ipv6_nbr_data *data;
+		char addr[NET_IPV6_ADDR_LEN];
+
+		data = net_rpl_get_ipv6_nbr_data(parent);
+		if (data) {
+			snprintk(addr, sizeof(addr), "%s",
+				 net_sprint_ipv6_addr(&data->addr));
+		} else {
+			snprintk(addr, sizeof(addr), "<unknown>");
+		}
+
+		printk("[%2d]%s %p %7d  %5d   %3d  0x%02x  %s\t%s\n",
+		       *count,
+		       parent->dag->preferred_parent == parent ? "*" : " ",
+		       parent, parent->last_tx_time, parent->rank,
 		       parent->dtsn, parent->flags,
-		       net_sprint_ipv6_addr(&parent->dag->dag_id));
+		       net_sprint_ipv6_addr(&parent->dag->dag_id),
+		       addr);
 	}
 }
 
@@ -1783,7 +1864,7 @@ int net_shell_cmd_rpl(int argc, char *argv[])
 	       instance, instance->is_used ? "active" : "disabled");
 
 	if (instance->default_route) {
-		printk("Default route    : %s\n",
+		printk("Default route   : %s\n",
 		       net_sprint_ipv6_addr(
 			       &instance->default_route->address.in6_addr));
 	}
