@@ -14,7 +14,7 @@ Major enhancements planned with this release include:
 * BSD Socket Support
 * Expand Device Tree support to more architectures
 * BLE Mesh
-* Full Bluetooth 5.0 Support
+* Bluetooth 5.0 Support (all features except Advertising Extensions)
 * Expand LLVM Support to more architectures
 * Revamp Testsuite, Increase Coverage
 * Zephyr SDK NG
@@ -74,7 +74,17 @@ Networking
 Bluetooth
 *********
 
-* change description
+* Bluetooth Mesh support (all mandatory features and most optional ones)
+* GATT Service Changed Characteristic support
+* IPSP net-app support: a simplified networking API reducing duplication
+  of common tasks an application writer has to go through to connect
+  to the network.
+* BLE controller qualification-ready, with all required tests passing
+* Controller-based privacy (including all optional features)
+* Extended Scanner Filter Policies support in the controller
+* Controller roles (Advertiser, Scanner, Master and Slave) separation in
+  source code, conditionally includable
+* Flash access cooperation with BLE radio activity
 
 Build and Infrastructure
 ************************
