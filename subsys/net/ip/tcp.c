@@ -95,9 +95,9 @@ static void net_tcp_trace(struct net_pkt *pkt, struct net_tcp *tcp)
 		rel_ack = ack ? ack - tcp->sent_ack : 0;
 	}
 
-	NET_DBG("pkt %p src %u dst %u seq 0x%04x (%u) ack 0x%04x (%u/%u) "
+	NET_DBG("[%p] pkt %p src %u dst %u seq 0x%04x (%u) ack 0x%04x (%u/%u) "
 		"flags %c%c%c%c%c%c win %u chk 0x%04x",
-		pkt,
+		tcp, pkt,
 		ntohs(tcp_hdr->src_port),
 		ntohs(tcp_hdr->dst_port),
 		sys_get_be32(tcp_hdr->seq),
@@ -140,19 +140,22 @@ static inline u32_t retry_timeout(const struct net_tcp *tcp)
  * Note that this is macro so that we get information who called the
  * net_pkt_ref() if memory debugging is active.
  */
-#define do_ref_if_needed(pkt)				\
-	do {						\
-		if (!is_6lo_technology(pkt)) {		\
-			pkt = net_pkt_ref(pkt);		\
-		}					\
+#define do_ref_if_needed(tcp, pkt)					\
+	do {								\
+		if (!is_6lo_technology(pkt)) {				\
+			NET_DBG("[%p] ref pkt %p new ref %d (%s:%d)",	\
+				tcp, pkt, pkt->ref + 1, __func__,	\
+				__LINE__);				\
+			pkt = net_pkt_ref(pkt);				\
+		}							\
 	} while (0)
 
 static void abort_connection(struct net_tcp *tcp)
 {
 	struct net_context *ctx = tcp->context;
 
-	NET_DBG("Segment retransmission exceeds %d, resetting context %p",
-		CONFIG_NET_TCP_RETRY_COUNT, ctx);
+	NET_DBG("[%p] segment retransmission exceeds %d, resetting context %p",
+		tcp, CONFIG_NET_TCP_RETRY_COUNT, ctx);
 
 	if (ctx->recv_cb) {
 		ctx->recv_cb(ctx, NULL, -ECONNRESET, tcp->recv_user_data);
@@ -182,10 +185,18 @@ static void tcp_retry_expired(struct k_timer *timer)
 		pkt = CONTAINER_OF(sys_slist_peek_head(&tcp->sent_list),
 				   struct net_pkt, sent_list);
 
-		do_ref_if_needed(pkt);
+		if (net_pkt_sent(pkt)) {
+			do_ref_if_needed(tcp, pkt);
+			net_pkt_set_sent(pkt, false);
+		}
+
+		net_pkt_set_queued(pkt, true);
+
 		if (net_tcp_send_pkt(pkt) < 0 && !is_6lo_technology(pkt)) {
+			NET_DBG("[%p] pkt %p send failed", tcp, pkt);
 			net_pkt_unref(pkt);
 		} else {
+			NET_DBG("[%p] sent pkt %p", tcp, pkt);
 			if (IS_ENABLED(CONFIG_NET_STATISTICS_TCP) &&
 			    !is_6lo_technology(pkt)) {
 				net_stats_update_tcp_seg_rexmit();
@@ -193,6 +204,8 @@ static void tcp_retry_expired(struct k_timer *timer)
 		}
 	} else if (IS_ENABLED(CONFIG_NET_TCP_TIME_WAIT)) {
 		if (tcp->fin_sent && tcp->fin_rcvd) {
+			NET_DBG("[%p] Closing connection (context %p)",
+				tcp, tcp->context);
 			net_context_unref(tcp->context);
 		}
 	}
@@ -274,7 +287,7 @@ int net_tcp_release(struct net_tcp *tcp)
 	tcp->flags &= ~(NET_TCP_IN_USE | NET_TCP_RECV_MSS_SET);
 	irq_unlock(key);
 
-	NET_DBG("Disposed of TCP connection state");
+	NET_DBG("[%p] Disposed of TCP connection state", tcp);
 
 	return 0;
 }
@@ -364,7 +377,7 @@ static struct net_pkt *prepare_segment(struct net_tcp *tcp,
 	} else
 #endif
 	{
-		NET_DBG("Protocol family %d not supported",
+		NET_DBG("[%p] Protocol family %d not supported", tcp,
 			net_pkt_family(pkt));
 		net_pkt_unref(pkt);
 		return NULL;
@@ -641,7 +654,7 @@ int net_tcp_prepare_reset(struct net_tcp *tcp,
 	return 0;
 }
 
-const char * const net_tcp_state_str(enum net_tcp_state state)
+const char *net_tcp_state_str(enum net_tcp_state state)
 {
 #if defined(CONFIG_NET_DEBUG_TCP)
 	switch (state) {
@@ -681,6 +694,8 @@ int net_tcp_queue_data(struct net_context *context, struct net_pkt *pkt)
 	size_t data_len = net_pkt_get_len(pkt);
 	int ret;
 
+	NET_DBG("[%p] Queue %p len %zd", context->tcp, pkt, data_len);
+
 	/* Set PSH on all packets, our window is so small that there's
 	 * no point in the remote side trying to finesse things and
 	 * coalesce packets.
@@ -703,7 +718,7 @@ int net_tcp_queue_data(struct net_context *context, struct net_pkt *pkt)
 			      retry_timeout(context->tcp), 0);
 	}
 
-	do_ref_if_needed(pkt);
+	do_ref_if_needed(context->tcp, pkt);
 
 	return 0;
 }
@@ -744,8 +759,6 @@ int net_tcp_send_pkt(struct net_pkt *pkt)
 	}
 
 	ctx->tcp->sent_ack = ctx->tcp->send_ack;
-
-	net_pkt_set_sent(pkt, true);
 
 	/* As we modified the header, we need to write it back.
 	 */
@@ -792,7 +805,7 @@ int net_tcp_send_pkt(struct net_pkt *pkt)
 				return -ENOMEM;
 			}
 
-			NET_DBG("Copied %zu bytes from %p to %p",
+			NET_DBG("[%p] Copied %zu bytes from %p to %p", ctx->tcp,
 				net_pkt_get_len(new_pkt), pkt, new_pkt);
 
 			/* This function is called from net_context.c and if we
@@ -841,11 +854,21 @@ int net_tcp_send_data(struct net_context *context)
 	 * add window handling and retry/ACK logic.
 	 */
 	SYS_SLIST_FOR_EACH_CONTAINER(&context->tcp->sent_list, pkt, sent_list) {
+		/* Do not resend packets that were sent by expire timer */
+		if (net_pkt_queued(pkt)) {
+			NET_DBG("[%p] Skipping pkt %p because it was already "
+				"sent.", context->tcp, pkt);
+			continue;
+		}
+
 		if (!net_pkt_sent(pkt)) {
+			NET_DBG("[%p] Sending pkt %p", context->tcp, pkt);
 			if (net_tcp_send_pkt(pkt) < 0 &&
 			    !is_6lo_technology(pkt)) {
 				net_pkt_unref(pkt);
 			}
+
+			net_pkt_set_queued(pkt, true);
 		}
 	}
 
@@ -896,7 +919,8 @@ void net_tcp_ack_received(struct net_context *ctx, u32_t ack)
 		valid_ack = true;
 	}
 
-	if (valid_ack) {
+	/* No need to re-send stuff we are closing down */
+	if (valid_ack && net_tcp_get_state(tcp) == NET_TCP_ESTABLISHED) {
 		/* Restart the timer on a valid inbound ACK.  This
 		 * isn't quite the same behavior as per-packet retry
 		 * timers, but is close in practice (it starts retries
@@ -911,12 +935,10 @@ void net_tcp_ack_received(struct net_context *ctx, u32_t ack)
 		 * pipe is uncorked again.
 		 */
 		if (ctx->tcp->flags & NET_TCP_RETRYING) {
-			struct net_pkt *pkt;
-
 			SYS_SLIST_FOR_EACH_CONTAINER(&ctx->tcp->sent_list, pkt,
 						     sent_list) {
 				if (net_pkt_sent(pkt)) {
-					do_ref_if_needed(pkt);
+					do_ref_if_needed(ctx->tcp, pkt);
 					net_pkt_set_sent(pkt, false);
 				}
 			}
@@ -984,7 +1006,7 @@ void net_tcp_change_state(struct net_tcp *tcp,
 	NET_ASSERT(new_state >= NET_TCP_CLOSED &&
 		   new_state <= NET_TCP_CLOSING);
 
-	NET_DBG("state@%p %s (%d) => %s (%d)",
+	NET_DBG("[%p] state %s (%d) => %s (%d)",
 		tcp, net_tcp_state_str(tcp->state), tcp->state,
 		net_tcp_state_str(new_state), new_state);
 
