@@ -56,6 +56,26 @@
 
 #define DISCOVER_PREFACE	"</.well-known/core>;ct=40"
 
+/*
+ * TODO: to implement a way for clients to specify alternate path
+ * via Kconfig (LwM2M specification 8.2.2 Alternate Path)
+ *
+ * For now, in order to inform server we support JSON format, we have to
+ * report 'ct=11543' to the server. '</>' is required in order to append
+ * content attribute. And resource type attribute is appended because of
+ * Eclipse wakaama will reject the registration when 'rt="oma.lwm2m"' is
+ * missing.
+ */
+
+#define RESOURCE_TYPE		";rt=\"oma.lwm2m\""
+
+#if defined(CONFIG_LWM2M_RW_JSON_SUPPORT)
+#define REG_PREFACE		"</>" RESOURCE_TYPE \
+				";ct=" STRINGIFY(LWM2M_FORMAT_OMA_JSON)
+#else
+#define REG_PREFACE		""
+#endif
+
 #define BUF_ALLOC_TIMEOUT K_SECONDS(1)
 
 struct observe_node {
@@ -585,16 +605,29 @@ u16_t lwm2m_get_rd_data(u8_t *client_data, u16_t size)
 	u16_t pos = 0;
 	int len;
 
+	/* Add resource-type/content-type to the registration message */
+	memcpy(client_data, REG_PREFACE, sizeof(REG_PREFACE) - 1);
+	pos += sizeof(REG_PREFACE) - 1;
+
 	SYS_SLIST_FOR_EACH_CONTAINER(&engine_obj_list, obj, node) {
-		len = snprintf(temp, sizeof(temp), "%s</%u>",
-			       (pos > 0) ? "," : "", obj->obj_id);
-		if (pos + len >= size) {
-			/* full buffer -- exit loop */
-			break;
+		/* Security obj MUST NOT be part of registration message */
+		if (obj->obj_id == LWM2M_OBJECT_SECURITY_ID) {
+			continue;
 		}
 
-		memcpy(&client_data[pos], temp, len);
-		pos += len;
+		/* Only report <OBJ_ID> when no instance available */
+		if (obj->instance_count == 0) {
+			len = snprintf(temp, sizeof(temp), "%s</%u>",
+				       (pos > 0) ? "," : "", obj->obj_id);
+			if (pos + len >= size) {
+				/* full buffer -- exit loop */
+				break;
+			}
+
+			memcpy(&client_data[pos], temp, len);
+			pos += len;
+			continue;
+		}
 
 		SYS_SLIST_FOR_EACH_CONTAINER(&engine_obj_inst_list,
 					     obj_inst, node) {
@@ -1816,8 +1849,10 @@ static int do_discover_op(struct lwm2m_engine_context *context)
 	out->outlen += strlen(DISCOVER_PREFACE);
 
 	SYS_SLIST_FOR_EACH_CONTAINER(&engine_obj_inst_list, obj_inst, node) {
-		/* avoid discovery for security and server objects */
-		if (obj_inst->obj->obj_id <= LWM2M_OBJECT_SERVER_ID) {
+		/* TODO: support bootstrap discover
+		 * Avoid discovery for security object (5.2.7.3)
+		 */
+		if (obj_inst->obj->obj_id == LWM2M_OBJECT_SECURITY_ID) {
 			continue;
 		}
 
