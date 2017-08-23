@@ -54,7 +54,7 @@ void _net_app_accept_cb(struct net_context *net_ctx,
 	ARG_UNUSED(addr);
 	ARG_UNUSED(addrlen);
 
-	if (status != 0 || ctx->server.net_ctx) {
+	if (status != 0 || ctx->server.net_ctx || !ctx->is_enabled) {
 		/* We are already connected and support only one connection at
 		 * a time so this new connection must be closed.
 		 */
@@ -90,8 +90,8 @@ void _net_app_accept_cb(struct net_context *net_ctx,
 
 int net_app_listen(struct net_app_ctx *ctx)
 {
+	bool dual = false, v4_failed = false;
 	int ret;
-	bool dual = false;
 
 	if (!ctx) {
 		return -EINVAL;
@@ -117,8 +117,12 @@ int net_app_listen(struct net_app_ctx *ctx)
 	ret = _net_app_set_net_ctx(ctx, ctx->ipv4.ctx, &ctx->ipv4.local,
 				   sizeof(struct sockaddr_in), ctx->proto);
 	if (ret < 0) {
-		net_context_put(ctx->ipv4.ctx);
-		ctx->ipv4.ctx = NULL;
+		if (ctx->ipv4.ctx) {
+			net_context_put(ctx->ipv4.ctx);
+			ctx->ipv4.ctx = NULL;
+		}
+
+		v4_failed = true;
 	}
 #if defined(CONFIG_NET_APP_DTLS)
 	else {
@@ -143,8 +147,14 @@ int net_app_listen(struct net_app_ctx *ctx)
 	ret = _net_app_set_net_ctx(ctx, ctx->ipv6.ctx, &ctx->ipv6.local,
 				   sizeof(struct sockaddr_in6), ctx->proto);
 	if (ret < 0) {
-		net_context_put(ctx->ipv6.ctx);
-		ctx->ipv6.ctx = NULL;
+		if (ctx->ipv6.ctx) {
+			net_context_put(ctx->ipv6.ctx);
+			ctx->ipv6.ctx = NULL;
+		}
+
+		if (!v4_failed) {
+			ret = 0;
+		}
 	}
 #if defined(CONFIG_NET_APP_DTLS)
 	else {
@@ -201,6 +211,18 @@ int net_app_init_server(struct net_app_ctx *ctx,
 			return -EPROTONOSUPPORT;
 #endif
 		}
+
+		if (server_addr->sa_family == AF_UNSPEC) {
+#if defined(CONFIG_NET_IPV4)
+			net_sin(&ctx->ipv4.local)->sin_port =
+				net_sin(server_addr)->sin_port;
+#endif
+
+#if defined(CONFIG_NET_IPV6)
+			net_sin6(&ctx->ipv6.local)->sin6_port =
+				net_sin6(server_addr)->sin6_port;
+#endif
+		}
 	} else {
 		if (port == 0) {
 			return -EINVAL;
@@ -223,7 +245,7 @@ int net_app_init_server(struct net_app_ctx *ctx,
 	ctx->proto = proto;
 	ctx->sock_type = sock_type;
 
-	ret = _net_app_config_local_ctx(ctx, sock_type, proto, NULL);
+	ret = _net_app_config_local_ctx(ctx, sock_type, proto, server_addr);
 	if (ret < 0) {
 		goto fail;
 	}
@@ -300,7 +322,7 @@ static void tls_server_handler(struct net_app_ctx *ctx,
 
 #define TLS_STARTUP_TIMEOUT K_SECONDS(5)
 
-bool net_app_server_tls_enable(struct net_app_ctx *ctx)
+bool _net_app_server_tls_enable(struct net_app_ctx *ctx)
 {
 	struct k_sem startup_sync;
 
@@ -310,8 +332,6 @@ bool net_app_server_tls_enable(struct net_app_ctx *ctx)
 		/* No stack or stack size is 0, we cannot enable */
 		return false;
 	}
-
-	ctx->is_enabled = true;
 
 	/* Start the thread that handles TLS traffic. */
 	if (!ctx->tls.tid) {
@@ -336,11 +356,9 @@ bool net_app_server_tls_enable(struct net_app_ctx *ctx)
 	return true;
 }
 
-bool net_app_server_tls_disable(struct net_app_ctx *ctx)
+bool _net_app_server_tls_disable(struct net_app_ctx *ctx)
 {
 	NET_ASSERT(ctx);
-
-	ctx->is_enabled = false;
 
 	if (!ctx->tls.tid) {
 		return false;
@@ -409,3 +427,39 @@ int net_app_server_tls(struct net_app_ctx *ctx,
 	return 0;
 }
 #endif /* CONFIG_NET_APP_TLS */
+
+bool net_app_server_enable(struct net_app_ctx *ctx)
+{
+	bool old;
+
+	NET_ASSERT(ctx);
+
+	old = ctx->is_enabled;
+
+	ctx->is_enabled = true;
+
+#if defined(CONFIG_NET_APP_TLS)
+	if (ctx->is_tls) {
+		_net_app_server_tls_enable(ctx);
+	}
+#endif
+	return old;
+}
+
+bool net_app_server_disable(struct net_app_ctx *ctx)
+{
+	bool old;
+
+	NET_ASSERT(ctx);
+
+	old = ctx->is_enabled;
+
+	ctx->is_enabled = false;
+
+#if defined(CONFIG_NET_APP_TLS)
+	if (ctx->is_tls) {
+		_net_app_server_tls_disable(ctx);
+	}
+#endif
+	return old;
+}
