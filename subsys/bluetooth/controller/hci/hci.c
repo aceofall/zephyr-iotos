@@ -353,6 +353,24 @@ static void write_auth_payload_timeout(struct net_buf *buf,
 }
 #endif /* CONFIG_BT_CTLR_LE_PING */
 
+static void read_tx_power_level(struct net_buf *buf, struct net_buf **evt)
+{
+	struct bt_hci_cp_read_tx_power_level *cmd = (void *)buf->data;
+	struct bt_hci_rp_read_tx_power_level *rp;
+	u32_t status;
+	u16_t handle;
+	u8_t  type;
+
+	handle = sys_le16_to_cpu(cmd->handle);
+	type = cmd->type;
+
+	rp = cmd_complete(evt, sizeof(*rp));
+
+	status = ll_tx_power_level_get(handle, type, &rp->tx_power_level);
+	rp->status = (!status) ? 0x00 : BT_HCI_ERR_UNKNOWN_CONN_ID;
+	rp->handle = sys_cpu_to_le16(handle);
+}
+
 static int ctrl_bb_cmd_handle(u16_t  ocf, struct net_buf *cmd,
 			      struct net_buf **evt)
 {
@@ -367,6 +385,10 @@ static int ctrl_bb_cmd_handle(u16_t  ocf, struct net_buf *cmd,
 
 	case BT_OCF(BT_HCI_OP_SET_EVENT_MASK_PAGE_2):
 		set_event_mask_page_2(cmd, evt);
+		break;
+
+	case BT_OCF(BT_HCI_OP_READ_TX_POWER_LEVEL):
+		read_tx_power_level(cmd, evt);
 		break;
 
 #if defined(CONFIG_BT_HCI_ACL_FLOW_CONTROL)
@@ -427,15 +449,20 @@ static void read_supported_commands(struct net_buf *buf, struct net_buf **evt)
 	rp->commands[2] |= BIT(7);
 	/* Set Event Mask, and Reset. */
 	rp->commands[5] |= BIT(6) | BIT(7);
+	/* Read TX Power Level. */
+	rp->commands[10] |= BIT(2);
 #if defined(CONFIG_BT_HCI_ACL_FLOW_CONTROL)
 	/* Set FC, Host Buffer Size and Host Num Completed */
 	rp->commands[10] |= BIT(5) | BIT(6) | BIT(7);
 #endif
-
 	/* Read Local Version Info, Read Local Supported Features. */
 	rp->commands[14] |= BIT(3) | BIT(5);
 	/* Read BD ADDR. */
 	rp->commands[15] |= BIT(1);
+#if defined(CONFIG_BT_CTLR_CONN_RSSI)
+	/* Read RSSI. */
+	rp->commands[15] |= BIT(5);
+#endif /* CONFIG_BT_CTLR_CONN_RSSI */
 	/* Set Event Mask Page 2 */
 	rp->commands[22] |= BIT(2);
 	/* LE Set Event Mask, LE Read Buffer Size, LE Read Local Supp Feats,
@@ -479,8 +506,8 @@ static void read_supported_commands(struct net_buf *buf, struct net_buf **evt)
 #if defined(CONFIG_BT_CONN)
 	/* Disconnect. */
 	rp->commands[0] |= BIT(5);
-	/* LE Connection Update, LE Read Remote Features */
-	rp->commands[27] |= BIT(2) | BIT(5);
+	/* LE Connection Update, LE Read Channel Map, LE Read Remote Features */
+	rp->commands[27] |= BIT(2) | BIT(4) | BIT(5);
 	/* LE Remote Conn Param Req and Neg Reply */
 	rp->commands[33] |= BIT(4) | BIT(5);
 #if defined(CONFIG_BT_CTLR_LE_PING)
@@ -510,6 +537,8 @@ static void read_supported_commands(struct net_buf *buf, struct net_buf **evt)
 	/* LE Read Local P256 Public Key and LE Generate DH Key*/
 	rp->commands[34] |= BIT(1) | BIT(2);
 #endif
+	/* LE Read TX Power. */
+	rp->commands[38] |= BIT(7);
 }
 
 static void read_local_features(struct net_buf *buf, struct net_buf **evt)
@@ -553,6 +582,44 @@ static int info_cmd_handle(u16_t  ocf, struct net_buf *cmd,
 	case BT_OCF(BT_HCI_OP_READ_BD_ADDR):
 		read_bd_addr(cmd, evt);
 		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+#if defined(CONFIG_BT_CTLR_CONN_RSSI)
+static void read_rssi(struct net_buf *buf, struct net_buf **evt)
+{
+	struct bt_hci_cp_read_rssi *cmd = (void *)buf->data;
+	struct bt_hci_rp_read_rssi *rp;
+	u32_t status;
+	u16_t handle;
+
+	handle = sys_le16_to_cpu(cmd->handle);
+
+	rp = cmd_complete(evt, sizeof(*rp));
+
+	status = ll_rssi_get(handle, &rp->rssi);
+
+	rp->status = (!status) ? 0x00 : BT_HCI_ERR_UNKNOWN_CONN_ID;
+	rp->handle = sys_cpu_to_le16(handle);
+	/* The Link Layer currently returns RSSI as an absolute value */
+	rp->rssi = (!status) ? -rp->rssi : 127;
+}
+#endif /* CONFIG_BT_CTLR_CONN_RSSI */
+
+static int status_cmd_handle(u16_t  ocf, struct net_buf *cmd,
+			     struct net_buf **evt)
+{
+	switch (ocf) {
+#if defined(CONFIG_BT_CTLR_CONN_RSSI)
+	case BT_OCF(BT_HCI_OP_READ_RSSI):
+		read_rssi(cmd, evt);
+		break;
+#endif /* CONFIG_BT_CTLR_CONN_RSSI */
 
 	default:
 		return -EINVAL;
@@ -962,6 +1029,21 @@ static void le_read_remote_features(struct net_buf *buf, struct net_buf **evt)
 
 	*evt = cmd_status((!status) ? 0x00 : BT_HCI_ERR_CMD_DISALLOWED);
 }
+static void le_read_chan_map(struct net_buf *buf, struct net_buf **evt)
+{
+	struct bt_hci_cp_le_read_chan_map *cmd = (void *)buf->data;
+	struct bt_hci_rp_le_read_chan_map *rp;
+	u32_t status;
+	u16_t handle;
+
+	handle = sys_le16_to_cpu(cmd->handle);
+
+	rp = cmd_complete(evt, sizeof(*rp));
+	status = ll_chm_get(handle, rp->ch_map);
+
+	rp->status = (!status) ?  0x00 : BT_HCI_ERR_UNKNOWN_CONN_ID;
+	rp->handle = sys_le16_to_cpu(handle);
+}
 
 static void le_conn_update(struct net_buf *buf, struct net_buf **evt)
 {
@@ -1252,6 +1334,15 @@ static void le_set_privacy_mode(struct net_buf *buf, struct net_buf **evt)
 }
 #endif /* CONFIG_BT_CTLR_PRIVACY */
 
+static void le_read_tx_power(struct net_buf *buf, struct net_buf **evt)
+{
+	struct bt_hci_rp_le_read_tx_power *rp;
+
+	rp = cmd_complete(evt, sizeof(*rp));
+	rp->status = 0x00;
+	ll_tx_power_get(&rp->min_tx_power, &rp->max_tx_power);
+}
+
 static int controller_cmd_handle(u16_t  ocf, struct net_buf *cmd,
 				 struct net_buf **evt)
 {
@@ -1365,6 +1456,10 @@ static int controller_cmd_handle(u16_t  ocf, struct net_buf *cmd,
 #endif /* CONFIG_BT_CTLR_LE_ENC */
 #endif /* CONFIG_BT_PERIPHERAL */
 
+	case BT_OCF(BT_HCI_OP_LE_READ_CHAN_MAP):
+		le_read_chan_map(cmd, evt);
+		break;
+
 	case BT_OCF(BT_HCI_OP_LE_READ_REMOTE_FEATURES):
 		le_read_remote_features(cmd, evt);
 		break;
@@ -1444,6 +1539,9 @@ static int controller_cmd_handle(u16_t  ocf, struct net_buf *cmd,
 		break;
 #endif /* CONFIG_BT_CTLR_PRIVACY */
 
+	case BT_OCF(BT_HCI_OP_LE_READ_TX_POWER):
+		le_read_tx_power(cmd, evt);
+		break;
 
 	default:
 		return -EINVAL;
@@ -1550,6 +1648,9 @@ struct net_buf *hci_cmd_handle(struct net_buf *cmd)
 		break;
 	case BT_OGF_INFO:
 		err = info_cmd_handle(ocf, cmd, &evt);
+		break;
+	case BT_OGF_STATUS:
+		err = status_cmd_handle(ocf, cmd, &evt);
 		break;
 	case BT_OGF_LE:
 		err = controller_cmd_handle(ocf, cmd, &evt);
@@ -1727,6 +1828,7 @@ static void le_advertising_report(struct pdu_data *pdu_data, u8_t *b,
 		data_len = 0;
 	}
 
+	/* The Link Layer currently returns RSSI as an absolute value */
 	rssi = -b[offsetof(struct radio_pdu_node_rx, pdu_data) +
 		  offsetof(struct pdu_adv, payload) + adv->len];
 
@@ -1814,6 +1916,7 @@ static void le_adv_ext_report(struct pdu_data *pdu_data, u8_t *b,
 	struct pdu_adv *adv = (struct pdu_adv *)pdu_data;
 	s8_t rssi;
 
+	/* The Link Layer currently returns RSSI as an absolute value */
 	rssi = -b[offsetof(struct radio_pdu_node_rx, pdu_data) +
 		  offsetof(struct pdu_adv, payload) + adv->len];
 
@@ -1899,6 +2002,7 @@ static void le_scan_req_received(struct pdu_data *pdu_data, u8_t *b,
 		addr.type = adv->tx_addr;
 		memcpy(&addr.a.val[0], &adv->payload.scan_req.scan_addr[0],
 		       sizeof(bt_addr_t));
+		/* The Link Layer currently returns RSSI as an absolute value */
 		rssi = -b[offsetof(struct radio_pdu_node_rx, pdu_data) +
 			  offsetof(struct pdu_adv, payload) + adv->len];
 
@@ -2328,6 +2432,10 @@ static void le_conn_param_req(struct pdu_data *pdu_data, u16_t handle,
 
 	if (!(event_mask & BT_EVT_MASK_LE_META_EVENT) ||
 	    !(le_event_mask & BT_EVT_MASK_LE_CONN_PARAM_REQ)) {
+		/* event masked, reject the conn param req */
+		ll_conn_update(handle, 2, BT_HCI_ERR_UNSUPP_REMOTE_FEATURE,
+			       0, 0, 0);
+
 		return;
 	}
 

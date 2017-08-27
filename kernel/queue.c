@@ -65,9 +65,10 @@ void k_queue_init(struct k_queue *queue)
 	// sys_dlist_init에서 한일:
 	// (&(&(&k_sys_work_q)->fifo)->wait_q)->head: &(&(&k_sys_work_q)->fifo)->wait_q
 	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
-
+#if defined(CONFIG_POLL)
 	// queue: &(&k_sys_work_q)->fifo
-	_INIT_OBJ_POLL_EVENT(queue); // null function
+	sys_dlist_init(&queue->poll_events);
+#endif
 
 	// queue: &(&k_sys_work_q)->fifo
 	SYS_TRACING_OBJ_INIT(k_queue, queue); // null function
@@ -83,13 +84,12 @@ static void prepare_thread_to_run(struct k_thread *thread, void *data)
 #endif /* CONFIG_POLL */
 
 /* returns 1 if a reschedule must take place, 0 otherwise */
-static inline int handle_poll_event(struct k_queue *queue)
+static inline int handle_poll_events(struct k_queue *queue)
 {
 #ifdef CONFIG_POLL
 	u32_t state = K_POLL_STATE_DATA_AVAILABLE;
 
-	return queue->poll_event ?
-	       _handle_obj_poll_event(&queue->poll_event, state) : 0;
+	return _handle_obj_poll_events(&queue->poll_events, state);
 #else
 	return 0;
 #endif
@@ -111,7 +111,7 @@ void k_queue_cancel_wait(struct k_queue *queue)
 		}
 	}
 #else
-	if (handle_poll_event(queue)) {
+	if (handle_poll_events(queue)) {
 		(void)_Swap(key);
 		return;
 	}
@@ -142,7 +142,7 @@ void k_queue_insert(struct k_queue *queue, void *prev, void *data)
 	sys_slist_insert(&queue->data_q, prev, data);
 
 #if defined(CONFIG_POLL)
-	if (handle_poll_event(queue)) {
+	if (handle_poll_events(queue)) {
 		(void)_Swap(key);
 		return;
 	}
@@ -187,7 +187,7 @@ void k_queue_append_list(struct k_queue *queue, void *head, void *tail)
 	}
 #else
 	sys_slist_append_list(&queue->data_q, head, tail);
-	if (handle_poll_event(queue)) {
+	if (handle_poll_events(queue)) {
 		(void)_Swap(key);
 		return;
 	}
@@ -224,11 +224,10 @@ static void *k_queue_poll(struct k_queue *queue, s32_t timeout)
 	event.state = K_POLL_STATE_NOT_READY;
 
 	err = k_poll(&event, 1, timeout);
-	if (err == -EAGAIN) {
+	if (err) {
 		return NULL;
 	}
 
-	__ASSERT_NO_MSG(err == 0);
 	__ASSERT_NO_MSG(event.state == K_POLL_STATE_FIFO_DATA_AVAILABLE);
 
 	return sys_slist_get(&queue->data_q);

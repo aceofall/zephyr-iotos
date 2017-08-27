@@ -38,18 +38,30 @@ Kernel
 Architectures
 *************
 
-* change description
+* arm: Added STM32F405, STM32F417, STM32F103x8 SoCs
+* arm: Added TI CC2650 SoC
+* arm: Removed TI CC3200 SoC
+* arm: Added MPU support to nRF52, STM32L4, and STM32F3
 
 Boards
 ******
 
-* change description
+* Added device tree support for Intel Quark based microcontroller boards
+  such as Arduino_101, tinytile, and Quark_d2000_crb.
+* arm: Added Atmel SAM4S Xplained board
+* arm: Added Olimex STM32-E407 and STM32-P405 boards
+* arm: Added STM32F412 Nucleo and STM32F429I-DISC1 boards
+* arm: Added TI SensorTag board
+* arm: Removed TI CC3200 LaunchXL board
+* arm: Added VBLUno51 and VBLUno52 boards
 
 Drivers and Sensors
 *******************
 
 * KW40Z IEEE 802.15.4 radio driver support added
 * APDS9960 sensor driver added
+* Added TICKLESS KERNEL support for nrf RTC Timer.
+* Added Kinetis adc and pwm drivers
 
 Networking
 **********
@@ -125,7 +137,9 @@ Documentation
 Tests and Samples
 *****************
 
-* change description
+* Added test Case to stress test round robin scheduling in schedule_api test.
+* Added test case to stress test priority scheduling in scheduling_api_test.
+
 
 JIRA Related Items
 ******************

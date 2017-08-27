@@ -5,7 +5,7 @@ VERSION_MINOR 	   = 9
 # KID 20170613
 PATCHLEVEL 	   = 0
 VERSION_RESERVED   = 0
-EXTRAVERSION       = -rc1
+EXTRAVERSION       = -rc2
 NAME 		   = Zephyr Kernel
 
 export SOURCE_DIR PROJECT
