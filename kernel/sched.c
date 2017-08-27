@@ -348,18 +348,16 @@ void _pend_thread(struct k_thread *thread, _wait_q_t *wait_q, s32_t timeout)
 	sys_dlist_t *wait_q_list = (sys_dlist_t *)wait_q;
 	// wait_q_list: &(&(&k_sys_work_q)->fifo)->wait_q
 
-	sys_dnode_t *node;
+	struct k_thread *pending;
 
 	// wait_q_list: &(&(&k_sys_work_q)->fifo)->wait_q
 	// sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->wait_q): NULL
-	SYS_DLIST_FOR_EACH_NODE(wait_q_list, node) {
+	SYS_DLIST_FOR_EACH_CONTAINER(wait_q_list, pending, base.k_q_node) {
 	// for (node = sys_dlist_peek_head(&(&(&k_sys_work_q)->fifo)->wait_q); node;
 	//      node = sys_dlist_peek_next(&(&(&k_sys_work_q)->fifo)->wait_q, node))
-
-		struct k_thread *pending = (struct k_thread *)node;
-
 		if (_is_t1_higher_prio_than_t2(thread, pending)) {
-			sys_dlist_insert_before(wait_q_list, node,
+			sys_dlist_insert_before(wait_q_list,
+						&pending->base.k_q_node,
 						&thread->base.k_q_node);
 			goto inserted;
 		}
