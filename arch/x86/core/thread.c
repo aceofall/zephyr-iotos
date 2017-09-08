@@ -25,115 +25,9 @@
 /* forward declaration */
 
 #if defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) \
-	|| defined(CONFIG_X86_IAMCU) // CONFIG_GDB_INFO=n, CONFIG_DEBUG_INFO=n, CONFIG_X86_IAMCU=y
-void _thread_entry_wrapper(_thread_entry_t, void *,
-			   void *, void *);
-#endif
-
-/**
- *
- * @brief Initialize a new execution thread
- *
- * This function is utilized to initialize all execution threads (both fiber
- * and task).  The 'priority' parameter will be set to -1 for the creation of
- * task.
- *
- * This function is called by _new_thread() to initialize tasks.
- *
- * @param thread pointer to thread struct memory
- * @param pStackMem pointer to thread stack memory
- * @param stackSize size of a stack in bytes
- * @param priority thread priority
- * @param options thread options: K_ESSENTIAL, K_FP_REGS, K_SSE_REGS
- *
- * @return N/A
- */
-// KID 20170522
-// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: &_main_thread_s
-// KID 20170525
-// pStackMem: _idle_stack, stackSize: 256, priority: 15, options: 0x1, thread: &_idle_thread_s
-// KID 20170717
-// pStackMem: sys_work_q_stack, stackSize: 1024, priority: -1, options: 0, thread: &(&k_sys_work_q)->thread
-static void _new_thread_internal(char *pStackMem, unsigned int stackSize,
-				 int priority,
-				 unsigned int options,
-				 struct k_thread *thread)
-{
-	unsigned long *pInitialCtx;
-
-#if (defined(CONFIG_FP_SHARING) || defined(CONFIG_GDB_INFO)) // CONFIG_FP_SHARING=n, CONFIG_GDB_INFO=n
-	thread->arch.excNestCount = 0;
-#endif /* CONFIG_FP_SHARING || CONFIG_GDB_INFO */
-
-	/*
-	 * The creation of the initial stack for the task has already been done.
-	 * Now all that is needed is to set the ESP. However, we have been passed
-	 * the base address of the stack which is past the initial stack frame.
-	 * Therefore some of the calculations done in the other routines that
-	 * initialize the stack frame need to be repeated.
-	 */
-
-	// pStackMem: _main_stack, stackSize: 1024
-	// STACK_ROUND_DOWN(_main_stack + 1024): _main_stack + 1024
-	// pStackMem: _idle_stack, stackSize: 256
-	// STACK_ROUND_DOWN(_idle_stack + 256): _idle_stack + 256
-	// pStackMem: sys_work_q_stack, stackSize: 1024
-	// STACK_ROUND_DOWN(sys_work_q_stack + 1024): sys_work_q_stack + 1024
-	pInitialCtx = (unsigned long *)STACK_ROUND_DOWN(pStackMem + stackSize);
-	// pInitialCtx: _main_stack + 1024
-	// pInitialCtx: _idle_stack + 256
-	// pInitialCtx: sys_work_q_stack + 1024
-
-#ifdef CONFIG_THREAD_MONITOR // CONFIG_THREAD_MONITOR=n
-	/*
-	 * In debug mode thread->entry give direct access to the thread entry
-	 * and the corresponding parameters.
-	 */
-	thread->entry = (struct __thread_entry *)(pInitialCtx -
-		sizeof(struct __thread_entry));
-#endif
-
-	/* The stack needs to be set up so that when we do an initial switch
-	 * to it in the middle of _Swap(), it needs to be set up as follows:
-	 *  - 4 thread entry routine parameters
-	 *  - eflags
-	 *  - eip (so that _Swap() "returns" to the entry point)
-	 *  - edi, esi, ebx, ebp,  eax
-	 */
-	// pInitialCtx: _main_stack + 1024
-	// pInitialCtx: _idle_stack + 256
-	// pInitialCtx: sys_work_q_stack + 1024
-	pInitialCtx -= 11;
-	// pInitialCtx: _main_stack + 980
-	// pInitialCtx: _idle_stack + 212
-	// pInitialCtx: sys_work_q_stack + 980
-
-	// thread->callee_saved.esp: (&_main_thread_s)->callee_saved.esp, pInitialCtx: _main_stack + 980
-	// thread->callee_saved.esp: (&_idle_thread_s)->callee_saved.esp, pInitialCtx: _idle_stack + 212
-	// thread->callee_saved.esp: (&(&k_sys_work_q)->thread)->callee_saved.esp, pInitialCtx: sys_work_q_stack + 980
-	thread->callee_saved.esp = (unsigned long)pInitialCtx;
-	// thread->callee_saved.esp: (&_main_thread_s)->callee_saved.esp: _main_stack + 980
-	// thread->callee_saved.esp: (&_idle_thread_s)->callee_saved.esp: _idle_stack + 212
-	// thread->callee_saved.esp: (&(&k_sys_work_q)->thread)->callee_saved.esp: sys_work_q_stack + 980
-
-	// thread->coopReg.esp: (&_main_thread_s)->coopReg.esp: ????
-	// thread->coopReg.esp: (&_idle_thread_s)->coopReg.esp: ????
-	// thread->coopReg.esp: (&(&k_sys_work_q)->thread)->coopReg.esp: ????
-	PRINTK("\nInitial context ESP = 0x%x\n", thread->coopReg.esp); // null function
-
-	// thread: &_main_thread_s
-	// thread: &_idle_thread_s
-	// thread: &(&k_sys_work_q)->thread
-	PRINTK("\nstruct thread * = 0x%x", thread); // null function
-
-	// thread: &_main_thread_s
-	// thread: &_idle_thread_s
-	// thread: &(&k_sys_work_q)->thread
-	thread_monitor_init(thread); // null function
-}
-
-#if defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) \
 	|| defined(CONFIG_X86_IAMCU)
+extern void _thread_entry_wrapper(_thread_entry_t entry,
+				  void *p1, void *p2, void *p3);
 /**
  *
  * @brief Adjust stack/parameters before invoking _thread_entry
@@ -213,26 +107,38 @@ __asm__("\t.globl _thread_entry\n"
 	"\tjmp _thread_entry\n");
 #endif /* CONFIG_GDB_INFO || CONFIG_DEBUG_INFO) || CONFIG_X86_IAMCU */
 
+/* Initial thread stack frame, such that everything is laid out as expected
+ * for when _Swap() switches to it for the first time.
+ */
+struct _x86_initial_frame {
+	u32_t swap_retval;
+	u32_t ebp;
+	u32_t ebx;
+	u32_t esi;
+	u32_t edi;
+	void *_thread_entry;
+	u32_t eflags;
+	_thread_entry_t entry;
+	void *p1;
+	void *p2;
+	void *p3;
+};
+
 /**
- *
  * @brief Create a new kernel execution thread
  *
- * This function is utilized to create execution threads for both fiber
- * threads and kernel tasks.
+ * Initializes the k_thread object and sets up initial stack frame.
  *
  * @param thread pointer to thread struct memory, including any space needed
  *		for extra coprocessor context
- * @param pStackmem the pointer to aligned stack memory
- * @param stackSize the stack size in bytes
- * @param pEntry thread entry point routine
+ * @param stack the pointer to aligned stack memory
+ * @param stack_size the stack size in bytes
+ * @param entry thread entry point routine
  * @param parameter1 first param to entry point
  * @param parameter2 second param to entry point
  * @param parameter3 third param to entry point
  * @param priority thread priority
  * @param options thread options: K_ESSENTIAL, K_FP_REGS, K_SSE_REGS
- *
- *
- * @return opaque pointer to initialized k_thread structure
  */
 // KID 20170519
 // _main_thread: &_main_thread_s, _main_stack, MAIN_STACK_SIZE: 1024,
@@ -244,194 +150,51 @@ __asm__("\t.globl _thread_entry\n"
 // new_thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, entry: work_q_main,
 // p1: &k_sys_work_q, p2: 0, p3: 0, prio: -1, options: 0
 void _new_thread(struct k_thread *thread, k_thread_stack_t stack,
-		 size_t stackSize,
-		 _thread_entry_t pEntry,
+		 size_t stack_size, _thread_entry_t entry,
 		 void *parameter1, void *parameter2, void *parameter3,
 		 int priority, unsigned int options)
 {
-	char *pStackMem;
+	char *stack_buf;
+	char *stack_high;
+	struct _x86_initial_frame *initial_frame;
 
-	// priority: 0, pEntry: _main
-	// _is_idle_thread(_main): 0, _is_prio_higher_or_equal((0), 14): 1, _is_prio_lower_or_equal((0), -16): 1
-	//
-	// _ASSERT_VALID_PRIO(0, _main):
-	// __ASSERT(((0) == 15 && _is_idle_thread(_main)) || (_is_prio_higher_or_equal((0), 14) && _is_prio_lower_or_equal((0), -16)),
-	//          "invalid priority (%d); allowed range: %d to %d", (0), 14, -16); // null function
-	//
-	// priority: 15, pEntry: idle
-	// _is_idle_thread(idle): 1, _is_prio_higher_or_equal((15), 14): 0, _is_prio_lower_or_equal((15), -16): 1
-	//
-	// _ASSERT_VALID_PRIO(15, idle):
-	// __ASSERT(((15) == 15 && _is_idle_thread(idle)) || (_is_prio_higher_or_equal((15), 14) && _is_prio_lower_or_equal((15), -16)),
-	//          "invalid priority (%d); allowed range: %d to %d", (15), 14, -16); // null function
-	//
-	// priority: -1, pEntry: work_q_main
-	// _is_idle_thread(work_q_main): 0, _is_prio_higher_or_equal((-1), 14): 1, _is_prio_lower_or_equal((-1), -16): 1
-	//
-	// _ASSERT_VALID_PRIO(-1, work_q_main):
-	// __ASSERT(((-1) == 15 && _is_idle_thread(work_q_main)) || (_is_prio_higher_or_equal((-1), 14) && _is_prio_lower_or_equal((-1), -16)),
-	//          "invalid priority (%d); allowed range: %d to %d", (-1), 14, -16); // null function
-	_ASSERT_VALID_PRIO(priority, pEntry);
-
-	unsigned long *pInitialThread;
-
-#if CONFIG_X86_STACK_PROTECTION // CONFIG_X86_STACK_PROTECTION=n
+	_ASSERT_VALID_PRIO(priority, entry);
+#if CONFIG_X86_STACK_PROTECTION
 	_x86_mmu_set_flags(stack, MMU_PAGE_SIZE, MMU_ENTRY_NOT_PRESENT,
 			   MMU_PTE_P_MASK);
 #endif
-	pStackMem = K_THREAD_STACK_BUFFER(stack);
+	stack_buf = K_THREAD_STACK_BUFFER(stack);
+	_new_thread_init(thread, stack_buf, stack_size, priority, options);
 
-	// thread: &_main_thread_s, pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1
-	// thread: &_idle_thread_s, pStackMem: _idle_stack, stackSize: 256, priority: 15, options: 0x1
-	// thread: &(&k_sys_work_q)->thread, pStackMem: sys_work_q_stack, stackSize: 1024, priority: -1, options: 0
-	_new_thread_init(thread, pStackMem, stackSize, priority, options);
+	stack_high = (char *)STACK_ROUND_DOWN(stack_buf + stack_size);
 
-	// _new_thread_init 에서 한일:
-	// (&(&_main_thread_s)->base)->user_options: 0x1
-	// (&(&_main_thread_s)->base)->thread_state: 0x4
-	// (&(&_main_thread_s)->base)->prio: 0
-	// (&(&_main_thread_s)->base)->sched_locked: 0
-	// (&(&(&_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
-	// (&(&(&_main_thread_s)->base)->timeout)->wait_q: NULL
-	// (&(&(&_main_thread_s)->base)->timeout)->thread: NULL
-	// (&(&(&_main_thread_s)->base)->timeout)->func: NULL
-	//
-	// (&_main_thread_s)->init_data: NULL
-	// (&_main_thread_s)->fn_abort: NULL
-
-	// _new_thread_init 에서 한일:
-	// (&(&_idle_thread_s)->base)->user_options: 0x1
-	// (&(&_idle_thread_s)->base)->thread_state: 0x4
-	// (&(&_idle_thread_s)->base)->prio: 15
-	// (&(&_idle_thread_s)->base)->sched_locked: 0
-	// (&(&(&_idle_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
-	// (&(&(&_idle_thread_s)->base)->timeout)->wait_q: NULL
-	// (&(&(&_idle_thread_s)->base)->timeout)->thread: NULL
-	// (&(&(&_idle_thread_s)->base)->timeout)->func: NULL
-	//
-	// (&_idle_thread_s)->init_data: NULL
-	// (&_idle_thread_s)->fn_abort: NULL
-
-	// _new_thread_init 에서 한일:
-	// (&(&(&k_sys_work_q)->thread)->base)->user_options: 0
-	// (&(&(&k_sys_work_q)->thread)->base)->thread_state: 0x4
-	// (&(&(&k_sys_work_q)->thread)->base)->prio: -1
-	// (&(&(&k_sys_work_q)->thread)->base)->sched_locked: 0
-	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->delta_ticks_from_prev: -1
-	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->wait_q: NULL
-	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->thread: NULL
-	// (&(&(&(&k_sys_work_q)->thread)->base)->timeout)->func: NULL
-	//
-	// (&(&k_sys_work_q)->thread)->init_data: NULL
-	// (&(&k_sys_work_q)->thread)->fn_abort: NULL
-
-	/* carve the thread entry struct from the "base" of the stack */
-
-	// pStackMem: _main_stack, stackSize: 1024, STACK_ROUND_DOWN(_main_stack + 1024): _main_stack + 1024
-	// pStackMem: _idle_stack, stackSize: 256, STACK_ROUND_DOWN(_idle_stack + 256): _idle_stack + 256
-	// pStackMem: sys_work_q_stack, stackSize: 1024, STACK_ROUND_DOWN(sys_work_q_stack + 1024): sys_work_q_stack + 1024
-	pInitialThread =
-		(unsigned long *)STACK_ROUND_DOWN(pStackMem + stackSize);
-	// pInitialThread: (unsigned long *)(_main_stack + 1024)
-	// pInitialThread: (unsigned long *)(_idle_stack + 256)
-	// pInitialThread: (unsigned long *)(sys_work_q_stack + 1024)
-
-	/*
-	 * Create an initial context on the stack expected by the _Swap()
-	 * primitive.
-	 */
-
-	/* push arguments required by _thread_entry() */
-
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1024), parameter3: NULL
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 256), parameter3: NULL
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1024), parameter3: NULL
-	*--pInitialThread = (unsigned long)parameter3;
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1024): NULL
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 256): NULL
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1024): &k_sys_work_q
-
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1020), parameter2: NULL
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 252), parameter2: NULL
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1020), parameter2: NULL
-	*--pInitialThread = (unsigned long)parameter2;
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1020): NULL
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 252): NULL
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1020): NULL
-
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1016), parameter1: NULL
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 248), parameter1: NULL
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1016), parameter1: NULL
-	*--pInitialThread = (unsigned long)parameter1;
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1016): NULL
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 248): NULL
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1016): NULL
-
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1016), pEntry: _main
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 244), pEntry: idle
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1016), pEntry: work_q_main
-	*--pInitialThread = (unsigned long)pEntry;
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1016): _main
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 244): idle
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1016), pEntry: work_q_main
-
-	/* push initial EFLAGS; only modify IF and IOPL bits */
-
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1012),
-	// EflagsGet(): eflag 레지스터 값, EFLAGS_MASK: 0x00003200, EFLAGS_INITIAL: 0x00000200
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 240),
-	// EflagsGet(): eflag 레지스터 값, EFLAGS_MASK: 0x00003200, EFLAGS_INITIAL: 0x00000200
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1012),
-	// EflagsGet(): eflag 레지스터 값, EFLAGS_MASK: 0x00003200, EFLAGS_INITIAL: 0x00000200
-	*--pInitialThread = (EflagsGet() & ~EFLAGS_MASK) | EFLAGS_INITIAL;
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1012): eflag 레지스터 값 | 0x00000200
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 240): eflag 레지스터 값 | 0x00000200
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1012): eflag 레지스터 값 | 0x00000200
-
+	/* Create an initial context on the stack expected by _Swap() */
+	initial_frame = (struct _x86_initial_frame *)
+		(stack_high - sizeof(struct _x86_initial_frame));
+	/* _thread_entry() arguments */
+	initial_frame->entry = entry;
+	initial_frame->p1 = parameter1;
+	initial_frame->p2 = parameter2;
+	initial_frame->p3 = parameter3;
+	/* initial EFLAGS; only modify IF and IOPL bits */
+	initial_frame->eflags = (EflagsGet() & ~EFLAGS_MASK) | EFLAGS_INITIAL;
 #if defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) \
-	|| defined(CONFIG_X86_IAMCU) // CONFIG_GDB_INFO=n, CONFIG_DEBUG_INFO=n, CONFIG_X86_IAMCU=y
-	/*
-	 * Arrange for the _thread_entry_wrapper() function to be called
-	 * to adjust the stack before _thread_entry() is invoked.
+	|| defined(CONFIG_X86_IAMCU)
+	 /* Adjust the stack before _thread_entry() is invoked */
+	initial_frame->_thread_entry = _thread_entry_wrapper;
+#else
+	initial_frame->_thread_entry = _thread_entry;
+#endif
+	/* Remaining _x86_initial_frame members can be garbage, _thread_entry()
+	 * doesn't care about their state when execution begins
 	 */
+	thread->callee_saved.esp = (unsigned long)initial_frame;
 
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1008)
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 236)
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1008)
-	*--pInitialThread = (unsigned long)_thread_entry_wrapper;
-	// *pInitialThread: *(unsigned long *)(_main_stack + 1008): _thread_entry_wrapper
-	// *pInitialThread: *(unsigned long *)(_idle_stack + 236): _thread_entry_wrapper
-	// *pInitialThread: *(unsigned long *)(sys_work_q_stack + 1008): _thread_entry_wrapper
-
-#else /* defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) */
-
-	*--pInitialThread = (unsigned long)_thread_entry;
-
-#endif /* defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) */
-
-	/*
-	 * note: stack area for edi, esi, ebx, ebp, and eax registers can be
-	 * left
-	 * uninitialized, since _thread_entry() doesn't care about the values
-	 * of these registers when it begins execution
-	 */
-
-	/*
-	 * The k_thread structure is located at the "low end" of memory set
-	 * aside for the thread's stack.
-	 */
-
-	// pStackMem: _main_stack, stackSize: 1024, priority: 0, options: 0x1, thread: &_main_thread_s
-	// pStackMem: _idle_stack, stackSize: 256, priority: 15, options: 0x1, thread: &_idle_thread_s
-	// pStackMem: sys_work_q_stack, stackSize: 1024, priority: -1, options: 0, thread: &(&k_sys_work_q)->thread
-	_new_thread_internal(pStackMem, stackSize, priority, options, thread);
-
-	// _new_thread_internal 에서 한일:
-	// (&_main_thread_s)->callee_saved.esp: _main_stack + 980
-
-	// _new_thread_internal 에서 한일:
-	// (&_idle_thread_s)->callee_saved.esp: _idle_stack + 212
-
-	// _new_thread_internal 에서 한일:
-	// (&(&k_sys_work_q)->thread)->callee_saved.esp: sys_work_q_stack + 980
+#if (defined(CONFIG_FP_SHARING) || defined(CONFIG_GDB_INFO))
+	thread->arch.excNestCount = 0;
+#endif /* CONFIG_FP_SHARING || CONFIG_GDB_INFO */
+#ifdef CONFIG_THREAD_MONITOR
+	thread->entry = (struct __thread_entry *)&initial_frame->entry;
+	thread_monitor_init(thread);
+#endif
 }

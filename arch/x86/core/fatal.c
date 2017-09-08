@@ -64,10 +64,6 @@ FUNC_NORETURN void _NanoFatalErrorHandler(unsigned int reason,
 		printk("*****\n");
 		break;
 	}
-	case _NANO_ERR_INVALID_TASK_EXIT:
-		printk("***** Invalid Exit Software Error! *****\n");
-		break;
-
 #if defined(CONFIG_STACK_CANARIES) || defined(CONFIG_STACK_SENTINEL) || \
 		defined(CONFIG_X86_STACK_PROTECTION)
 	case _NANO_ERR_STACK_CHK_FAIL:
@@ -157,7 +153,12 @@ const NANO_ESF _default_esf = {
 static FUNC_NORETURN void generic_exc_handle(unsigned int vector,
 					     const NANO_ESF *pEsf)
 {
-	printk("***** CPU exception %d\n", vector);
+	printk("***** ");
+	if (vector == 13) {
+		printk("General Protection Fault\n");
+	} else {
+		printk("CPU exception %d\n", vector);
+	}
 	if ((1 << vector) & _EXC_ERROR_CODE_FAULTS) {
 		printk("***** Exception code: 0x%x\n", pEsf->errorCode);
 	}

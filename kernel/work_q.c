@@ -133,6 +133,8 @@ void k_work_q_start(struct k_work_q *work_q, k_thread_stack_t stack,
 	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
 	//
 	// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
+
+	_k_object_init(work_q);
 }
 
 #ifdef CONFIG_SYS_CLOCK_EXISTS
@@ -150,6 +152,8 @@ void k_delayed_work_init(struct k_delayed_work *work, k_work_handler_t handler)
 	k_work_init(&work->work, handler);
 	_init_timeout(&work->timeout, work_timeout);
 	work->work_q = NULL;
+
+	_k_object_init(work);
 }
 
 int k_delayed_work_submit_to_queue(struct k_work_q *work_q,

@@ -248,6 +248,12 @@ static void _main(void *unused1, void *unused2, void *unused3)
 
 	// _SYS_INIT_LEVEL_POST_KERNEL: 2
 	_sys_device_do_config_level(_SYS_INIT_LEVEL_POST_KERNEL);
+	if (boot_delay > 0) {
+		printk("***** delaying boot " STRINGIFY(CONFIG_BOOT_DELAY)
+		       "ms (per build configuration) *****\n");
+		k_sleep(CONFIG_BOOT_DELAY);
+	}
+	PRINT_BOOT_BANNER();
 
 	// _sys_device_do_config_level 에서 한일:
 	// section ".init_POST_KERNEL[0-9][0-9]" 순으로 소팅되어 컴파일 된 코드들 순으로 분석 진행
@@ -342,12 +348,6 @@ static void _main(void *unused1, void *unused2, void *unused3)
 	__do_init_array_aux();
 #endif
 
-	if (boot_delay > 0) {
-		printk("***** delaying boot " STRINGIFY(CONFIG_BOOT_DELAY)
-		       "ms (per build configuration) *****\n");
-		k_sleep(CONFIG_BOOT_DELAY);
-	}
-	PRINT_BOOT_BANNER();
 	_init_static_threads();
 
 
@@ -414,6 +414,11 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	// _THREAD_DUMMY: 0x1
 	dummy_thread->base.thread_state = _THREAD_DUMMY;
 	// dummy_thread->base.thread_state: (struct k_thread* &dummy_thread_memory)->base.thread_state: 0x1
+
+#ifdef CONFIG_THREAD_STACK_INFO
+	dummy_thread->stack_info.start = 0;
+	dummy_thread->stack_info.size = 0;
+#endif
 #endif
 
 	/* _kernel.ready_q is all zeroes */
@@ -498,6 +503,7 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 
 	// _main_thread: &_main_thread_s
 	_add_thread_to_ready_q(_main_thread);
+	_k_object_init(_main_thread);
 
 	// _add_thread_to_ready_q 에서 한일:
 	// _kernel.ready_q.prio_bmap[0]: 0x10000
@@ -554,6 +560,8 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	// (&_kernel.ready_q.q[31])->tail: &(&_idle_thread_s)->base.k_q_node
 	//
 	// _kernel.ready_q.cache: &_main_thread_s
+
+	_k_object_init(_idle_thread);
 #endif
 
 	initialize_timeouts();
@@ -610,9 +618,12 @@ FUNC_NORETURN void _Cstart(void)
 #ifdef CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN // CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN=n
 	struct k_thread *dummy_thread = NULL;
 #else
+	/* Normally, kernel objects are not allowed on the stack, special case
+	 * here since this is just being used to bootstrap the first _Swap()
+	 */
 	// __stack: __aligned(4), _K_THREAD_NO_FLOAT_SIZEOF: 56
-	struct k_thread dummy_thread_memory;
-	struct k_thread *dummy_thread = &dummy_thread_memory;
+	char dummy_thread_memory[sizeof(struct k_thread)];
+	struct k_thread *dummy_thread = (struct k_thread *)&dummy_thread_memory;
 	// dummy_thread: &dummy_thread_memory
 #endif
 

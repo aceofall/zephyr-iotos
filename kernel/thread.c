@@ -193,10 +193,6 @@ FUNC_NORETURN void _thread_entry(void (*entry)(void *, void *, void *),
 	_check_stack_sentinel();
 #endif
 #ifdef CONFIG_MULTITHREADING
-	if (_is_thread_essential()) {
-		_k_except_reason(_NANO_ERR_INVALID_TASK_EXIT);
-	}
-
 	k_thread_abort(_current);
 #else
 	for (;;) {
@@ -216,13 +212,18 @@ FUNC_NORETURN void _thread_entry(void (*entry)(void *, void *, void *),
 // KID 20170717
 // KID 20170726
 // thread: &(&k_sys_work_q)->thread
-static void start_thread(struct k_thread *thread)
+void k_thread_start(struct k_thread *thread)
 {
 	// irq_lock(): eflags 값
 	int key = irq_lock(); /* protect kernel queues */
 	// key: eflags 값
 
 	// thread: &(&k_sys_work_q)->thread
+	if (_has_thread_started(thread)) {
+		irq_unlock(key);
+		return;
+	}
+
 	_mark_thread_as_started(thread);
 
 	// _mark_thread_as_started 에서 한일:
@@ -291,7 +292,7 @@ static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 	// delay: 0
 	if (delay == 0) {
 		// thread: &(&k_sys_work_q)->thread
-		start_thread(thread);
+		k_thread_start(thread);
 
 		// start_thread 에서 한일:
 		// 생성된 쓰레드 &(&k_sys_work_q)->thread 을 시작 시키기 위해 레디큐에 등록함
@@ -338,7 +339,7 @@ static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 	}
 #else
 	ARG_UNUSED(delay);
-	start_thread(thread);
+	k_thread_start(thread);
 #endif
 }
 #endif
@@ -363,6 +364,9 @@ k_tid_t k_thread_create(struct k_thread *new_thread,
 	_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3,
 		    prio, options);
 
+	// new_thread: &(&k_sys_work_q)->thread
+	_k_object_init(new_thread);
+
 	// _new_thread 에서 한일:
 	// (&(&(&k_sys_work_q)->thread)->base)->user_options: 0
 	// (&(&(&k_sys_work_q)->thread)->base)->thread_state: 0x4
@@ -385,47 +389,47 @@ k_tid_t k_thread_create(struct k_thread *new_thread,
 	//
 	// (&(&k_sys_work_q)->thread)->callee_saved.esp: sys_work_q_stack + 980
 
-	// new_thread: &(&k_sys_work_q)->thread, delay: 0
-	schedule_new_thread(new_thread, delay);
+	if (delay != K_FOREVER) {
+    // new_thread: &(&k_sys_work_q)->thread, delay: 0
+		schedule_new_thread(new_thread, delay);
 
-	// schedule_new_thread 에서 한일:
-	// 생성된 쓰레드 &(&k_sys_work_q)->thread 을 시작 시키기 위해 레디큐에 등록함
-	//
-	// (&(&k_sys_work_q)->thread)->base.thread_state: 0
-	//
-	// _kernel.ready_q.prio_bmap[0]: 0x80018000
-	//
-	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next: &_kernel.ready_q.q[15]
-	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&_kernel.ready_q.q[15])->tail
-	// (&_kernel.ready_q.q[15])->tail->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
-	// (&_kernel.ready_q.q[15])->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
-	//
-	// _kernel.ready_q.cache: &(&k_sys_work_q)->thread
-	//
-	// 현재 실행 중인 &_main_thread_s 보다 우선 순위가 높은 &(&k_sys_work_q)->thread 가 실행하여
-	// &_main_thread_s 는 선점됨, work_q_main이 실행 되다가 &(&k_sys_work_q)->fifo에 있는 큐에
-	// 연결되어 있는 잡이 비어 있는 상태를 확인 후 &(&(&k_sys_work_q)->fifo)->wait_q 인 웨이트 큐에
-	// &(&(&k_sys_work_q)->thread)->base.k_q_node 를 등록하고 현재 쓰레드 &(&k_sys_work_q)->thread 는
-	// _THREAD_PENDING 상태롤 변경, 변경된 이후 다시 &_main_thread_s 로 쓰레드 복귀 하여 수행 됨
-	//
-	// &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
-	//
-	// (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
-	// (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
-	//
-	// _kernel.ready_q.prio_bmap[0]: 0x80010000
-	// _kernel.ready_q.cache: &_main_thread_s
-	//
-	// &(&(&k_sys_work_q)->fifo)->wait_q 에 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 tail로 추가함
-	//
-	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
-	// (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
-	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
-	// (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
-	//
-	// (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
-
-	// new_thread: &(&k_sys_work_q)->thread
+    // schedule_new_thread 에서 한일:
+    // 생성된 쓰레드 &(&k_sys_work_q)->thread 을 시작 시키기 위해 레디큐에 등록함
+    //
+    // (&(&k_sys_work_q)->thread)->base.thread_state: 0
+    //
+    // _kernel.ready_q.prio_bmap[0]: 0x80018000
+    //
+    // (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next: &_kernel.ready_q.q[15]
+    // (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&_kernel.ready_q.q[15])->tail
+    // (&_kernel.ready_q.q[15])->tail->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+    // (&_kernel.ready_q.q[15])->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+    //
+    // _kernel.ready_q.cache: &(&k_sys_work_q)->thread
+    //
+    // 현재 실행 중인 &_main_thread_s 보다 우선 순위가 높은 &(&k_sys_work_q)->thread 가 실행하여
+    // &_main_thread_s 는 선점됨, work_q_main이 실행 되다가 &(&k_sys_work_q)->fifo에 있는 큐에
+    // 연결되어 있는 잡이 비어 있는 상태를 확인 후 &(&(&k_sys_work_q)->fifo)->wait_q 인 웨이트 큐에
+    // &(&(&k_sys_work_q)->thread)->base.k_q_node 를 등록하고 현재 쓰레드 &(&k_sys_work_q)->thread 는
+    // _THREAD_PENDING 상태롤 변경, 변경된 이후 다시 &_main_thread_s 로 쓰레드 복귀 하여 수행 됨
+    //
+    // &_kernel.ready_q.q[15] 에 연결된 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 제거함
+    //
+    // (&_kernel.ready_q.q[15])->next: &_kernel.ready_q.q[15]
+    // (&_kernel.ready_q.q[15])->prev: &_kernel.ready_q.q[15]
+    //
+    // _kernel.ready_q.prio_bmap[0]: 0x80010000
+    // _kernel.ready_q.cache: &_main_thread_s
+    //
+    // &(&(&k_sys_work_q)->fifo)->wait_q 에 list node 인 &(&(&k_sys_work_q)->thread)->base.k_q_node 을 tail로 추가함
+    //
+    // (&(&(&k_sys_work_q)->thread)->base.k_q_node)->next, &(&(&k_sys_work_q)->fifo)->wait_q
+    // (&(&(&k_sys_work_q)->thread)->base.k_q_node)->prev: (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->fifo)->wait_q
+    // (&(&(&k_sys_work_q)->fifo)->wait_q)->tail->next: (&(&(&k_sys_work_q)->fifo)->wait_q)->next: &(&(&k_sys_work_q)->thread)->base.k_q_node
+    // (&(&(&k_sys_work_q)->fifo)->wait_q)->tail: &(&(&k_sys_work_q)->thread)->base.k_q_node
+    //
+    // (&(&k_sys_work_q)->thread)->base.thread_state: 0x2
+	}
 	return new_thread;
 	// return &(&k_sys_work_q)->thread
 }
@@ -596,6 +600,7 @@ void _init_static_threads(void)
 			thread_data->init_options);
 
 		thread_data->init_thread->init_data = thread_data;
+		_k_object_init(thread_data->init_thread);
 	}
 
 	_sched_lock();

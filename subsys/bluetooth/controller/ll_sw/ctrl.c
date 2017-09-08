@@ -263,10 +263,8 @@ static void tx_packet_set(struct connection *conn,
 static void prepare_pdu_data_tx(struct connection *conn,
 				struct pdu_data **pdu_data_tx);
 static void packet_rx_allocate(u8_t max);
-
-static u8_t packet_rx_acquired_count_get(void);
-
-static struct radio_pdu_node_rx *packet_rx_reserve_get(u8_t count);
+static inline u8_t packet_rx_acquired_count_get(void);
+static inline struct radio_pdu_node_rx *packet_rx_reserve_get(u8_t count);
 static void packet_rx_enqueue(void);
 static void packet_tx_enqueue(u8_t max);
 static struct pdu_data *empty_tx_enqueue(struct connection *conn);
@@ -871,6 +869,9 @@ static inline u32_t isr_rx_adv(u8_t devmatch_ok, u8_t devmatch_id,
 
 		radio_pkt_tx_set(&_radio.advertiser.scan_data.
 		     data[_radio.advertiser.scan_data.first][0]);
+
+		/* assert if radio packet ptr is not set and radio started tx */
+		LL_ASSERT(!radio_is_ready());
 
 		return 0;
 	} else if ((pdu_adv->type == PDU_ADV_TYPE_CONNECT_IND) &&
@@ -1602,6 +1603,9 @@ static inline u32_t isr_rx_scan(u8_t devmatch_ok, u8_t devmatch_id,
 		radio_switch_complete_and_rx(0);
 		radio_pkt_tx_set(pdu_adv_tx);
 		radio_tmr_end_capture();
+
+		/* assert if radio packet ptr is not set and radio started tx */
+		LL_ASSERT(!radio_is_ready());
 
 		return 0;
 	}
@@ -2794,16 +2798,7 @@ isr_rx_conn_pkt_ctrl(struct radio_pdu_node_rx *radio_pdu_node_rx,
 #endif /* CONFIG_BT_CTLR_LE_PING */
 
 	case PDU_DATA_LLCTRL_TYPE_UNKNOWN_RSP:
-		if (_radio.conn_curr->llcp_req != _radio.conn_curr->llcp_ack) {
-			/* reset ctrl procedure */
-			_radio.conn_curr->llcp_ack = _radio.conn_curr->llcp_req;
-
-			switch (_radio.conn_curr->llcp_type) {
-			default:
-				LL_ASSERT(0);
-				break;
-			}
-
+		if (0) {
 #if defined(CONFIG_BT_CTLR_DATA_LENGTH)
 		} else if (_radio.conn_curr->llcp_length.req !=
 			   _radio.conn_curr->llcp_length.ack) {
@@ -3073,7 +3068,7 @@ isr_rx_conn_pkt(struct radio_pdu_node_rx *radio_pdu_node_rx,
 
 		if (_radio.conn_curr->empty == 0) {
 			struct radio_pdu_node_tx *node_tx;
-			u8_t pdu_data_tx_len, pdu_data_tx_ll_id;
+			u8_t pdu_data_tx_len;
 
 			node_tx = _radio.conn_curr->pkt_tx_head;
 			pdu_data_tx = (struct pdu_data *)
@@ -3081,8 +3076,6 @@ isr_rx_conn_pkt(struct radio_pdu_node_rx *radio_pdu_node_rx,
 				 _radio.conn_curr->packet_tx_head_offset);
 
 			pdu_data_tx_len = pdu_data_tx->len;
-			pdu_data_tx_ll_id = pdu_data_tx->ll_id;
-
 			if (pdu_data_tx_len != 0) {
 				/* if encrypted increment tx counter */
 				if (_radio.conn_curr->enc_tx) {
@@ -3090,7 +3083,7 @@ isr_rx_conn_pkt(struct radio_pdu_node_rx *radio_pdu_node_rx,
 				}
 
 				/* process ctrl packet on tx cmplt */
-				if (pdu_data_tx_ll_id == PDU_DATA_LLID_CTRL) {
+				if (pdu_data_tx->ll_id == PDU_DATA_LLID_CTRL) {
 					terminate =
 						isr_rx_conn_pkt_ack(pdu_data_tx,
 								    &node_tx);
@@ -3252,29 +3245,6 @@ static inline void isr_rx_conn(u8_t crc_ok, u8_t trx_done,
 	u8_t chg = 0;
 #endif /* CONFIG_BT_CTLR_PROFILE_ISR */
 
-#if defined(CONFIG_BT_CTLR_CONN_RSSI)
-	/* Collect RSSI for connection */
-	if (_radio.packet_counter == 0) {
-		if (rssi_ready) {
-			u8_t rssi = radio_rssi_get();
-
-			_radio.conn_curr->rssi_latest = rssi;
-
-			if (((_radio.conn_curr->rssi_reported - rssi) & 0xFF) >
-			    RADIO_RSSI_THRESHOLD) {
-				if (_radio.conn_curr->rssi_sample_count) {
-					_radio.conn_curr->rssi_sample_count--;
-				}
-			} else {
-				_radio.conn_curr->rssi_sample_count =
-					RADIO_RSSI_SAMPLE_COUNT;
-			}
-		}
-	}
-#else /* !CONFIG_BT_CTLR_CONN_RSSI */
-	ARG_UNUSED(rssi_ready);
-#endif /* !CONFIG_BT_CTLR_CONN_RSSI */
-
 	/* Increment packet counter for this connection event */
 	_radio.packet_counter++;
 
@@ -3386,6 +3356,9 @@ static inline void isr_rx_conn(u8_t crc_ok, u8_t trx_done,
 	/* setup the radio tx packet buffer */
 	tx_packet_set(_radio.conn_curr, pdu_data_tx);
 
+	/* assert if radio packet ptr is not set and radio started tx */
+	LL_ASSERT(!radio_is_ready());
+
 isr_rx_conn_exit:
 
 #if defined(CONFIG_BT_CTLR_PROFILE_ISR)
@@ -3398,6 +3371,13 @@ isr_rx_conn_exit:
 	radio_tmr_sample();
 
 #endif /* CONFIG_BT_CTLR_PROFILE_ISR */
+
+	/* NOTE: Check for connection termination and skip accessing connection
+	 * context.
+	 */
+	if (!_radio.conn_curr) {
+		goto isr_rx_conn_terminate_exit;
+	}
 
 	/* release tx node and generate event for num complete */
 	if (tx_release) {
@@ -3413,6 +3393,29 @@ isr_rx_conn_exit:
 		radio_pdu_node_rx->hdr.handle = _radio.conn_curr->handle;
 		packet_rx_enqueue();
 	}
+
+#if defined(CONFIG_BT_CTLR_CONN_RSSI)
+	/* Collect RSSI for connection */
+	if (rssi_ready) {
+		u8_t rssi = radio_rssi_get();
+
+		_radio.conn_curr->rssi_latest = rssi;
+
+		if (((_radio.conn_curr->rssi_reported - rssi) & 0xFF) >
+		    RADIO_RSSI_THRESHOLD) {
+			if (_radio.conn_curr->rssi_sample_count) {
+				_radio.conn_curr->rssi_sample_count--;
+			}
+		} else {
+			_radio.conn_curr->rssi_sample_count =
+				RADIO_RSSI_SAMPLE_COUNT;
+		}
+	}
+#else /* !CONFIG_BT_CTLR_CONN_RSSI */
+	ARG_UNUSED(rssi_ready);
+#endif /* !CONFIG_BT_CTLR_CONN_RSSI */
+
+isr_rx_conn_terminate_exit:
 
 #if defined(CONFIG_BT_CTLR_PROFILE_ISR)
 	/* calculate the elapsed time in us since on-air radio packet end
@@ -5615,7 +5618,9 @@ static void adv_setup(void)
 #else
 	ARG_UNUSED(upd);
 #endif /* !CONFIG_BT_CTLR_PRIVACY */
+
 	radio_pkt_tx_set(pdu);
+
 	if ((pdu->type != PDU_ADV_TYPE_NONCONN_IND) &&
 	    (!IS_ENABLED(CONFIG_BT_CTLR_ADV_EXT) ||
 	     (pdu->type != PDU_ADV_TYPE_EXT_IND))) {
@@ -8056,7 +8061,7 @@ static void packet_rx_allocate(u8_t max)
 	}
 }
 
-static u8_t packet_rx_acquired_count_get(void)
+static inline u8_t packet_rx_acquired_count_get(void)
 {
 	if (_radio.packet_rx_acquire >=
 	    _radio.packet_rx_last) {
@@ -8069,18 +8074,13 @@ static u8_t packet_rx_acquired_count_get(void)
 	}
 }
 
-static struct radio_pdu_node_rx *packet_rx_reserve_get(u8_t count)
+static inline struct radio_pdu_node_rx *packet_rx_reserve_get(u8_t count)
 {
-	struct radio_pdu_node_rx *radio_pdu_node_rx;
-
 	if (count > packet_rx_acquired_count_get()) {
 		return 0;
 	}
 
-	radio_pdu_node_rx = _radio.packet_rx[_radio.packet_rx_last];
-	radio_pdu_node_rx->hdr.type = NODE_RX_TYPE_DC_PDU;
-
-	return radio_pdu_node_rx;
+	return _radio.packet_rx[_radio.packet_rx_last];
 }
 
 static void packet_rx_callback(void)
