@@ -26,6 +26,7 @@
 #include <ksched.h>
 #include <version.h>
 #include <string.h>
+#include <misc/dlist.h>
 
 /* kernel build timestamp items */
 
@@ -152,7 +153,6 @@ k_tid_t const _idle_thread = (k_tid_t)&_idle_thread_s;
 K_THREAD_STACK_DEFINE(_interrupt_stack, CONFIG_ISR_STACK_SIZE);
 
 #ifdef CONFIG_SYS_CLOCK_EXISTS // CONFIG_SYS_CLOCK_EXISTS=y
-	#include <misc/dlist.h>
 // KID 20170527
 // _timeout_q: _kernel.timeout_q
 	#define initialize_timeouts() do { \

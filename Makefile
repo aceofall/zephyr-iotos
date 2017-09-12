@@ -971,9 +971,9 @@ $(KERNEL_STAT_NAME): $(KERNEL_BIN_NAME) $(KERNEL_ELF_NAME)
 	@$(READELF) -e $(KERNEL_ELF_NAME) > $@
 
 ram_report: $(KERNEL_STAT_NAME)
-	@$(srctree)/scripts/size_report -r -o $(O)
+	@$(srctree)/scripts/footprint/size_report -r -o $(O)
 rom_report: $(KERNEL_STAT_NAME)
-	@$(srctree)/scripts/size_report -F -o $(O)
+	@$(srctree)/scripts/footprint/size_report -F -o $(O)
 
 zephyr: $(zephyr-deps) $(KERNEL_BIN_NAME)
 
@@ -981,12 +981,12 @@ ifeq ($(CONFIG_HAS_DTS),y)
 define filechk_generated_dts_board.h
 	(echo "/* WARNING. THIS FILE IS AUTO-GENERATED. DO NOT MODIFY! */"; \
 		if test -e $(ZEPHYR_BASE)/dts/$(ARCH)/$(BOARD_NAME).fixup; then \
-			$(ZEPHYR_BASE)/scripts/extract_dts_includes.py \
+			$(ZEPHYR_BASE)/scripts/dts/extract_dts_includes.py \
 				-d dts/$(ARCH)/$(BOARD_NAME).dts_compiled \
 				-y $(ZEPHYR_BASE)/dts/$(ARCH)/yaml \
 				-f $(ZEPHYR_BASE)/dts/$(ARCH)/$(BOARD_NAME).fixup; \
 		else \
-			$(ZEPHYR_BASE)/scripts/extract_dts_includes.py \
+			$(ZEPHYR_BASE)/scripts/dts/extract_dts_includes.py \
 				-d dts/$(ARCH)/$(BOARD_NAME).dts_compiled \
 				-y $(ZEPHYR_BASE)/dts/$(ARCH)/yaml; \
 		fi; \
@@ -994,7 +994,7 @@ define filechk_generated_dts_board.h
 endef
 define filechk_generated_dts_board.conf
 	(echo "# WARNING. THIS FILE IS AUTO-GENERATED. DO NOT MODIFY!"; \
-		$(ZEPHYR_BASE)/scripts/extract_dts_includes.py \
+		$(ZEPHYR_BASE)/scripts/dts/extract_dts_includes.py \
 		-d dts/$(ARCH)/$(BOARD_NAME).dts_compiled \
 		-y $(ZEPHYR_BASE)/dts/$(ARCH)/yaml -k; \
 		)

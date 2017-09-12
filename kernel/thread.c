@@ -184,7 +184,7 @@ void _check_stack_sentinel(void)
  * generate preamble code that is only used by functions that actually return.
  */
 // KID 20170522
-FUNC_NORETURN void _thread_entry(void (*entry)(void *, void *, void *),
+FUNC_NORETURN void _thread_entry(k_thread_entry_t entry,
 				 void *p1, void *p2, void *p3)
 {
 	entry(p1, p2, p3);
@@ -352,7 +352,7 @@ static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 // work_q: &k_sys_work_q, 0, 0, prio: -1, 0, 0
 k_tid_t k_thread_create(struct k_thread *new_thread,
 			k_thread_stack_t stack,
-			size_t stack_size, void (*entry)(void *, void *, void*),
+			size_t stack_size, k_thread_entry_t entry,
 			void *p1, void *p2, void *p3,
 			int prio, u32_t options, s32_t delay)
 {
@@ -433,21 +433,6 @@ k_tid_t k_thread_create(struct k_thread *new_thread,
 	return new_thread;
 	// return &(&k_sys_work_q)->thread
 }
-
-
-k_tid_t k_thread_spawn(k_thread_stack_t stack, size_t stack_size,
-			void (*entry)(void *, void *, void*),
-			void *p1, void *p2, void *p3,
-			int prio, u32_t options, s32_t delay)
-{
-	struct k_thread *new_thread =
-		(struct k_thread *)K_THREAD_STACK_BUFFER(stack);
-
-	return k_thread_create(new_thread, stack,
-			       stack_size, entry, p1, p2,
-			       p3, prio, options, delay);
-}
-
 #endif
 
 int k_thread_cancel(k_tid_t tid)

@@ -26,7 +26,7 @@
 
 #if defined(CONFIG_GDB_INFO) || defined(CONFIG_DEBUG_INFO) \
 	|| defined(CONFIG_X86_IAMCU)
-extern void _thread_entry_wrapper(_thread_entry_t entry,
+extern void _thread_entry_wrapper(k_thread_entry_t entry,
 				  void *p1, void *p2, void *p3);
 /**
  *
@@ -118,7 +118,7 @@ struct _x86_initial_frame {
 	u32_t edi;
 	void *_thread_entry;
 	u32_t eflags;
-	_thread_entry_t entry;
+	k_thread_entry_t entry;
 	void *p1;
 	void *p2;
 	void *p3;
@@ -150,7 +150,7 @@ struct _x86_initial_frame {
 // new_thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, entry: work_q_main,
 // p1: &k_sys_work_q, p2: 0, p3: 0, prio: -1, options: 0
 void _new_thread(struct k_thread *thread, k_thread_stack_t stack,
-		 size_t stack_size, _thread_entry_t entry,
+		 size_t stack_size, k_thread_entry_t entry,
 		 void *parameter1, void *parameter2, void *parameter3,
 		 int priority, unsigned int options)
 {
