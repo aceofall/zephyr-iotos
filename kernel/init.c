@@ -419,6 +419,9 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 	dummy_thread->stack_info.start = 0;
 	dummy_thread->stack_info.size = 0;
 #endif
+#ifdef CONFIG_USERSPACE
+	dummy_thread->base.perm_index = 0;
+#endif
 #endif
 
 	/* _kernel.ready_q is all zeroes */
@@ -469,9 +472,9 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 
 	// _main_thread: &_main_thread_s, MAIN_STACK_SIZE: 1024, CONFIG_MAIN_THREAD_PRIORITY: 0
 	// K_ESSENTIAL: 0x1
-	_new_thread(_main_thread, _main_stack,
-		    MAIN_STACK_SIZE, _main, NULL, NULL, NULL,
-		    CONFIG_MAIN_THREAD_PRIORITY, K_ESSENTIAL);
+	_setup_new_thread(_main_thread, _main_stack,
+			  MAIN_STACK_SIZE, _main, NULL, NULL, NULL,
+			  CONFIG_MAIN_THREAD_PRIORITY, K_ESSENTIAL);
 
 	// _new_thread 에서 한일:
 	// (&(&_main_thread_s)->base)->user_options: 0x1
@@ -503,22 +506,12 @@ static void prepare_multithreading(struct k_thread *dummy_thread)
 
 	// _main_thread: &_main_thread_s
 	_add_thread_to_ready_q(_main_thread);
-	_k_object_init(_main_thread);
-
-	// _add_thread_to_ready_q 에서 한일:
-	// _kernel.ready_q.prio_bmap[0]: 0x10000
-	//
-	// (&(&_main_thread_s)->base.k_q_node)->next: &_kernel.ready_q.q[16]
-	// (&(&_main_thread_s)->base.k_q_node)->prev: (&_kernel.ready_q.q[16])->tail
-	// (&_kernel.ready_q.q[16])->tail->next: &(&_main_thread_s)->base.k_q_node
-	// (&_kernel.ready_q.q[16])->tail: &(&_main_thread_s)->base.k_q_node
-	//
-	// _kernel.ready_q.cache: &_main_thread_s
 
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 	// _idle_thread: &_idle_thread_s, IDLE_STACK_SIZE: 256, K_LOWEST_THREAD_PRIO: 15, K_ESSENTIAL: 0x1
-	_new_thread(_idle_thread, _idle_stack, IDLE_STACK_SIZE, idle, NULL, NULL, NULL,
-		    K_LOWEST_THREAD_PRIO, K_ESSENTIAL);
+	_setup_new_thread(_idle_thread, _idle_stack,
+			  IDLE_STACK_SIZE, idle, NULL, NULL, NULL,
+			  K_LOWEST_THREAD_PRIO, K_ESSENTIAL);
 
 	// _new_thread 에서 한일:
 	// (&(&_idle_thread_s)->base)->user_options: 0x1

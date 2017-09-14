@@ -112,6 +112,10 @@ static K_THREAD_STACK_DEFINE(engine_thread_stack,
 			     CONFIG_LWM2M_ENGINE_STACK_SIZE);
 static struct k_thread engine_thread_data;
 
+static struct lwm2m_engine_obj *get_engine_obj(int obj_id);
+static struct lwm2m_engine_obj_inst *get_engine_obj_inst(int obj_id,
+							 int obj_inst_id);
+
 /* for debugging: to print IP addresses */
 char *lwm2m_sprint_ip_addr(const struct sockaddr *addr)
 {
@@ -187,12 +191,46 @@ static int engine_add_observer(struct net_context *net_ctx,
 			       struct lwm2m_obj_path *path,
 			       u16_t format)
 {
+	struct lwm2m_engine_obj_inst *obj_inst = NULL;
 	struct observe_node *obs;
 	int i;
 
 	if (!addr) {
 		SYS_LOG_ERR("sockaddr is required");
 		return -EINVAL;
+	}
+
+	/* check if object exists */
+	if (!get_engine_obj(path->obj_id)) {
+		SYS_LOG_ERR("unable to find obj: %u", path->obj_id);
+		return -ENOENT;
+	}
+
+	/* check if object instance exists */
+	if (path->level >= 2) {
+		obj_inst = get_engine_obj_inst(path->obj_id,
+					       path->obj_inst_id);
+		if (!obj_inst) {
+			SYS_LOG_ERR("unable to find obj_inst: %u/%u",
+				    path->obj_id, path->obj_inst_id);
+			return -ENOENT;
+		}
+	}
+
+	/* check if resource exists */
+	if (path->level >= 3) {
+		for (i = 0; i < obj_inst->resource_count; i++) {
+			if (obj_inst->resources[i].res_id == path->res_id) {
+				break;
+			}
+		}
+
+		if (i == obj_inst->resource_count) {
+			SYS_LOG_ERR("unable to find res_id: %u/%u/%u",
+				    path->obj_id, path->obj_inst_id,
+				    path->res_id);
+			return -ENOENT;
+		}
 	}
 
 	/* make sure this observer doesn't exist already */
@@ -252,6 +290,7 @@ static int engine_add_observer(struct net_context *net_ctx,
 static int engine_remove_observer(const u8_t *token, u8_t tkl)
 {
 	struct observe_node *obs, *found_obj = NULL;
+	sys_snode_t *prev_node = NULL;
 
 	if (!token || tkl == 0) {
 		SYS_LOG_ERR("token(%p) and token length(%u) must be valid.",
@@ -265,17 +304,40 @@ static int engine_remove_observer(const u8_t *token, u8_t tkl)
 			found_obj = obs;
 			break;
 		}
+
+		prev_node = &obs->node;
 	}
 
 	if (!found_obj) {
 		return -ENOENT;
 	}
 
-	sys_slist_remove(&engine_observer_list, NULL, &found_obj->node);
+	sys_slist_remove(&engine_observer_list, prev_node, &found_obj->node);
+	memset(found_obj, 0, sizeof(*found_obj));
 
 	SYS_LOG_DBG("observer '%s' removed", sprint_token(token, tkl));
 
 	return 0;
+}
+
+static void engine_remove_observer_by_id(u16_t obj_id, s32_t obj_inst_id)
+{
+	struct observe_node *obs, *tmp;
+	sys_snode_t *prev_node = NULL;
+
+	/* remove observer instances accordingly */
+	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(
+			&engine_observer_list, obs, tmp, node) {
+		if (!(obj_id == obs->path.obj_id &&
+		      (obj_inst_id < 0 ||
+		       obj_inst_id == obs->path.obj_inst_id))) {
+			prev_node = &obs->node;
+			continue;
+		}
+
+		sys_slist_remove(&engine_observer_list, prev_node, &obs->node);
+		memset(obs, 0, sizeof(*obs));
+	}
 }
 
 /* engine object */
@@ -287,8 +349,8 @@ void lwm2m_register_obj(struct lwm2m_engine_obj *obj)
 
 void lwm2m_unregister_obj(struct lwm2m_engine_obj *obj)
 {
-	/* TODO: remove all observer instances */
-	sys_slist_remove(&engine_obj_list, NULL, &obj->node);
+	engine_remove_observer_by_id(obj->obj_id, -1);
+	sys_slist_find_and_remove(&engine_obj_list, &obj->node);
 }
 
 static struct lwm2m_engine_obj *get_engine_obj(int obj_id)
@@ -329,7 +391,9 @@ static void engine_register_obj_inst(struct lwm2m_engine_obj_inst *obj_inst)
 
 static void engine_unregister_obj_inst(struct lwm2m_engine_obj_inst *obj_inst)
 {
-	sys_slist_remove(&engine_obj_inst_list, NULL, &obj_inst->node);
+	engine_remove_observer_by_id(
+			obj_inst->obj->obj_id, obj_inst->obj_inst_id);
+	sys_slist_find_and_remove(&engine_obj_inst_list, &obj_inst->node);
 }
 
 static struct lwm2m_engine_obj_inst *get_engine_obj_inst(int obj_id,
@@ -415,6 +479,7 @@ int lwm2m_create_obj_inst(u16_t obj_id, u16_t obj_inst_id,
 
 int lwm2m_delete_obj_inst(u16_t obj_id, u16_t obj_inst_id)
 {
+	int i, ret = 0;
 	struct lwm2m_engine_obj *obj;
 	struct lwm2m_engine_obj_inst *obj_inst;
 
@@ -430,11 +495,22 @@ int lwm2m_delete_obj_inst(u16_t obj_id, u16_t obj_inst_id)
 
 	engine_unregister_obj_inst(obj_inst);
 	obj->instance_count--;
+
 	if (obj->delete_cb) {
-		return obj->delete_cb(obj_inst_id);
+		ret = obj->delete_cb(obj_inst_id);
 	}
 
-	return 0;
+	/* reset obj_inst and res_inst data structure */
+	for (i = 0; i < obj_inst->resource_count; i++) {
+		memset(obj_inst->resources + i, 0,
+		       sizeof(struct lwm2m_engine_res_inst));
+	}
+
+	memset(obj_inst, 0, sizeof(struct lwm2m_engine_obj_inst));
+#ifdef CONFIG_LWM2M_RD_CLIENT_SUPPORT
+	engine_trigger_update();
+#endif
+	return ret;
 }
 
 /* utility functions */
@@ -1674,32 +1750,12 @@ static int lwm2m_exec_handler(struct lwm2m_engine_obj *obj,
 static int lwm2m_delete_handler(struct lwm2m_engine_obj *obj,
 				struct lwm2m_engine_context *context)
 {
-	struct lwm2m_obj_path *path = context->path;
-	struct lwm2m_engine_obj_inst *obj_inst;
-
-	SYS_LOG_DBG(">> DELETE [path:%u/%u/%u(%u)]",
-		path->obj_id, path->obj_inst_id, path->res_id, path->level);
-
-	if (!obj || !context) {
+	if (!context) {
 		return -EINVAL;
 	}
 
-	obj_inst = get_engine_obj_inst(path->obj_id, path->obj_inst_id);
-	if (!obj_inst) {
-		return -ENOENT;
-	}
-
-	engine_unregister_obj_inst(obj_inst);
-	obj->instance_count--;
-#ifdef CONFIG_LWM2M_RD_CLIENT_SUPPORT
-	engine_trigger_update();
-#endif
-
-	if (obj->delete_cb) {
-		return obj->delete_cb(path->obj_inst_id);
-	}
-
-	return 0;
+	return lwm2m_delete_obj_inst(context->path->obj_id,
+				     context->path->obj_inst_id);
 }
 
 /*

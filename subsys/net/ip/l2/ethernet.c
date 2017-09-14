@@ -204,7 +204,9 @@ static enum net_verdict ethernet_send(struct net_if *iface,
 			arp_pkt, pkt, iface);
 
 		if (pkt != arp_pkt) {
-			/* pkt went to ARP pending queue */
+			/* Either pkt went to ARP pending queue
+			 * or there was not space in the queue anymore
+			 */
 			net_pkt_unref(pkt);
 		}
 

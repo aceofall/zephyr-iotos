@@ -350,6 +350,11 @@ struct _thread_base {
 	/* this thread's entry in a timeout queue */
 	struct _timeout timeout;
 #endif
+
+#ifdef CONFIG_USERSPACE
+	/* Bit position in kernel object permissions bitfield for this thread */
+	unsigned int perm_index;
+#endif
 };
 
 typedef struct _thread_base _thread_base_t;
@@ -485,6 +490,11 @@ extern void k_call_stacks_analyze(void);
 #define K_FP_REGS (1 << 1)
 #endif
 
+/* This thread has dropped from supervisor mode to user mode and consequently
+ * has additional restrictions
+ */
+#define K_USER (1 << 2)
+
 #ifdef CONFIG_X86
 /* x86 Bitmask definitions for threads user options */
 
@@ -557,6 +567,20 @@ extern k_tid_t k_thread_create(struct k_thread *new_thread,
 			       k_thread_entry_t entry,
 			       void *p1, void *p2, void *p3,
 			       int prio, u32_t options, s32_t delay);
+
+#ifdef CONFIG_USERSPACE
+/**
+ * @brief Drop a thread's privileges permanently to user mode
+ *
+ * @param entry Function to start executing from
+ * @param p1 1st entry point parameter
+ * @param p2 2nd entry point parameter
+ * @param p3 3rd entry point parameter
+ */
+extern FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry,
+						   void *p1, void *p2,
+						   void *p3);
+#endif
 
 /**
  * @brief Put the current thread to sleep.
@@ -4191,6 +4215,48 @@ extern void k_cpu_atomic_idle(unsigned int key);
 extern void _sys_power_save_idle_exit(s32_t ticks);
 
 #include <arch/cpu.h>
+
+#ifdef CONFIG_USERSPACE
+/* Architecture-specific inline functions that may be indirectly called by
+ * application code due to their appearance in macros or other inline functions.
+ *
+ * Each arch should implement these in <arch/cpu.h>
+ */
+
+/* Indicate whether we are currently running in user mode
+ *
+ * @return nonzero if the CPU is currently running with user permissions
+ */
+static inline int _arch_is_user_context(void);
+
+/**
+ * Indicate whether the CPU is currently in user mode
+ *
+ * @return nonzero if the CPU is currently running with user permissions
+ */
+static inline int _is_user_context(void)
+{
+	return _arch_is_user_context();
+}
+
+/* Interfaces for invoking system calls */
+static inline u32_t _arch_syscall_invoke5(u32_t arg1, u32_t arg2, u32_t arg3,
+					  u32_t arg4, u32_t arg5,
+					  u32_t call_id);
+
+static inline u32_t _arch_syscall_invoke4(u32_t arg1, u32_t arg2, u32_t arg3,
+					  u32_t arg4, u32_t call_id);
+
+static inline u32_t _arch_syscall_invoke3(u32_t arg1, u32_t arg2, u32_t arg3,
+					  u32_t call_id);
+
+static inline u32_t _arch_syscall_invoke2(u32_t arg1, u32_t arg2,
+					  u32_t call_id);
+
+static inline u32_t _arch_syscall_invoke1(u32_t arg1, u32_t call_id);
+
+static inline u32_t _arch_syscall_invoke0(u32_t call_id);
+#endif
 
 #ifdef _ARCH_EXCEPT
 /* This archtecture has direct support for triggering a CPU exception */

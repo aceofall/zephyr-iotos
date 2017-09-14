@@ -52,10 +52,17 @@ FUNC_NORETURN void _Cstart(void);
 extern FUNC_NORETURN void _thread_entry(k_thread_entry_t entry,
 			  void *p1, void *p2, void *p3);
 
+/* Implemented by architectures. Only called from _setup_new_thread. */
 extern void _new_thread(struct k_thread *thread, k_thread_stack_t pStack,
 			size_t stackSize, k_thread_entry_t entry,
 			void *p1, void *p2, void *p3,
 			int prio, unsigned int options);
+
+extern void _setup_new_thread(struct k_thread *new_thread,
+			      k_thread_stack_t stack, size_t stack_size,
+			      k_thread_entry_t entry,
+			      void *p1, void *p2, void *p3,
+			      int prio, u32_t options);
 
 /* context switching and scheduling-related routines */
 
@@ -100,6 +107,48 @@ static inline unsigned int _Swap(unsigned int key)
 	// key: eflags 값
 	return __swap(key);
 }
+
+#ifdef CONFIG_USERSPACE
+/**
+ * @brief Check memory region permissions
+ *
+ * Given a memory region, return whether the current memory management hardware
+ * configuration would allow a user thread to read/write that region. Used by
+ * system calls to validate buffers coming in from userspace.
+ *
+ * @param addr start address of the buffer
+ * @param size the size of the buffer
+ * @param write If nonzero, additionally check if the area is writable.
+ *	  Otherwise, just check if the memory can be read.
+ *
+ * @return nonzero if the permissions don't match.
+ */
+extern int _arch_buffer_validate(void *addr, size_t size, int write);
+
+/**
+ * Perform a one-way transition from supervisor to kernel mode.
+ *
+ * Implementations of this function must do the following:
+ * - Reset the thread's stack pointer to a suitable initial value. We do not
+ *   need any prior context since this is a one-way operation.
+ * - Set up any kernel stack region for the CPU to use during privilege
+ *   elevation
+ * - Put the CPU in whatever its equivalent of user mode is
+ * - Transfer execution to _new_thread() passing along all the supplied
+ *   arguments, in user mode.
+ *
+ * @param Entry point to start executing as a user thread
+ * @param p1 1st parameter to user thread
+ * @param p2 2nd parameter to user thread
+ * @param p3 3rd parameter to user thread
+ */
+extern FUNC_NORETURN
+void _arch_user_mode_enter(k_thread_entry_t user_entry, void *p1, void *p2,
+			   void *p3);
+
+extern u32_t _k_syscall_entry(u32_t arg1, u32_t arg2, u32_t arg3, u32_t arg4,
+			      u32_t arg5, u32_t call_id);
+#endif /* CONFIG_USERSPACE */
 
 /* set and clear essential fiber/task flag */
 

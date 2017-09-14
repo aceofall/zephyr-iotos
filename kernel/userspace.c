@@ -10,6 +10,7 @@
 #include <misc/printk.h>
 #include <kernel_structs.h>
 #include <sys_io.h>
+#include <ksched.h>
 
 /**
  * Kernel object validation function
@@ -68,28 +69,22 @@ const char *otype_to_str(enum k_objects otype)
 
 static void set_thread_perms(struct _k_object *ko, struct k_thread *thread)
 {
-	ARG_UNUSED(ko);
-	ARG_UNUSED(thread);
-
-	/* STUB */
+	if (thread->base.perm_index < 8 * CONFIG_MAX_THREAD_BYTES) {
+		sys_bitfield_set_bit((mem_addr_t)&ko->perms,
+				     thread->base.perm_index);
+	}
 }
 
 
 static int test_thread_perms(struct _k_object *ko)
 {
-	ARG_UNUSED(ko);
-
-	/* STUB */
-
-	return 1;
-}
-
-static int _is_thread_user(void)
-{
-	/* STUB */
-
+	if (_current->base.perm_index < 8 * CONFIG_MAX_THREAD_BYTES) {
+		return sys_bitfield_test_bit((mem_addr_t)&ko->perms,
+					     _current->base.perm_index);
+	}
 	return 0;
 }
+
 
 void k_object_grant_access(void *object, struct k_thread *thread)
 {
@@ -184,5 +179,18 @@ void _k_object_init(void *object)
 	set_thread_perms(ko, _current);
 
 	ko->flags |= K_OBJ_FLAG_INITIALIZED;
+}
+
+
+u32_t _k_syscall_entry(u32_t arg1, u32_t arg2, u32_t arg3, u32_t arg4,
+		       u32_t arg5, u32_t call_id)
+{
+	/* A real implementation will figure out what function to call
+	 * based on call_id, validate arguments, perform any other runtime
+	 * checks needed, and call into the appropriate kernel function.
+	 */
+	__ASSERT(0, "system calls are unimplemented");
+
+	return 0;
 }
 

@@ -1164,9 +1164,9 @@ class TestCase:
         self.depends_on = tc_dict["depends_on"]
         self.min_flash = tc_dict["min_flash"]
         self.extra_sections = tc_dict["extra_sections"]
-        self.path = os.path.join(os.path.basename(os.path.abspath(testcase_root)),
-                                 workdir, name)
-        self.name = self.path # for now
+
+        self.path = os.path.normpath(os.path.join(os.path.abspath(testcase_root).replace(ZEPHYR_BASE + "/",''), workdir, name))
+        self.name = os.path.join(self.path)
         self.defconfig = {}
         self.inifile = inifile
 
@@ -1187,7 +1187,7 @@ class TestInstance:
                  slow=False, coverage=False):
         self.test = test
         self.platform = platform
-        self.name = os.path.join(platform.name, test.path)
+        self.name = os.path.join(platform.name, test.name)
         self.outdir = os.path.join(base_outdir, platform.name, test.path)
         self.build_only = build_only or test.build_only
 
@@ -1233,7 +1233,7 @@ class TestSuite:
         os.path.join(os.environ['ZEPHYR_BASE'],
                      "scripts", "sanity_chk", "sanitycheck-tc-schema.yaml"))
 
-    def __init__(self, arch_root, testcase_roots, outdir, coverage):
+    def __init__(self, board_root, testcase_roots, outdir, coverage):
         # Keep track of which test cases we've filtered out and why
         discards = {}
         self.arches = {}
@@ -1245,7 +1245,7 @@ class TestSuite:
         self.discards = None
         self.coverage = coverage
 
-        arch_root = os.path.abspath(arch_root)
+        board_root = os.path.abspath(board_root)
 
         for testcase_root in testcase_roots:
             testcase_root = os.path.abspath(testcase_root)
@@ -1278,8 +1278,8 @@ class TestSuite:
                                   yaml_path)
                     self.testcases[tc.name] = tc
 
-        debug("Reading platform configuration files under %s..." % arch_root)
-        for dirpath, dirnames, filenames in os.walk(arch_root):
+        debug("Reading platform configuration files under %s..." % board_root)
+        for dirpath, dirnames, filenames in os.walk(board_root):
             for filename in filenames:
                 if filename.endswith(".yaml"):
                     fn = os.path.join(dirpath, filename)
@@ -1313,6 +1313,26 @@ class TestSuite:
                 platform = row["platform"]
                 result.append((test, platform))
         return result
+
+    def load_from_file(self, file):
+        if not os.path.exists(file):
+            raise SanityRuntimeError("Couldn't find input file with list of tests.")
+        result = []
+        with open(file, "r") as fp:
+            cr = csv.reader(fp)
+            instance_list = []
+            for row in cr:
+                name = os.path.join(row[0], row[1])
+                platforms = self.arches[row[3]].platforms
+                myp = None
+                for p in platforms:
+                    if p.name == row[2]:
+                        myp = p
+                        break
+                instance = TestInstance(self.testcases[name], myp, self.outdir)
+                instance_list.append(instance)
+            self.add_instances(instance_list)
+
 
     def apply_filters(self, platform_filter, arch_filter, tag_filter, exclude_tag,
                       config_filter, testcase_filter, last_failed, all_plats,
@@ -1596,18 +1616,31 @@ class TestSuite:
 
         return self.goals
 
+    def run_report(self, filename):
+        with open(filename, "at") as csvfile:
+            fieldnames = ['path', 'test', 'platform', 'arch']
+            cw = csv.DictWriter(csvfile, fieldnames, lineterminator=os.linesep)
+            for instance in self.instances.values():
+                rowdict = {
+                           "path": os.path.dirname(instance.test.name),
+                           "test" : os.path.basename(instance.test.name),
+                           "platform" : instance.platform.name,
+                           "arch" : instance.platform.arch
+                           }
+                cw.writerow(rowdict)
+
     def discard_report(self, filename):
         if self.discards == None:
             raise SanityRuntimeException("apply_filters() hasn't been run!")
 
-        with open(filename, "wb") as csvfile:
+        with open(filename, "wt") as csvfile:
             fieldnames = ["test", "arch", "platform", "reason"]
             cw = csv.DictWriter(csvfile, fieldnames, lineterminator=os.linesep)
             cw.writeheader()
             for instance, reason in self.discards.items():
-                rowdict = {"test" : i.test.name,
-                           "arch" : i.platform.arch,
-                           "platform" : i.platform.name,
+                rowdict = {"test" : instance.test.name,
+                           "arch" : instance.platform.arch,
+                           "platform" : instance.platform.name,
                            "reason" : reason}
                 cw.writerow(rowdict)
 
@@ -1834,6 +1867,12 @@ def parse_arguments():
     parser.add_argument("-u", "--no-update", action="store_true",
             help="do not update the results of the last run of the sanity "
                  "checks")
+    parser.add_argument("-F", "--load-tests", metavar="FILENAME", action="store",
+            help="Load list of tests to be run from file.")
+
+    parser.add_argument("-E", "--save-tests", metavar="FILENAME", action="store",
+            help="Save list of tests to be run to file.")
+
     parser.add_argument("-b", "--build-only", action="store_true",
             help="Only build the code, do not execute any of it in QEMU")
     parser.add_argument("-j", "--jobs", type=int,
@@ -1858,9 +1897,9 @@ def parse_arguments():
                  "testcase.yaml files under here will be processed. May be "
                  "called multiple times. Defaults to the 'samples' and "
                  "'tests' directories in the Zephyr tree.")
-    parser.add_argument("-A", "--arch-root",
+    parser.add_argument("-A", "--board-root",
             default="%s/boards" % ZEPHYR_BASE,
-            help="Directory to search for arch configuration files. All .yaml "
+            help="Directory to search for board configuration files. All .yaml "
                  "files in the directory will be processed.")
     parser.add_argument("-z", "--size", action="append",
             help="Don't run sanity  checks. Instead, produce a report to "
@@ -2013,8 +2052,13 @@ def main():
         args.testcase_root = [os.path.join(ZEPHYR_BASE, "tests"),
                               os.path.join(ZEPHYR_BASE, "samples")]
 
-    ts = TestSuite(args.arch_root, args.testcase_root, args.outdir, args.coverage)
-    discards = ts.apply_filters(args.platform, args.arch, args.tag, args.exclude_tag, args.config,
+    ts = TestSuite(args.board_root, args.testcase_root, args.outdir, args.coverage)
+
+    discards = []
+    if args.load_tests:
+        ts.load_from_file(args.load_tests)
+    else:
+        discards = ts.apply_filters(args.platform, args.arch, args.tag, args.exclude_tag, args.config,
                                 args.test, args.only_failed, args.all,
                                 args.platform_limit, toolchain, args.extra_args, args.ccache)
 
@@ -2026,11 +2070,17 @@ def main():
             debug("{:<25} {:<50} {}SKIPPED{}: {}".format(i.platform.name,
                   i.test.name, COLOR_YELLOW, COLOR_NORMAL, reason))
 
-    ts.instancets = OrderedDict(sorted(ts.instances.items(), key=lambda t: t[0]))
+    ts.instances = OrderedDict(sorted(ts.instances.items(), key=lambda t: t[0]))
+
+
+    if args.save_tests:
+        ts.run_report(args.save_tests)
+        return
+
 
     if args.subset:
         subset, sets = args.subset.split("/")
-        total = len(ts.instancets)
+        total = len(ts.instances)
         per_set = round(total / int(sets))
         start = (int(subset) - 1 ) * per_set
         if subset == sets:
@@ -2038,7 +2088,7 @@ def main():
         else:
             end = start + per_set
 
-        sliced_instances = islice(ts.instancets.items(),start, end)
+        sliced_instances = islice(ts.instances.items(),start, end)
         ts.instances = OrderedDict(sliced_instances)
 
     info("%d tests selected, %d tests discarded due to filters" %

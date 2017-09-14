@@ -22,13 +22,29 @@
 #include <drivers/system_timer.h>
 #include <ksched.h>
 #include <wait_q.h>
+#include <atomic.h>
 
 // KID 20170728
 // KID 20170807
 extern struct _static_thread_data _static_thread_data_list_start[];
 extern struct _static_thread_data _static_thread_data_list_end[];
 
+#ifdef CONFIG_USERSPACE
+/* Each thread gets assigned an index into a permission bitfield */
 // KID 20170728
+static atomic_t thread_index;
+
+static unsigned int thread_index_get(void)
+{
+	unsigned int retval;
+
+	retval = (int)atomic_inc(&thread_index);
+	__ASSERT(retval < 8 * CONFIG_MAX_THREAD_BYTES,
+		 "too many threads created, increase CONFIG_MAX_THREAD_BYTES");
+	return retval;
+}
+#endif
+
 #define _FOREACH_STATIC_THREAD(thread_data)              \
 	for (struct _static_thread_data *thread_data =   \
 	     _static_thread_data_list_start;             \
@@ -146,7 +162,6 @@ void _thread_monitor_exit(struct k_thread *thread)
  * 1) In k_yield() if the current thread is not swapped out
  * 2) After servicing a non-nested interrupt
  * 3) In _Swap(), check the sentinel in the outgoing thread
- * 4) When a thread returns from its entry function to cooperatively terminate
  *
  * Item 2 requires support in arch/ code.
  *
@@ -157,10 +172,7 @@ void _check_stack_sentinel(void)
 {
 	u32_t *stack;
 
-	if (_is_thread_prevented_from_running(_current)) {
-		/* Filter out threads that are dummy threads or already
-		 * marked for termination (_THREAD_DEAD)
-		 */
+	if (_current->base.thread_state == _THREAD_DUMMY) {
 		return;
 	}
 
@@ -189,11 +201,8 @@ FUNC_NORETURN void _thread_entry(k_thread_entry_t entry,
 {
 	entry(p1, p2, p3);
 
-#ifdef CONFIG_STACK_SENTINEL
-	_check_stack_sentinel();
-#endif
 #ifdef CONFIG_MULTITHREADING
-	k_thread_abort(_current);
+	k_thread_abort(k_current_get());
 #else
 	for (;;) {
 		k_cpu_idle();
@@ -344,12 +353,28 @@ static void schedule_new_thread(struct k_thread *thread, s32_t delay)
 }
 #endif
 
-#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
-
 // KID 20170717
 // KID 20170726
 // &work_q->thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, work_q_main,
 // work_q: &k_sys_work_q, 0, 0, prio: -1, 0, 0
+void _setup_new_thread(struct k_thread *new_thread,
+		       k_thread_stack_t stack, size_t stack_size,
+		       k_thread_entry_t entry,
+		       void *p1, void *p2, void *p3,
+		       int prio, u32_t options)
+{
+	_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3,
+		    prio, options);
+#ifdef CONFIG_USERSPACE
+	new_thread->base.perm_index = thread_index_get();
+	_k_object_init(new_thread);
+
+	/* Any given thread has access to itself */
+	k_object_grant_access(new_thread, new_thread);
+#endif
+}
+
+#ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
 k_tid_t k_thread_create(struct k_thread *new_thread,
 			k_thread_stack_t stack,
 			size_t stack_size, k_thread_entry_t entry,
@@ -361,11 +386,9 @@ k_tid_t k_thread_create(struct k_thread *new_thread,
 
 	// new_thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, entry: work_q_main,
 	// p1: &k_sys_work_q, p2: 0, p3: 0, prio: -1, options: 0
-	_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3,
-		    prio, options);
-
+	_setup_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3,
+			  prio, options);
 	// new_thread: &(&k_sys_work_q)->thread
-	_k_object_init(new_thread);
 
 	// _new_thread 에서 한일:
 	// (&(&(&k_sys_work_q)->thread)->base)->user_options: 0
@@ -572,8 +595,7 @@ void _init_static_threads(void)
 	_FOREACH_STATIC_THREAD(thread_data) {
 	// for (struct _static_thread_data *thread_data = _static_thread_data_list_start;
 	//      thread_data < _static_thread_data_list_end; thread_data++)
-
-		_new_thread(
+		_setup_new_thread(
 			thread_data->init_thread,
 			thread_data->init_stack,
 			thread_data->init_stack_size,
@@ -585,7 +607,6 @@ void _init_static_threads(void)
 			thread_data->init_options);
 
 		thread_data->init_thread->init_data = thread_data;
-		_k_object_init(thread_data->init_thread);
 	}
 
 	_sched_lock();
@@ -673,3 +694,13 @@ void _k_thread_group_leave(u32_t groups, struct k_thread *thread)
 	thread_data->init_groups &= groups;
 }
 
+
+#ifdef CONFIG_USERSPACE
+FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry,
+					    void *p1, void *p2, void *p3)
+{
+	_current->base.user_options |= K_USER;
+	_thread_essential_clear();
+	_arch_user_mode_enter(entry, p1, p2, p3);
+}
+#endif /* CONFIG_USERSPACE */
