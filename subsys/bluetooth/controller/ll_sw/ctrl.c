@@ -444,6 +444,8 @@ u32_t radio_init(void *hf_clock, u8_t sca, u8_t connection_count_max,
 	chan_sel_2_ut();
 #endif /* RADIO_UNIT_TEST && CONFIG_BT_CTLR_CHAN_SEL_2 */
 
+	radio_setup();
+
 	return retcode;
 }
 
@@ -2759,6 +2761,9 @@ isr_rx_conn_pkt_ctrl(struct radio_pdu_node_rx *radio_pdu_node_rx,
 					0x1e);
 				break;
 			}
+
+			/* Stop procedure timeout */
+			_radio.conn_curr->procedure_expire = 0;
 
 			/* save parameters to be used to select offset
 			 */

@@ -48,6 +48,48 @@ void radio_isr_set(radio_isr_fp fp_radio_isr)
 	irq_enable(RADIO_IRQn);
 }
 
+void radio_setup(void)
+{
+#if defined(CONFIG_SOC_SERIES_NRF52X)
+	struct {
+		u32_t volatile reserved_0[0x5a0 >> 2];
+		u32_t volatile bridge_type;
+		u32_t volatile reserved_1[((0xe00 - 0x5a0) >> 2) - 1];
+		struct {
+			u32_t volatile CPU0;
+			u32_t volatile SPIS1;
+			u32_t volatile RADIO;
+			u32_t volatile ECB;
+			u32_t volatile CCM;
+			u32_t volatile AAR;
+			u32_t volatile SAADC;
+			u32_t volatile UARTE;
+			u32_t volatile SERIAL0;
+			u32_t volatile SERIAL2;
+			u32_t volatile NFCT;
+			u32_t volatile I2S;
+			u32_t volatile PDM;
+			u32_t volatile PWM;
+		} RAMPRI;
+	} volatile *NRF_AMLI = (void volatile *)0x40000000UL;
+
+	NRF_AMLI->RAMPRI.CPU0    = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.SPIS1   = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.RADIO   = 0x00000000UL;
+	NRF_AMLI->RAMPRI.ECB     = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.CCM     = 0x00000000UL;
+	NRF_AMLI->RAMPRI.AAR     = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.SAADC   = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.UARTE   = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.SERIAL0 = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.SERIAL2 = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.NFCT    = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.I2S     = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.PDM     = 0xFFFFFFFFUL;
+	NRF_AMLI->RAMPRI.PWM     = 0xFFFFFFFFUL;
+#endif /* CONFIG_SOC_SERIES_NRF52X */
+}
+
 void radio_reset(void)
 {
 	irq_disable(RADIO_IRQn);
@@ -78,11 +120,6 @@ void radio_phy_set(u8_t phy, u8_t flags)
 #if defined(CONFIG_SOC_SERIES_NRF51X)
 	case BIT(1):
 		mode = RADIO_MODE_MODE_Nrf_2Mbit;
-
-#if defined(CONFIG_SOC_NRF52840)
-		/* Workaround: nRF52840 Engineering A Errata ID 164 */
-		*(volatile u32_t *)0x4000173c &= ~0x80000000;
-#endif /* CONFIG_SOC_NRF52840 */
 		break;
 
 #elif defined(CONFIG_SOC_SERIES_NRF52X)
@@ -769,15 +806,36 @@ static u8_t MALIGN(4) _ccm_scratch[(RADIO_PDU_LEN_MAX - 4) + 16];
 
 void *radio_ccm_rx_pkt_set(struct ccm *ccm, void *pkt)
 {
+	u32_t mode;
+
 	NRF_CCM->ENABLE = CCM_ENABLE_ENABLE_Disabled;
 	NRF_CCM->ENABLE = CCM_ENABLE_ENABLE_Enabled;
-	NRF_CCM->MODE =
-#if !defined(CONFIG_SOC_SERIES_NRF51X)
-	    ((CCM_MODE_LENGTH_Extended << CCM_MODE_LENGTH_Pos) &
-	       CCM_MODE_LENGTH_Msk) |
+	mode = (CCM_MODE_MODE_Decryption << CCM_MODE_MODE_Pos) &
+	       CCM_MODE_MODE_Msk;
+#if defined(CONFIG_SOC_SERIES_NRF52X)
+	/* Enable CCM support for 8-bit length field PDUs. */
+	mode |= (CCM_MODE_LENGTH_Extended << CCM_MODE_LENGTH_Pos) &
+		CCM_MODE_LENGTH_Msk;
+
+	/* Select CCM data rate based on current PHY in use. */
+	/* TODO: add cases for nRF52840's coded PHY */
+	switch ((NRF_RADIO->MODE & RADIO_MODE_MODE_Msk) >>
+		RADIO_MODE_MODE_Pos) {
+	default:
+	case RADIO_MODE_MODE_Ble_1Mbit:
+		mode |= (CCM_MODE_DATARATE_1Mbit <<
+			 CCM_MODE_DATARATE_Pos) &
+			CCM_MODE_DATARATE_Msk;
+		break;
+
+	case RADIO_MODE_MODE_Ble_2Mbit:
+		mode |= (CCM_MODE_DATARATE_2Mbit <<
+			 CCM_MODE_DATARATE_Pos) &
+			CCM_MODE_DATARATE_Msk;
+		break;
+	}
 #endif
-	    ((CCM_MODE_MODE_Decryption << CCM_MODE_MODE_Pos) &
-	     CCM_MODE_MODE_Msk);
+	NRF_CCM->MODE = mode;
 	NRF_CCM->CNFPTR = (u32_t)ccm;
 	NRF_CCM->INPTR = (u32_t)_pkt_scratch;
 	NRF_CCM->OUTPTR = (u32_t)pkt;
@@ -798,15 +856,24 @@ void *radio_ccm_rx_pkt_set(struct ccm *ccm, void *pkt)
 
 void *radio_ccm_tx_pkt_set(struct ccm *ccm, void *pkt)
 {
+	u32_t mode;
+
 	NRF_CCM->ENABLE = CCM_ENABLE_ENABLE_Disabled;
 	NRF_CCM->ENABLE = CCM_ENABLE_ENABLE_Enabled;
-	NRF_CCM->MODE =
-#if !defined(CONFIG_SOC_SERIES_NRF51X)
-	    ((CCM_MODE_LENGTH_Extended << CCM_MODE_LENGTH_Pos) &
-	       CCM_MODE_LENGTH_Msk) |
+	mode = (CCM_MODE_MODE_Encryption << CCM_MODE_MODE_Pos) &
+	       CCM_MODE_MODE_Msk;
+#if defined(CONFIG_SOC_SERIES_NRF52X)
+	/* Enable CCM support for 8-bit length field PDUs. */
+	mode |= (CCM_MODE_LENGTH_Extended << CCM_MODE_LENGTH_Pos) &
+		CCM_MODE_LENGTH_Msk;
+
+	/* NOTE: use fastest data rate as tx data needs to be prepared before
+	 * radio Tx on any PHY.
+	 */
+	mode |= (CCM_MODE_DATARATE_2Mbit << CCM_MODE_DATARATE_Pos) &
+		CCM_MODE_DATARATE_Msk;
 #endif
-	    ((CCM_MODE_MODE_Encryption << CCM_MODE_MODE_Pos) &
-	     CCM_MODE_MODE_Msk);
+	NRF_CCM->MODE = mode;
 	NRF_CCM->CNFPTR = (u32_t)ccm;
 	NRF_CCM->INPTR = (u32_t)pkt;
 	NRF_CCM->OUTPTR = (u32_t)_pkt_scratch;
@@ -844,7 +911,8 @@ static u8_t MALIGN(4) _aar_scratch[3];
 
 void radio_ar_configure(u32_t nirk, void *irk)
 {
-	NRF_AAR->ENABLE = 1;
+	NRF_AAR->ENABLE = (AAR_ENABLE_ENABLE_Enabled << AAR_ENABLE_ENABLE_Pos) &
+			  AAR_ENABLE_ENABLE_Msk;
 	NRF_AAR->NIRK = nirk;
 	NRF_AAR->IRKPTR = (u32_t)irk;
 	NRF_AAR->ADDRPTR = (u32_t)NRF_RADIO->PACKETPTR - 1;
