@@ -414,7 +414,7 @@ void radio_tx_enable(void)
 void radio_disable(void)
 {
 #if !defined(CONFIG_BT_CTLR_TIFS_HW)
-	NRF_PPI->CHENCLR = PPI_CHEN_CH8_Msk | PPI_CHEN_CH11_Msk;
+	NRF_PPI->CHENCLR = PPI_CHEN_CH9_Msk | PPI_CHEN_CH12_Msk;
 	NRF_PPI->TASKS_CHG[0].DIS = 1;
 	NRF_PPI->TASKS_CHG[1].DIS = 1;
 #endif /* !CONFIG_BT_CTLR_TIFS_HW */
@@ -489,13 +489,13 @@ static u8_t sw_tifs_toggle;
 static void sw_switch(u8_t dir, u8_t phy_curr, u8_t flags_curr, u8_t phy_next,
 		      u8_t flags_next)
 {
-	u8_t ppi = 12 + sw_tifs_toggle;
+	u8_t ppi = 13 + sw_tifs_toggle;
 	u32_t delay;
 
 	NRF_TIMER1->EVENTS_COMPARE[sw_tifs_toggle] = 0;
 
-	NRF_PPI->CH[11].EEP = (u32_t)&(NRF_RADIO->EVENTS_END);
-	NRF_PPI->CH[11].TEP = (u32_t)&(NRF_PPI->TASKS_CHG[sw_tifs_toggle].EN);
+	NRF_PPI->CH[12].EEP = (u32_t)&(NRF_RADIO->EVENTS_END);
+	NRF_PPI->CH[12].TEP = (u32_t)&(NRF_PPI->TASKS_CHG[sw_tifs_toggle].EN);
 
 	NRF_PPI->CH[ppi].EEP = (u32_t)
 			       &(NRF_TIMER1->EVENTS_COMPARE[sw_tifs_toggle]);
@@ -518,7 +518,7 @@ static void sw_switch(u8_t dir, u8_t phy_curr, u8_t flags_curr, u8_t phy_next,
 		NRF_TIMER1->CC[sw_tifs_toggle] = 1;
 	}
 
-	NRF_PPI->CHENSET = PPI_CHEN_CH8_Msk | PPI_CHEN_CH11_Msk;
+	NRF_PPI->CHENSET = PPI_CHEN_CH9_Msk | PPI_CHEN_CH12_Msk;
 
 	sw_tifs_toggle += 1;
 	sw_tifs_toggle &= 1;
@@ -558,7 +558,7 @@ void radio_switch_complete_and_disable(void)
 	    (RADIO_SHORTS_READY_START_Msk | RADIO_SHORTS_END_DISABLE_Msk);
 
 #if !defined(CONFIG_BT_CTLR_TIFS_HW)
-	NRF_PPI->CHENCLR = PPI_CHEN_CH8_Msk | PPI_CHEN_CH11_Msk;
+	NRF_PPI->CHENCLR = PPI_CHEN_CH9_Msk | PPI_CHEN_CH12_Msk;
 #endif /* !CONFIG_BT_CTLR_TIFS_HW */
 }
 
@@ -644,7 +644,7 @@ void radio_tmr_status_reset(void)
 	NRF_PPI->CHENCLR =
 	    (PPI_CHEN_CH0_Msk | PPI_CHEN_CH1_Msk | PPI_CHEN_CH2_Msk |
 	     PPI_CHEN_CH3_Msk | PPI_CHEN_CH4_Msk | PPI_CHEN_CH5_Msk |
-	     PPI_CHEN_CH6_Msk | PPI_CHEN_CH7_Msk);
+	     PPI_CHEN_CH6_Msk);
 }
 
 void radio_tmr_tifs_set(u32_t tifs)
@@ -680,19 +680,10 @@ u32_t radio_tmr_start(u8_t trx, u32_t ticks_start, u32_t remainder)
 	NRF_PPI->CH[1].TEP = (u32_t)&(NRF_TIMER0->TASKS_START);
 	NRF_PPI->CHENSET = PPI_CHEN_CH1_Msk;
 
-	if (trx) {
-		NRF_PPI->CH[0].EEP =
-			(u32_t)&(NRF_TIMER0->EVENTS_COMPARE[0]);
-		NRF_PPI->CH[0].TEP =
-			(u32_t)&(NRF_RADIO->TASKS_TXEN);
-		NRF_PPI->CHENSET = PPI_CHEN_CH0_Msk;
-	} else {
-		NRF_PPI->CH[0].EEP =
-			(u32_t)&(NRF_TIMER0->EVENTS_COMPARE[0]);
-		NRF_PPI->CH[0].TEP =
-			(u32_t)&(NRF_RADIO->TASKS_RXEN);
-		NRF_PPI->CHENSET = PPI_CHEN_CH0_Msk;
-	}
+	NRF_PPI->CH[0].EEP = (u32_t)&(NRF_TIMER0->EVENTS_COMPARE[0]);
+	NRF_PPI->CH[0].TEP = (trx) ? (u32_t)&(NRF_RADIO->TASKS_TXEN) :
+				     (u32_t)&(NRF_RADIO->TASKS_RXEN);
+	NRF_PPI->CHENSET = PPI_CHEN_CH0_Msk;
 
 #if !defined(CONFIG_BT_CTLR_TIFS_HW)
 	NRF_TIMER1->TASKS_CLEAR = 1;
@@ -701,19 +692,17 @@ u32_t radio_tmr_start(u8_t trx, u32_t ticks_start, u32_t remainder)
 	NRF_TIMER1->BITMODE = 0; /* 16 bit */
 	NRF_TIMER1->TASKS_START = 1;
 
-	NRF_PPI->CH[8].EEP = (u32_t)&(NRF_RADIO->EVENTS_END);
-	NRF_PPI->CH[8].TEP = (u32_t)&(NRF_TIMER1->TASKS_CLEAR);
+	NRF_PPI->CH[9].EEP = (u32_t)&(NRF_RADIO->EVENTS_END);
+	NRF_PPI->CH[9].TEP = (u32_t)&(NRF_TIMER1->TASKS_CLEAR);
 
-	NRF_PPI->CH[9].EEP = (u32_t)
-			     &(NRF_TIMER1->EVENTS_COMPARE[0]);
-	NRF_PPI->CH[9].TEP = (u32_t)&(NRF_PPI->TASKS_CHG[0].DIS);
+	NRF_PPI->CH[10].EEP = (u32_t)&(NRF_TIMER1->EVENTS_COMPARE[0]);
+	NRF_PPI->CH[10].TEP = (u32_t)&(NRF_PPI->TASKS_CHG[0].DIS);
 
-	NRF_PPI->CH[10].EEP = (u32_t)
-			      &(NRF_TIMER1->EVENTS_COMPARE[1]);
-	NRF_PPI->CH[10].TEP = (u32_t)&(NRF_PPI->TASKS_CHG[1].DIS);
+	NRF_PPI->CH[11].EEP = (u32_t)&(NRF_TIMER1->EVENTS_COMPARE[1]);
+	NRF_PPI->CH[11].TEP = (u32_t)&(NRF_PPI->TASKS_CHG[1].DIS);
 
-	NRF_PPI->CHG[0] = PPI_CHG_CH9_Msk | PPI_CHG_CH12_Msk;
-	NRF_PPI->CHG[1] = PPI_CHG_CH10_Msk | PPI_CHG_CH13_Msk;
+	NRF_PPI->CHG[0] = PPI_CHG_CH10_Msk | PPI_CHG_CH13_Msk;
+	NRF_PPI->CHG[1] = PPI_CHG_CH11_Msk | PPI_CHG_CH14_Msk;
 #endif /* !CONFIG_BT_CTLR_TIFS_HW */
 
 	return remainder;
@@ -721,21 +710,13 @@ u32_t radio_tmr_start(u8_t trx, u32_t ticks_start, u32_t remainder)
 
 void radio_tmr_start_us(u8_t trx, u32_t us)
 {
-	if (trx) {
-		NRF_PPI->CH[0].EEP =
-			(u32_t)&(NRF_TIMER0->EVENTS_COMPARE[0]);
-		NRF_PPI->CH[0].TEP =
-			(u32_t)&(NRF_RADIO->TASKS_TXEN);
-	} else {
-		NRF_PPI->CH[0].EEP =
-			(u32_t)&(NRF_TIMER0->EVENTS_COMPARE[0]);
-		NRF_PPI->CH[0].TEP =
-			(u32_t)&(NRF_RADIO->TASKS_RXEN);
-	}
-	NRF_PPI->CHENSET = PPI_CHEN_CH0_Msk;
-
 	NRF_TIMER0->CC[0] = us;
 	NRF_TIMER0->EVENTS_COMPARE[0] = 0;
+
+	NRF_PPI->CH[0].EEP = (u32_t)&(NRF_TIMER0->EVENTS_COMPARE[0]);
+	NRF_PPI->CH[0].TEP = (trx) ? (u32_t)&(NRF_RADIO->TASKS_TXEN) :
+				     (u32_t)&(NRF_RADIO->TASKS_RXEN);
+	NRF_PPI->CHENSET = PPI_CHEN_CH0_Msk;
 }
 
 void radio_tmr_stop(void)
@@ -751,14 +732,14 @@ void radio_tmr_stop(void)
 
 void radio_tmr_hcto_configure(u32_t hcto)
 {
-	NRF_TIMER0->CC[2] = hcto;
-	NRF_TIMER0->EVENTS_COMPARE[2] = 0;
+	NRF_TIMER0->CC[1] = hcto;
+	NRF_TIMER0->EVENTS_COMPARE[1] = 0;
 
-	NRF_PPI->CH[4].EEP = (u32_t)&(NRF_RADIO->EVENTS_ADDRESS);
-	NRF_PPI->CH[4].TEP = (u32_t)&(NRF_TIMER0->TASKS_CAPTURE[2]);
-	NRF_PPI->CH[5].EEP = (u32_t)&(NRF_TIMER0->EVENTS_COMPARE[2]);
-	NRF_PPI->CH[5].TEP = (u32_t)&(NRF_RADIO->TASKS_DISABLE);
-	NRF_PPI->CHENSET = (PPI_CHEN_CH4_Msk | PPI_CHEN_CH5_Msk);
+	NRF_PPI->CH[3].EEP = (u32_t)&(NRF_RADIO->EVENTS_ADDRESS);
+	NRF_PPI->CH[3].TEP = (u32_t)&(NRF_TIMER0->TASKS_CAPTURE[1]);
+	NRF_PPI->CH[4].EEP = (u32_t)&(NRF_TIMER0->EVENTS_COMPARE[1]);
+	NRF_PPI->CH[4].TEP = (u32_t)&(NRF_RADIO->TASKS_DISABLE);
+	NRF_PPI->CHENSET = (PPI_CHEN_CH3_Msk | PPI_CHEN_CH4_Msk);
 }
 
 void radio_tmr_aa_capture(void)
@@ -770,21 +751,34 @@ void radio_tmr_aa_capture(void)
 	NRF_PPI->CHENSET = (PPI_CHEN_CH2_Msk | PPI_CHEN_CH3_Msk);
 }
 
+u32_t radio_tmr_aa_get(void)
+{
+	return NRF_TIMER0->CC[1];
+}
+
+static u32_t radio_tmr_aa;
+
+void radio_tmr_aa_save(u32_t aa)
+{
+	radio_tmr_aa = aa;
+}
+
+u32_t radio_tmr_aa_restore(void)
+{
+	/* NOTE: we dont need to restore for now, but return the saved value. */
+	return radio_tmr_aa;
+}
+
 u32_t radio_tmr_ready_get(void)
 {
 	return NRF_TIMER0->CC[0];
 }
 
-u32_t radio_tmr_aa_get(void)
-{
-	return (NRF_TIMER0->CC[1] - NRF_TIMER0->CC[0]);
-}
-
 void radio_tmr_end_capture(void)
 {
-	NRF_PPI->CH[7].EEP = (u32_t)&(NRF_RADIO->EVENTS_END);
-	NRF_PPI->CH[7].TEP = (u32_t)&(NRF_TIMER0->TASKS_CAPTURE[2]);
-	NRF_PPI->CHENSET = PPI_CHEN_CH7_Msk;
+	NRF_PPI->CH[5].EEP = (u32_t)&(NRF_RADIO->EVENTS_END);
+	NRF_PPI->CH[5].TEP = (u32_t)&(NRF_TIMER0->TASKS_CAPTURE[2]);
+	NRF_PPI->CHENSET = PPI_CHEN_CH5_Msk;
 }
 
 u32_t radio_tmr_end_get(void)
