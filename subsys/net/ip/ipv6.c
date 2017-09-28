@@ -74,6 +74,8 @@ const char *net_ipv6_nbr_state2str(enum net_ipv6_nbr_state state)
 		return "delay";
 	case NET_IPV6_NBR_STATE_PROBE:
 		return "probe";
+	case NET_IPV6_NBR_STATE_STATIC:
+		return "static";
 	}
 
 	return "<invalid state>";
@@ -82,7 +84,8 @@ const char *net_ipv6_nbr_state2str(enum net_ipv6_nbr_state state)
 static void ipv6_nbr_set_state(struct net_nbr *nbr,
 			       enum net_ipv6_nbr_state new_state)
 {
-	if (new_state == net_ipv6_nbr_data(nbr)->state) {
+	if (new_state == net_ipv6_nbr_data(nbr)->state ||
+	    net_ipv6_nbr_data(nbr)->state == NET_IPV6_NBR_STATE_STATIC) {
 		return;
 	}
 
@@ -427,7 +430,8 @@ struct net_nbr *net_ipv6_nbr_add(struct net_if *iface,
 		}
 	}
 
-	if (net_nbr_link(nbr, iface, lladdr) == -EALREADY) {
+	if (net_nbr_link(nbr, iface, lladdr) == -EALREADY &&
+	    net_ipv6_nbr_data(nbr)->state != NET_IPV6_NBR_STATE_STATIC) {
 		/* Update the lladdr if the node was already known */
 		struct net_linkaddr_storage *cached_lladdr;
 
@@ -453,10 +457,11 @@ struct net_nbr *net_ipv6_nbr_add(struct net_if *iface,
 		net_ipv6_send_ns(iface, NULL, NULL, NULL, addr, false);
 	}
 
-	NET_DBG("[%d] nbr %p state %d router %d IPv6 %s ll %s",
+	NET_DBG("[%d] nbr %p state %d router %d IPv6 %s ll %s iface %p",
 		nbr->idx, nbr, state, is_router,
 		net_sprint_ipv6_addr(addr),
-		net_sprint_ll_addr(lladdr->addr, lladdr->len));
+		net_sprint_ll_addr(lladdr->addr, lladdr->len),
+		nbr->iface);
 
 	return nbr;
 }
@@ -1417,6 +1422,9 @@ static void nd_reachable_timeout(struct k_work *work)
 	}
 
 	switch (data->state) {
+	case NET_IPV6_NBR_STATE_STATIC:
+		NET_ASSERT_INFO(false, "Static entry shall never timeout");
+		break;
 
 	case NET_IPV6_NBR_STATE_INCOMPLETE:
 		if (data->ns_count >= MAX_MULTICAST_SOLICIT) {
