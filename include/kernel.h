@@ -28,6 +28,7 @@
 #include <kernel_version.h>
 #include <drivers/rand32.h>
 #include <kernel_arch_thread.h>
+#include <syscall.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -2795,8 +2796,13 @@ struct k_sem {
  *
  * @return N/A
  */
-extern void k_sem_init(struct k_sem *sem, unsigned int initial_count,
-			unsigned int limit);
+static inline void k_sem_init(struct k_sem *sem, unsigned int initial_count,
+			      unsigned int limit);
+
+K_SYSCALL_DECLARE3_VOID(K_SYSCALL_SEM_INIT, k_sem_init,
+			struct k_sem *, sem,
+			unsigned int, initial_count,
+			unsigned int, limit);
 
 /**
  * @brief Take a semaphore.
@@ -2819,7 +2825,11 @@ extern void k_sem_init(struct k_sem *sem, unsigned int initial_count,
  * @retval -EBUSY Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-extern int k_sem_take(struct k_sem *sem, s32_t timeout);
+static inline int k_sem_take(struct k_sem *sem, s32_t timeout);
+
+K_SYSCALL_DECLARE2(K_SYSCALL_SEM_TAKE, k_sem_take, int,
+		   struct k_sem *, sem,
+		   s32_t, timeout);
 
 /**
  * @brief Give a semaphore.
@@ -2833,7 +2843,10 @@ extern int k_sem_take(struct k_sem *sem, s32_t timeout);
  *
  * @return N/A
  */
-extern void k_sem_give(struct k_sem *sem);
+static inline void k_sem_give(struct k_sem *sem);
+
+K_SYSCALL_DECLARE1_VOID(K_SYSCALL_SEM_GIVE, k_sem_give,
+			struct k_sem *, sem);
 
 /**
  * @brief Reset a semaphore's count to zero.
@@ -2844,10 +2857,15 @@ extern void k_sem_give(struct k_sem *sem);
  *
  * @return N/A
  */
-static inline void k_sem_reset(struct k_sem *sem)
+static inline void k_sem_reset(struct k_sem *sem);
+
+static inline void _impl_k_sem_reset(struct k_sem *sem)
 {
 	sem->count = 0;
 }
+
+K_SYSCALL_DECLARE1_VOID_INLINE(K_SYSCALL_SEM_RESET, k_sem_reset,
+			       struct k_sem *, sem);
 
 /**
  * @brief Get a semaphore's count.
@@ -2858,10 +2876,15 @@ static inline void k_sem_reset(struct k_sem *sem)
  *
  * @return Current semaphore count.
  */
-static inline unsigned int k_sem_count_get(struct k_sem *sem)
+static inline unsigned int k_sem_count_get(struct k_sem *sem);
+
+static inline unsigned int _impl_k_sem_count_get(struct k_sem *sem)
 {
 	return sem->count;
 }
+
+K_SYSCALL_DECLARE1_INLINE(K_SYSCALL_SEM_COUNT_GET, k_sem_count_get,
+			  unsigned int, struct k_sem *, sem);
 
 /**
  * @brief Statically define and initialize a semaphore.
@@ -4215,52 +4238,6 @@ extern void k_cpu_atomic_idle(unsigned int key);
 extern void _sys_power_save_idle_exit(s32_t ticks);
 
 #include <arch/cpu.h>
-
-#ifdef CONFIG_USERSPACE
-/* Architecture-specific inline functions that may be indirectly called by
- * application code due to their appearance in macros or other inline functions.
- *
- * Each arch should implement these in <arch/cpu.h>
- */
-
-/* Indicate whether we are currently running in user mode
- *
- * @return nonzero if the CPU is currently running with user permissions
- */
-static inline int _arch_is_user_context(void);
-
-/**
- * Indicate whether the CPU is currently in user mode
- *
- * @return nonzero if the CPU is currently running with user permissions
- */
-static inline int _is_user_context(void)
-{
-	return _arch_is_user_context();
-}
-
-/* Interfaces for invoking system calls */
-static inline u32_t _arch_syscall_invoke6(u32_t arg1, u32_t arg2, u32_t arg3,
-					  u32_t arg4, u32_t arg5, u32_t arg6,
-					  u32_t call_id);
-
-static inline u32_t _arch_syscall_invoke5(u32_t arg1, u32_t arg2, u32_t arg3,
-					  u32_t arg4, u32_t arg5,
-					  u32_t call_id);
-
-static inline u32_t _arch_syscall_invoke4(u32_t arg1, u32_t arg2, u32_t arg3,
-					  u32_t arg4, u32_t call_id);
-
-static inline u32_t _arch_syscall_invoke3(u32_t arg1, u32_t arg2, u32_t arg3,
-					  u32_t call_id);
-
-static inline u32_t _arch_syscall_invoke2(u32_t arg1, u32_t arg2,
-					  u32_t call_id);
-
-static inline u32_t _arch_syscall_invoke1(u32_t arg1, u32_t call_id);
-
-static inline u32_t _arch_syscall_invoke0(u32_t call_id);
-#endif
 
 #ifdef _ARCH_EXCEPT
 /* This archtecture has direct support for triggering a CPU exception */
