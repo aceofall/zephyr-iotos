@@ -167,7 +167,7 @@ static void iface_cb(struct net_if *iface, void *user_data)
 
 	ARG_UNUSED(user_data);
 
-	printk("Interface %p (%s)\n", iface, iface2str(iface, &extra));
+	printk("\nInterface %p (%s)\n", iface, iface2str(iface, &extra));
 	printk("=======================%s\n", extra);
 
 	if (!net_if_is_up(iface)) {
@@ -260,6 +260,21 @@ static void iface_cb(struct net_if *iface, void *user_data)
 #endif /* CONFIG_NET_IPV6 */
 
 #if defined(CONFIG_NET_IPV4)
+	/* No need to print IPv4 information for interface that does not
+	 * support that protocol.
+	 */
+	if (
+#if defined(CONFIG_NET_L2_IEEE802154)
+		(iface->l2 == &NET_L2_GET_NAME(IEEE802154)) ||
+#endif
+#if defined(CONFIG_NET_L2_BT)
+		 (iface->l2 == &NET_L2_GET_NAME(BLUETOOTH)) ||
+#endif
+		 0) {
+		printk("IPv4 not supported for this interface.\n");
+		return;
+	}
+
 	count = 0;
 
 	printk("IPv4 unicast addresses (max %d):\n", NET_IF_MAX_IPV4_ADDR);
@@ -346,14 +361,14 @@ static void route_cb(struct net_route_entry *entry, void *user_data)
 			continue;
 		}
 
-		printk("\tneighbor  : %p\n", nexthop_route->nbr);
+		printk("\tneighbor : %p\t", nexthop_route->nbr);
 
 		if (nexthop_route->nbr->idx == NET_NBR_LLADDR_UNKNOWN) {
-			printk("\tlink addr : <unknown>\n");
+			printk("addr : <unknown>\n");
 		} else {
 			lladdr = net_nbr_get_lladdr(nexthop_route->nbr->idx);
 
-			printk("\tlink addr : %s\n",
+			printk("addr : %s\n",
 			       net_sprint_ll_addr(lladdr->addr,
 						  lladdr->len));
 		}
@@ -372,7 +387,7 @@ static void iface_per_route_cb(struct net_if *iface, void *user_data)
 
 	ARG_UNUSED(user_data);
 
-	printk("IPv6 routes for interface %p (%s)\n", iface,
+	printk("\nIPv6 routes for interface %p (%s)\n", iface,
 	       iface2str(iface, &extra));
 	printk("=======================================%s\n", extra);
 
@@ -1572,26 +1587,39 @@ int net_shell_cmd_mem(int argc, char *argv[])
 static void nbr_cb(struct net_nbr *nbr, void *user_data)
 {
 	int *count = user_data;
+	char *padding = "";
+	char *state_pad = "";
+	const char *state_str;
+
+#if defined(CONFIG_NET_L2_IEEE802154)
+	padding = "      ";
+#endif
 
 	if (*count == 0) {
-		char *padding = "";
-
-		if (net_nbr_get_lladdr(nbr->idx)->len == 8) {
-			padding = "      ";
-		}
-
-		printk("     Neighbor   Flags   Interface  State\t"
-		       "Remain\tLink              %sAddress\n", padding);
+		printk("     Neighbor   Interface        Flags State     "
+		       "Remain  Link              %sAddress\n", padding);
 	}
 
 	(*count)++;
 
-	printk("[%2d] %p %d/%d/%d/%d %p %9s\t%6d\t%17s %s\n",
-	       *count, nbr, nbr->ref, net_ipv6_nbr_data(nbr)->ns_count,
-	       net_ipv6_nbr_data(nbr)->is_router,
+	state_str = net_ipv6_nbr_state2str(net_ipv6_nbr_data(nbr)->state);
+
+	/* This is not a proper way but the minimal libc does not honor
+	 * string lengths in %s modifier so in order the output to look
+	 * nice, do it like this.
+	 */
+	if (strlen(state_str) == 5) {
+		state_pad = "    ";
+	}
+
+	printk("[%2d] %p %p %5d/%d/%d/%d %s%s %6d  %17s%s %s\n",
+	       *count, nbr, nbr->iface,
 	       net_ipv6_nbr_data(nbr)->link_metric,
-	       nbr->iface,
-	       net_ipv6_nbr_state2str(net_ipv6_nbr_data(nbr)->state),
+	       nbr->ref,
+	       net_ipv6_nbr_data(nbr)->ns_count,
+	       net_ipv6_nbr_data(nbr)->is_router,
+	       state_str,
+	       state_pad,
 #if defined(CONFIG_NET_IPV6_ND)
 	       k_delayed_work_remaining_get(
 		       &net_ipv6_nbr_data(nbr)->reachable),
@@ -1602,6 +1630,7 @@ static void nbr_cb(struct net_nbr *nbr, void *user_data)
 	       net_sprint_ll_addr(
 		       net_nbr_get_lladdr(nbr->idx)->addr,
 		       net_nbr_get_lladdr(nbr->idx)->len),
+	       net_nbr_get_lladdr(nbr->idx)->len == 8 ? "" : padding,
 	       net_sprint_ipv6_addr(&net_ipv6_nbr_data(nbr)->addr));
 }
 #endif

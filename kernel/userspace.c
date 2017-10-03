@@ -33,6 +33,7 @@ const char *otype_to_str(enum k_objects otype)
 	 */
 #ifdef CONFIG_PRINTK
 	switch (otype) {
+	/* Core kernel objects */
 	case K_OBJ_ALERT:
 		return "k_alert";
 	case K_OBJ_DELAYED_WORK:
@@ -57,6 +58,50 @@ const char *otype_to_str(enum k_objects otype)
 		return "k_work";
 	case K_OBJ_WORK_Q:
 		return "k_work_q";
+
+	/* Driver subsystems */
+	case K_OBJ_DRIVER_ADC:
+		return "adc driver";
+	case K_OBJ_DRIVER_AIO_CMP:
+		return "aio comparator driver";
+	case K_OBJ_DRIVER_CLOCK_CONTROL:
+		return "clock control driver";
+	case K_OBJ_DRIVER_COUNTER:
+		return "counter driver";
+	case K_OBJ_DRIVER_CRYPTO:
+		return "crypto driver";
+	case K_OBJ_DRIVER_DMA:
+		return "dma driver";
+	case K_OBJ_DRIVER_ETH:
+		return "ethernet driver";
+	case K_OBJ_DRIVER_FLASH:
+		return "flash driver";
+	case K_OBJ_DRIVER_GPIO:
+		return "gpio driver";
+	case K_OBJ_DRIVER_I2C:
+		return "i2c driver";
+	case K_OBJ_DRIVER_I2S:
+		return "i2s driver";
+	case K_OBJ_DRIVER_IPM:
+		return "ipm driver";
+	case K_OBJ_DRIVER_PINMUX:
+		return "pinmux driver";
+	case K_OBJ_DRIVER_PWM:
+		return "pwm driver";
+	case K_OBJ_DRIVER_RANDOM:
+		return "random driver";
+	case K_OBJ_DRIVER_RTC:
+		return "realtime clock driver";
+	case K_OBJ_DRIVER_SENSOR:
+		return "sensor driver";
+	case K_OBJ_DRIVER_SHARED_IRQ:
+		return "shared irq driver";
+	case K_OBJ_DRIVER_SPI:
+		return "spi driver";
+	case K_OBJ_DRIVER_UART:
+		return "uart driver";
+	case K_OBJ_DRIVER_WDT:
+		return "watchdog timer driver";
 	default:
 		return "?";
 	}
@@ -190,12 +235,13 @@ static u32_t _handler_bad_syscall(u32_t bad_id, u32_t arg2, u32_t arg3,
 	CODE_UNREACHABLE;
 }
 
-const _k_syscall_handler_t _k_syscall_table[K_SYSCALL_LIMIT] = {
-	[K_SYSCALL_BAD] = _handler_bad_syscall,
+static u32_t _handler_no_syscall(u32_t arg1, u32_t arg2, u32_t arg3,
+				 u32_t arg4, u32_t arg5, u32_t arg6, void *ssf)
+{
+	printk("Unimplemented system call\n");
+	_arch_syscall_oops(ssf);
+	CODE_UNREACHABLE;
+}
 
-	[K_SYSCALL_SEM_INIT] = _handler_k_sem_init,
-	[K_SYSCALL_SEM_GIVE] = _handler_k_sem_give,
-	[K_SYSCALL_SEM_TAKE] = _handler_k_sem_take,
-	[K_SYSCALL_SEM_RESET] = _handler_k_sem_reset,
-	[K_SYSCALL_SEM_COUNT_GET] = _handler_k_sem_count_get,
-};
+#include <syscall_dispatch.c>
+

@@ -262,6 +262,8 @@ void _sys_device_do_config_level(int level)
 		// (*(volatile u32_t *) 0xb0800940): 0x15
 		//
 		// *(0xb0800948):  0x100
+
+		_k_object_init(info);
 	}
 }
 

@@ -135,6 +135,12 @@
 // _CONCAT(sys_init_init_static_pools, __COUNTER__): sys_init_init_static_pools0
 #define _CONCAT(x, y) _DO_CONCAT(x, y)
 
+/* Additionally used as a sentinel by gen_syscalls.py to identify what
+ * functions are system calls
+ */
+#define __syscall static inline
+#define __syscall_inline static inline
+
 #ifndef BUILD_ASSERT
 /* compile-time assertion that makes the build fail */
 #define BUILD_ASSERT(EXPR) typedef char __build_assert_failure[(EXPR) ? 1 : -1]

@@ -152,8 +152,15 @@ struct k_mem_pool;
 struct k_timer;
 struct k_poll_event;
 struct k_poll_signal;
+struct k_mem_domain;
+struct k_mem_partition;
 
+/* This enumeration needs to be kept in sync with the lists of kernel objects
+ * and subsystems in scripts/gen_kobject_list.py, as well as the otype_to_str()
+ * function in kernel/userspace.c
+ */
 enum k_objects {
+	/* Core kernel objects */
 	K_OBJ_ALERT,
 	K_OBJ_DELAYED_WORK,
 	K_OBJ_MEM_SLAB,
@@ -166,6 +173,29 @@ enum k_objects {
 	K_OBJ_TIMER,
 	K_OBJ_WORK,
 	K_OBJ_WORK_Q,
+
+	/* Driver subsystems */
+	K_OBJ_DRIVER_ADC,
+	K_OBJ_DRIVER_AIO_CMP,
+	K_OBJ_DRIVER_CLOCK_CONTROL,
+	K_OBJ_DRIVER_COUNTER,
+	K_OBJ_DRIVER_CRYPTO,
+	K_OBJ_DRIVER_DMA,
+	K_OBJ_DRIVER_ETH,
+	K_OBJ_DRIVER_FLASH,
+	K_OBJ_DRIVER_GPIO,
+	K_OBJ_DRIVER_I2C,
+	K_OBJ_DRIVER_I2S,
+	K_OBJ_DRIVER_IPM,
+	K_OBJ_DRIVER_PINMUX,
+	K_OBJ_DRIVER_PWM,
+	K_OBJ_DRIVER_RANDOM,
+	K_OBJ_DRIVER_RTC,
+	K_OBJ_DRIVER_SENSOR,
+	K_OBJ_DRIVER_SHARED_IRQ,
+	K_OBJ_DRIVER_SPI,
+	K_OBJ_DRIVER_UART,
+	K_OBJ_DRIVER_WDT,
 
 	K_OBJ_LAST
 };
@@ -386,6 +416,16 @@ typedef struct _thread_stack_info _thread_stack_info_t;
 // sizeof(struct _thread_base): 40 bytes
 // sizeof(struct _thread_arch): 0 bytes
 // sizeof(struct k_thread): 56 bytes
+#if defined(CONFIG_USERSPACE)
+struct _mem_domain_info {
+	/* memory domain queue node */
+	sys_dnode_t mem_domain_q_node;
+	/* memory domain of the thread */
+	struct k_mem_domain *mem_domain;
+};
+
+#endif /* CONFIG_USERSPACE */
+
 struct k_thread {
 
 	struct _thread_base base;
@@ -422,6 +462,11 @@ struct k_thread {
 	/* Stack Info */
 	struct _thread_stack_info stack_info;
 #endif /* CONFIG_THREAD_STACK_INFO */
+
+#if defined(CONFIG_USERSPACE)
+	/* memory domain info of the thread */
+	struct _mem_domain_info mem_domain_info;
+#endif /* CONFIG_USERSPACE */
 
 	/* arch-specifics: must always be at the end */
 	struct _thread_arch arch;
@@ -2796,13 +2841,8 @@ struct k_sem {
  *
  * @return N/A
  */
-static inline void k_sem_init(struct k_sem *sem, unsigned int initial_count,
-			      unsigned int limit);
-
-K_SYSCALL_DECLARE3_VOID(K_SYSCALL_SEM_INIT, k_sem_init,
-			struct k_sem *, sem,
-			unsigned int, initial_count,
-			unsigned int, limit);
+__syscall void k_sem_init(struct k_sem *sem, unsigned int initial_count,
+			  unsigned int limit);
 
 /**
  * @brief Take a semaphore.
@@ -2825,11 +2865,7 @@ K_SYSCALL_DECLARE3_VOID(K_SYSCALL_SEM_INIT, k_sem_init,
  * @retval -EBUSY Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-static inline int k_sem_take(struct k_sem *sem, s32_t timeout);
-
-K_SYSCALL_DECLARE2(K_SYSCALL_SEM_TAKE, k_sem_take, int,
-		   struct k_sem *, sem,
-		   s32_t, timeout);
+__syscall int k_sem_take(struct k_sem *sem, s32_t timeout);
 
 /**
  * @brief Give a semaphore.
@@ -2843,10 +2879,7 @@ K_SYSCALL_DECLARE2(K_SYSCALL_SEM_TAKE, k_sem_take, int,
  *
  * @return N/A
  */
-static inline void k_sem_give(struct k_sem *sem);
-
-K_SYSCALL_DECLARE1_VOID(K_SYSCALL_SEM_GIVE, k_sem_give,
-			struct k_sem *, sem);
+__syscall void k_sem_give(struct k_sem *sem);
 
 /**
  * @brief Reset a semaphore's count to zero.
@@ -2857,15 +2890,12 @@ K_SYSCALL_DECLARE1_VOID(K_SYSCALL_SEM_GIVE, k_sem_give,
  *
  * @return N/A
  */
-static inline void k_sem_reset(struct k_sem *sem);
+__syscall_inline void k_sem_reset(struct k_sem *sem);
 
 static inline void _impl_k_sem_reset(struct k_sem *sem)
 {
 	sem->count = 0;
 }
-
-K_SYSCALL_DECLARE1_VOID_INLINE(K_SYSCALL_SEM_RESET, k_sem_reset,
-			       struct k_sem *, sem);
 
 /**
  * @brief Get a semaphore's count.
@@ -2876,15 +2906,12 @@ K_SYSCALL_DECLARE1_VOID_INLINE(K_SYSCALL_SEM_RESET, k_sem_reset,
  *
  * @return Current semaphore count.
  */
-static inline unsigned int k_sem_count_get(struct k_sem *sem);
+__syscall_inline unsigned int k_sem_count_get(struct k_sem *sem);
 
 static inline unsigned int _impl_k_sem_count_get(struct k_sem *sem)
 {
 	return sem->count;
 }
-
-K_SYSCALL_DECLARE1_INLINE(K_SYSCALL_SEM_COUNT_GET, k_sem_count_get,
-			  unsigned int, struct k_sem *, sem);
 
 /**
  * @brief Statically define and initialize a semaphore.
@@ -4436,6 +4463,132 @@ static inline char *K_THREAD_STACK_BUFFER(k_thread_stack_t sym)
 
 #endif /* _ARCH_DECLARE_STACK */
 
+/**
+ * @defgroup mem_domain_apis Memory domain APIs
+ * @ingroup kernel_apis
+ * @{
+ */
+
+/** @def MEM_PARTITION_ENTRY
+ *  @brief Used to declare a memory partition entry
+ */
+#define MEM_PARTITION_ENTRY(_start, _size, _attr) \
+	{\
+		.start = _start, \
+		.size = _size, \
+		.attr = _attr, \
+	}
+
+/** @def K_MEM_PARTITION_DEFINE
+ *  @brief Used to declare a memory partition
+ */
+#ifdef _ARCH_MEM_PARTITION_ALIGN_CHECK
+#define K_MEM_PARTITION_DEFINE(name, start, size, attr) \
+	_ARCH_MEM_PARTITION_ALIGN_CHECK(start, size); \
+	struct k_mem_partition name = \
+		MEM_PARTITION_ENTRY((u32_t)start, size, attr)
+#else
+#define K_MEM_PARTITION_DEFINE(name, start, size, attr) \
+	struct k_mem_partition name = \
+		MEM_PARTITION_ENTRY((u32_t)start, size, attr)
+#endif /* _ARCH_MEM_PARTITION_ALIGN_CHECK */
+
+
+/* memory partition */
+struct k_mem_partition {
+	/* start address of memory partition */
+	u32_t start;
+	/* size of memory partition */
+	u32_t size;
+	/* attribute of memory partition */
+	u32_t attr;
+};
+
+#if defined(CONFIG_USERSPACE)
+/* memory domian */
+struct k_mem_domain {
+	/* number of partitions in the domain */
+	u32_t num_partitions;
+	/* partitions in the domain */
+	struct k_mem_partition partitions[CONFIG_MAX_DOMAIN_PARTITIONS];
+	/* domain q */
+	sys_dlist_t mem_domain_q;
+};
+#endif /* CONFIG_USERSPACE */
+
+/**
+ * @brief Initialize a memory domain.
+ *
+ * Initialize a memory domain with given name and memory partitions.
+ *
+ * @param domain The memory domain to be initialized.
+ * @param num_parts The number of array items of "parts" parameter.
+ * @param parts An array of pointers to the memory partitions. Can be NULL
+ *              if num_parts is zero.
+ */
+
+extern void k_mem_domain_init(struct k_mem_domain *domain, u32_t num_parts,
+			      struct k_mem_partition *parts[]);
+/**
+ * @brief Destroy a memory domain.
+ *
+ * Destroy a memory domain.
+ *
+ * @param domain The memory domain to be destroyed.
+ */
+
+extern void k_mem_domain_destroy(struct k_mem_domain *domain);
+
+/**
+ * @brief Add a memory partition into a memory domain.
+ *
+ * Add a memory partition into a memory domain.
+ *
+ * @param domain The memory domain to be added a memory partition.
+ * @param part The memory partition to be added
+ */
+
+extern void k_mem_domain_add_partition(struct k_mem_domain *domain,
+				      struct k_mem_partition *part);
+
+/**
+ * @brief Remove a memory partition from a memory domain.
+ *
+ * Remove a memory partition from a memory domain.
+ *
+ * @param domain The memory domain to be removed a memory partition.
+ * @param part The memory partition to be removed
+ */
+
+extern void k_mem_domain_remove_partition(struct k_mem_domain *domain,
+					 struct k_mem_partition *part);
+
+/**
+ * @brief Add a thread into a memory domain.
+ *
+ * Add a thread into a memory domain.
+ *
+ * @param domain The memory domain that the thread is going to be added into.
+ * @param thread ID of thread going to be added into the memory domain.
+ */
+
+extern void k_mem_domain_add_thread(struct k_mem_domain *domain,
+				    k_tid_t thread);
+
+/**
+ * @brief Remove a thread from its memory domain.
+ *
+ * Remove a thread from its memory domain.
+ *
+ * @param thread ID of thread going to be removed from its memory domain.
+ */
+
+extern void k_mem_domain_remove_thread(k_tid_t thread);
+
+/**
+ * @} end defgroup mem_domain_apis
+ */
+
 #ifdef __cplusplus
 }
 #endif
@@ -4494,6 +4647,8 @@ inline void *operator new[](size_t size, void *ptr)
 }
 
 #endif /* defined(CONFIG_CPLUSPLUS) && defined(__cplusplus) */
+
+#include <syscalls/kernel.h>
 
 #endif /* !_ASMLANGUAGE */
 
