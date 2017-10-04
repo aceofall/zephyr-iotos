@@ -2890,7 +2890,7 @@ __syscall void k_sem_give(struct k_sem *sem);
  *
  * @return N/A
  */
-__syscall_inline void k_sem_reset(struct k_sem *sem);
+__syscall void k_sem_reset(struct k_sem *sem);
 
 static inline void _impl_k_sem_reset(struct k_sem *sem)
 {
@@ -2906,7 +2906,7 @@ static inline void _impl_k_sem_reset(struct k_sem *sem)
  *
  * @return Current semaphore count.
  */
-__syscall_inline unsigned int k_sem_count_get(struct k_sem *sem);
+__syscall unsigned int k_sem_count_get(struct k_sem *sem);
 
 static inline unsigned int _impl_k_sem_count_get(struct k_sem *sem)
 {
