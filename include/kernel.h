@@ -244,20 +244,6 @@ int _k_object_validate(void *obj, enum k_objects otype, int init);
  * @param object Address of the kernel object
  */
 void _k_object_init(void *obj);
-
-
-/**
- * grant a thread access to a kernel object
- *
- * The thread will be granted access to the object if the caller is from
- * supervisor mode, or the caller is from user mode AND has permissions
- * on the object already.
- *
- * @param object Address of kernel object
- * @param thread Thread to grant access to the object
- */
-void k_object_grant_access(void *object, struct k_thread *thread);
-
 #else
 static inline int _k_object_validate(void *obj, enum k_objects otype, int init)
 {
@@ -273,12 +259,47 @@ static inline void _k_object_init(void *obj)
 	ARG_UNUSED(obj);
 }
 
-static inline void k_object_grant_access(void *object, struct k_thread *thread)
+static inline void _impl_k_object_access_grant(void *object,
+					       struct k_thread *thread)
 {
 	ARG_UNUSED(object);
 	ARG_UNUSED(thread);
 }
-#endif /* CONFIG_USERSPACE */
+
+static inline void _impl_k_object_access_all_grant(void *object)
+{
+	ARG_UNUSED(object);
+}
+#endif /* !CONFIG_USERSPACE */
+
+/**
+ * grant a thread access to a kernel object
+ *
+ * The thread will be granted access to the object if the caller is from
+ * supervisor mode, or the caller is from user mode AND has permissions
+ * on the object already.
+ *
+ * @param object Address of kernel object
+ * @param thread Thread to grant access to the object
+ */
+__syscall void k_object_access_grant(void *object, struct k_thread *thread);
+
+
+/**
+ * grant all present and future threads access to an object
+ *
+ * If the caller is from supervisor mode, or the caller is from user mode and
+ * have sufficient permissions on the object, then that object will have
+ * permissions granted to it for *all* current and future threads running in
+ * the system, effectively becoming a public kernel object.
+ *
+ * Use of this API should be avoided on systems that are running untrusted code
+ * as it is possible for such code to derive the addresses of kernel objects
+ * and perform unwanted operations on them.
+ *
+ * @param object Address of kernel object
+ */
+__syscall void k_object_access_all_grant(void *object);
 
 /* timeouts */
 
