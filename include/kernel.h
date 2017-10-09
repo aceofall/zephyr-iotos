@@ -162,8 +162,6 @@ struct k_mem_partition;
 enum k_objects {
 	/* Core kernel objects */
 	K_OBJ_ALERT,
-	K_OBJ_DELAYED_WORK,
-	K_OBJ_MEM_SLAB,
 	K_OBJ_MSGQ,
 	K_OBJ_MUTEX,
 	K_OBJ_PIPE,
@@ -171,8 +169,6 @@ enum k_objects {
 	K_OBJ_STACK,
 	K_OBJ_THREAD,
 	K_OBJ_TIMER,
-	K_OBJ_WORK,
-	K_OBJ_WORK_Q,
 
 	/* Driver subsystems */
 	K_OBJ_DRIVER_ADC,
@@ -657,7 +653,7 @@ extern FUNC_NORETURN void k_thread_user_mode_enter(k_thread_entry_t entry,
  *
  * @return N/A
  */
-extern void k_sleep(s32_t duration);
+__syscall void k_sleep(s32_t duration);
 
 /**
  * @brief Cause the current thread to busy wait.
@@ -678,7 +674,7 @@ extern void k_busy_wait(u32_t usec_to_wait);
  *
  * @return N/A
  */
-extern void k_yield(void);
+__syscall void k_yield(void);
 
 /**
  * @brief Wake up a sleeping thread.
@@ -691,14 +687,14 @@ extern void k_yield(void);
  *
  * @return N/A
  */
-extern void k_wakeup(k_tid_t thread);
+__syscall void k_wakeup(k_tid_t thread);
 
 /**
  * @brief Get thread ID of the current thread.
  *
  * @return ID of current thread.
  */
-extern k_tid_t k_current_get(void);
+__syscall k_tid_t k_current_get(void);
 
 /**
  * @brief Cancel thread performing a delayed start.
@@ -711,7 +707,7 @@ extern k_tid_t k_current_get(void);
  * @retval 0 Thread spawning canceled.
  * @retval -EINVAL Thread has already started executing.
  */
-extern int k_thread_cancel(k_tid_t thread);
+__syscall int k_thread_cancel(k_tid_t thread);
 
 /**
  * @brief Abort a thread.
@@ -727,7 +723,7 @@ extern int k_thread_cancel(k_tid_t thread);
  *
  * @return N/A
  */
-extern void k_thread_abort(k_tid_t thread);
+__syscall void k_thread_abort(k_tid_t thread);
 
 
 /**
@@ -739,7 +735,7 @@ extern void k_thread_abort(k_tid_t thread);
  *
  * @param thread thread to start
  */
-extern void k_thread_start(k_tid_t thread);
+__syscall void k_thread_start(k_tid_t thread);
 
 /**
  * @cond INTERNAL_HIDDEN
@@ -1028,7 +1024,7 @@ struct _static_thread_data {
  *
  * @return Priority of @a thread.
  */
-extern int  k_thread_priority_get(k_tid_t thread);
+__syscall int k_thread_priority_get(k_tid_t thread);
 
 /**
  * @brief Set a thread's priority.
@@ -1057,7 +1053,7 @@ extern int  k_thread_priority_get(k_tid_t thread);
  *
  * @return N/A
  */
-extern void k_thread_priority_set(k_tid_t thread, int prio);
+__syscall void k_thread_priority_set(k_tid_t thread, int prio);
 
 /**
  * @brief Suspend a thread.
@@ -1073,7 +1069,7 @@ extern void k_thread_priority_set(k_tid_t thread, int prio);
  *
  * @return N/A
  */
-extern void k_thread_suspend(k_tid_t thread);
+__syscall void k_thread_suspend(k_tid_t thread);
 
 /**
  * @brief Resume a suspended thread.
@@ -1087,7 +1083,7 @@ extern void k_thread_suspend(k_tid_t thread);
  *
  * @return N/A
  */
-extern void k_thread_resume(k_tid_t thread);
+__syscall void k_thread_resume(k_tid_t thread);
 
 /**
  * @brief Set time-slicing period and scope.
@@ -1157,7 +1153,7 @@ extern int k_is_in_isr(void);
  * @return 0 if invoked by an ISR or by a cooperative thread.
  * @return Non-zero if invoked by a preemptible thread.
  */
-extern int k_is_preempt_thread(void);
+__syscall int k_is_preempt_thread(void);
 
 /**
  * @} end addtogroup isr_apis
@@ -1212,7 +1208,7 @@ extern void k_sched_unlock(void);
  *
  * @return N/A
  */
-extern void k_thread_custom_data_set(void *value);
+__syscall void k_thread_custom_data_set(void *value);
 
 /**
  * @brief Get current thread's custom data.
@@ -1221,7 +1217,7 @@ extern void k_thread_custom_data_set(void *value);
  *
  * @return Current custom data value.
  */
-extern void *k_thread_custom_data_get(void);
+__syscall void *k_thread_custom_data_get(void);
 
 /**
  * @} end addtogroup thread_apis
@@ -1498,8 +1494,8 @@ extern void k_timer_init(struct k_timer *timer,
  *
  * @return N/A
  */
-extern void k_timer_start(struct k_timer *timer,
-			  s32_t duration, s32_t period);
+__syscall void k_timer_start(struct k_timer *timer,
+			     s32_t duration, s32_t period);
 
 /**
  * @brief Stop a timer.
@@ -1517,7 +1513,7 @@ extern void k_timer_start(struct k_timer *timer,
  *
  * @return N/A
  */
-extern void k_timer_stop(struct k_timer *timer);
+__syscall void k_timer_stop(struct k_timer *timer);
 
 /**
  * @brief Read timer status.
@@ -1531,7 +1527,7 @@ extern void k_timer_stop(struct k_timer *timer);
  *
  * @return Timer status.
  */
-extern u32_t k_timer_status_get(struct k_timer *timer);
+__syscall u32_t k_timer_status_get(struct k_timer *timer);
 
 /**
  * @brief Synchronize thread to timer expiration.
@@ -1550,7 +1546,7 @@ extern u32_t k_timer_status_get(struct k_timer *timer);
  *
  * @return Timer status.
  */
-extern u32_t k_timer_status_sync(struct k_timer *timer);
+__syscall u32_t k_timer_status_sync(struct k_timer *timer);
 
 /**
  * @brief Get time remaining before a timer next expires.
@@ -1562,7 +1558,9 @@ extern u32_t k_timer_status_sync(struct k_timer *timer);
  *
  * @return Remaining time (in milliseconds).
  */
-static inline s32_t k_timer_remaining_get(struct k_timer *timer)
+__syscall s32_t k_timer_remaining_get(struct k_timer *timer);
+
+static inline s32_t _impl_k_timer_remaining_get(struct k_timer *timer)
 {
 	return _timeout_remaining_get(&timer->timeout);
 }
@@ -1581,8 +1579,10 @@ static inline s32_t k_timer_remaining_get(struct k_timer *timer)
  *
  * @return N/A
  */
-static inline void k_timer_user_data_set(struct k_timer *timer,
-					 void *user_data)
+__syscall void k_timer_user_data_set(struct k_timer *timer, void *user_data);
+
+static inline void _impl_k_timer_user_data_set(struct k_timer *timer,
+					       void *user_data)
 {
 	timer->user_data = user_data;
 }
@@ -1594,7 +1594,9 @@ static inline void k_timer_user_data_set(struct k_timer *timer,
  *
  * @return The user data.
  */
-static inline void *k_timer_user_data_get(struct k_timer *timer)
+__syscall void *k_timer_user_data_get(struct k_timer *timer);
+
+static inline void *_impl_k_timer_user_data_get(struct k_timer *timer)
 {
 	return timer->user_data;
 }
@@ -1669,7 +1671,7 @@ static inline void k_disable_sys_clock_always_on(void)
  *
  * @return Current uptime.
  */
-extern u32_t k_uptime_get_32(void);
+__syscall u32_t k_uptime_get_32(void);
 
 /**
  * @brief Get elapsed time.
@@ -2306,8 +2308,8 @@ struct k_stack {
  *
  * @return N/A
  */
-extern void k_stack_init(struct k_stack *stack,
-			 u32_t *buffer, int num_entries);
+__syscall void k_stack_init(struct k_stack *stack,
+			    u32_t *buffer, int num_entries);
 
 /**
  * @brief Push an element onto a stack.
@@ -2321,7 +2323,7 @@ extern void k_stack_init(struct k_stack *stack,
  *
  * @return N/A
  */
-extern void k_stack_push(struct k_stack *stack, u32_t data);
+__syscall void k_stack_push(struct k_stack *stack, u32_t data);
 
 /**
  * @brief Pop an element from a stack.
@@ -2340,7 +2342,7 @@ extern void k_stack_push(struct k_stack *stack, u32_t data);
  * @retval -EBUSY Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-extern int k_stack_pop(struct k_stack *stack, u32_t *data, s32_t timeout);
+__syscall int k_stack_pop(struct k_stack *stack, u32_t *data, s32_t timeout);
 
 /**
  * @brief Statically define and initialize a stack
@@ -2773,7 +2775,7 @@ struct k_mutex {
  *
  * @return N/A
  */
-extern void k_mutex_init(struct k_mutex *mutex);
+__syscall void k_mutex_init(struct k_mutex *mutex);
 
 /**
  * @brief Lock a mutex.
@@ -2793,7 +2795,7 @@ extern void k_mutex_init(struct k_mutex *mutex);
  * @retval -EBUSY Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-extern int k_mutex_lock(struct k_mutex *mutex, s32_t timeout);
+__syscall int k_mutex_lock(struct k_mutex *mutex, s32_t timeout);
 
 /**
  * @brief Unlock a mutex.
@@ -2809,7 +2811,7 @@ extern int k_mutex_lock(struct k_mutex *mutex, s32_t timeout);
  *
  * @return N/A
  */
-extern void k_mutex_unlock(struct k_mutex *mutex);
+__syscall void k_mutex_unlock(struct k_mutex *mutex);
 
 /**
  * @} end defgroup mutex_apis
@@ -3066,7 +3068,7 @@ extern void k_alert_init(struct k_alert *alert, k_alert_handler_t handler,
  * @retval -EBUSY Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-extern int k_alert_recv(struct k_alert *alert, s32_t timeout);
+__syscall int k_alert_recv(struct k_alert *alert, s32_t timeout);
 
 /**
  * @brief Signal an alert.
@@ -3082,7 +3084,7 @@ extern int k_alert_recv(struct k_alert *alert, s32_t timeout);
  *
  * @return N/A
  */
-extern void k_alert_send(struct k_alert *alert);
+__syscall void k_alert_send(struct k_alert *alert);
 
 /**
  * @} end addtogroup alert_apis
@@ -3175,8 +3177,8 @@ struct k_msgq {
  *
  * @return N/A
  */
-extern void k_msgq_init(struct k_msgq *q, char *buffer,
-			size_t msg_size, u32_t max_msgs);
+__syscall void k_msgq_init(struct k_msgq *q, char *buffer,
+			   size_t msg_size, u32_t max_msgs);
 
 /**
  * @brief Send a message to a message queue.
@@ -3194,7 +3196,7 @@ extern void k_msgq_init(struct k_msgq *q, char *buffer,
  * @retval -ENOMSG Returned without waiting or queue purged.
  * @retval -EAGAIN Waiting period timed out.
  */
-extern int k_msgq_put(struct k_msgq *q, void *data, s32_t timeout);
+__syscall int k_msgq_put(struct k_msgq *q, void *data, s32_t timeout);
 
 /**
  * @brief Receive a message from a message queue.
@@ -3213,7 +3215,7 @@ extern int k_msgq_put(struct k_msgq *q, void *data, s32_t timeout);
  * @retval -ENOMSG Returned without waiting.
  * @retval -EAGAIN Waiting period timed out.
  */
-extern int k_msgq_get(struct k_msgq *q, void *data, s32_t timeout);
+__syscall int k_msgq_get(struct k_msgq *q, void *data, s32_t timeout);
 
 /**
  * @brief Purge a message queue.
@@ -3226,7 +3228,7 @@ extern int k_msgq_get(struct k_msgq *q, void *data, s32_t timeout);
  *
  * @return N/A
  */
-extern void k_msgq_purge(struct k_msgq *q);
+__syscall void k_msgq_purge(struct k_msgq *q);
 
 /**
  * @brief Get the amount of free space in a message queue.
@@ -3238,7 +3240,9 @@ extern void k_msgq_purge(struct k_msgq *q);
  *
  * @return Number of unused ring buffer entries.
  */
-static inline u32_t k_msgq_num_free_get(struct k_msgq *q)
+__syscall u32_t k_msgq_num_free_get(struct k_msgq *q);
+
+static inline u32_t _impl_k_msgq_num_free_get(struct k_msgq *q)
 {
 	return q->max_msgs - q->used_msgs;
 }
@@ -3252,7 +3256,9 @@ static inline u32_t k_msgq_num_free_get(struct k_msgq *q)
  *
  * @return Number of messages.
  */
-static inline u32_t k_msgq_num_used_get(struct k_msgq *q)
+__syscall u32_t k_msgq_num_used_get(struct k_msgq *q);
+
+static inline u32_t _impl_k_msgq_num_used_get(struct k_msgq *q)
 {
 	return q->used_msgs;
 }
@@ -3559,8 +3565,8 @@ struct k_pipe {
  *
  * @return N/A
  */
-extern void k_pipe_init(struct k_pipe *pipe, unsigned char *buffer,
-			size_t size);
+__syscall void k_pipe_init(struct k_pipe *pipe, unsigned char *buffer,
+			   size_t size);
 
 /**
  * @brief Write data to a pipe.
@@ -3581,9 +3587,9 @@ extern void k_pipe_init(struct k_pipe *pipe, unsigned char *buffer,
  * @retval -EAGAIN Waiting period timed out; between zero and @a min_xfer
  *                 minus one data bytes were written.
  */
-extern int k_pipe_put(struct k_pipe *pipe, void *data,
-		      size_t bytes_to_write, size_t *bytes_written,
-		      size_t min_xfer, s32_t timeout);
+__syscall int k_pipe_put(struct k_pipe *pipe, void *data,
+			 size_t bytes_to_write, size_t *bytes_written,
+			 size_t min_xfer, s32_t timeout);
 
 /**
  * @brief Read data from a pipe.
@@ -3604,9 +3610,9 @@ extern int k_pipe_put(struct k_pipe *pipe, void *data,
  * @retval -EAGAIN Waiting period timed out; between zero and @a min_xfer
  *                 minus one data bytes were read.
  */
-extern int k_pipe_get(struct k_pipe *pipe, void *data,
-		      size_t bytes_to_read, size_t *bytes_read,
-		      size_t min_xfer, s32_t timeout);
+__syscall int k_pipe_get(struct k_pipe *pipe, void *data,
+			 size_t bytes_to_read, size_t *bytes_read,
+			 size_t min_xfer, s32_t timeout);
 
 /**
  * @brief Write memory block to a pipe.

@@ -63,6 +63,13 @@ static inline int _is_idle_thread_ptr(k_tid_t thread)
 }
 
 #ifdef CONFIG_MULTITHREADING // CONFIG_MULTITHREADING=y
+#define _VALID_PRIO(prio, entry_point) \
+	(((prio) == K_IDLE_PRIO && _is_idle_thread(entry_point)) || \
+		 (_is_prio_higher_or_equal((prio), \
+			K_LOWEST_APPLICATION_THREAD_PRIO) && \
+		  _is_prio_lower_or_equal((prio), \
+			K_HIGHEST_APPLICATION_THREAD_PRIO)))
+
 // KID 20170519
 // K_IDLE_PRIO: 15
 // K_LOWEST_APPLICATION_THREAD_PRIO: 14
@@ -89,17 +96,14 @@ static inline int _is_idle_thread_ptr(k_tid_t thread)
 // 		 "invalid priority (%d); allowed range: %d to %d", (-1), 14, -16);
 // } while ((0))
 #define _ASSERT_VALID_PRIO(prio, entry_point) do { \
-	__ASSERT(((prio) == K_IDLE_PRIO && _is_idle_thread(entry_point)) || \
-		 (_is_prio_higher_or_equal((prio), \
-			K_LOWEST_APPLICATION_THREAD_PRIO) && \
-		  _is_prio_lower_or_equal((prio), \
-			K_HIGHEST_APPLICATION_THREAD_PRIO)), \
+	__ASSERT(_VALID_PRIO((prio), (entry_point)), \
 		 "invalid priority (%d); allowed range: %d to %d", \
 		 (prio), \
 		 K_LOWEST_APPLICATION_THREAD_PRIO, \
 		 K_HIGHEST_APPLICATION_THREAD_PRIO); \
 	} while ((0))
 #else
+#define _VALID_PRIO(prio, entry_point) ((prio) == -1)
 #define _ASSERT_VALID_PRIO(prio, entry_point) __ASSERT((prio) == -1, "")
 #endif
 
