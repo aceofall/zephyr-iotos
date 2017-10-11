@@ -1918,7 +1918,7 @@ isr_rx_conn_pkt_ctrl_rej_conn_upd(struct radio_pdu_node_rx *radio_pdu_node_rx,
 	conn = _radio.conn_curr;
 
 	/* Unsupported remote feature */
-	if (rej_ext_ind->error_code == 0x1a) {
+	if (!conn->role && (rej_ext_ind->error_code == 0x1a)) {
 		LL_ASSERT(conn->llcp_req == conn->llcp_ack);
 
 		conn->llcp_conn_param.state = LLCP_CPR_STATE_UPD;
@@ -1929,7 +1929,7 @@ isr_rx_conn_pkt_ctrl_rej_conn_upd(struct radio_pdu_node_rx *radio_pdu_node_rx,
 		conn->llcp.conn_upd.latency = conn->llcp_conn_param.latency;
 		conn->llcp.conn_upd.timeout = conn->llcp_conn_param.timeout;
 		/* conn->llcp.conn_upd.instant     = 0; */
-		conn->llcp.conn_upd.state = LLCP_CUI_STATE_SELECT;
+		conn->llcp.conn_upd.state = LLCP_CUI_STATE_USE;
 		conn->llcp.conn_upd.is_internal = !conn->llcp_conn_param.cmd;
 		conn->llcp_type = LLCP_CONN_UPD;
 		conn->llcp_ack--;
@@ -2995,11 +2995,22 @@ isr_rx_conn_pkt_ctrl(struct radio_pdu_node_rx *radio_pdu_node_rx,
 		} else {
 			phy_rsp_send(_radio.conn_curr);
 
-			/* Start Procedure Timeout (TODO: this shall not replace
-			 * terminate procedure).
-			 */
-			_radio.conn_curr->procedure_expire =
-				_radio.conn_curr->procedure_reload;
+			/* Wait for peer master to complete the procedure */
+			if (_radio.conn_curr->llcp_phy.ack ==
+			    _radio.conn_curr->llcp_phy.req) {
+				_radio.conn_curr->llcp_phy.ack--;
+
+				_radio.conn_curr->llcp_phy.state =
+					LLCP_PHY_STATE_RSP_WAIT;
+
+				_radio.conn_curr->llcp_phy.cmd = 0;
+
+				/* Start Procedure Timeout (TODO: this shall not
+				 * replace terminate procedure).
+				 */
+				_radio.conn_curr->procedure_expire =
+					_radio.conn_curr->procedure_reload;
+			}
 		}
 		break;
 
@@ -6419,6 +6430,9 @@ static inline u32_t event_conn_upd_prep(struct connection *conn,
 		if ((conn->llcp_conn_param.req != conn->llcp_conn_param.ack) &&
 		    (conn->llcp_conn_param.state == LLCP_CPR_STATE_UPD)) {
 			conn->llcp_conn_param.ack = conn->llcp_conn_param.req;
+
+			/* Stop procedure timeout */
+			conn->procedure_expire = 0;
 		}
 #endif /* CONFIG_BT_CTLR_CONN_PARAM_REQ */
 		/* Reset ticker_id_prepare as role is not continued further
