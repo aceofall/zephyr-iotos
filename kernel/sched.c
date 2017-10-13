@@ -471,18 +471,8 @@ int _impl_k_thread_priority_get(k_tid_t thread)
 }
 
 #ifdef CONFIG_USERSPACE
-u32_t _handler_k_thread_priority_get(u32_t arg1, u32_t arg2, u32_t arg3,
-				     u32_t arg4, u32_t arg5, u32_t arg6,
-				     void *ssf)
-{
-	struct k_thread *thread;
-
-	_SYSCALL_ARG1;
-
-	thread = (struct k_thread *)arg1;
-	_SYSCALL_IS_OBJ(thread, K_OBJ_THREAD, 0, ssf);
-	return (u32_t)_impl_k_thread_priority_get(thread);
-}
+_SYSCALL_HANDLER1_SIMPLE(k_thread_priority_get, K_OBJ_THREAD,
+			 struct k_thread *);
 #endif
 
 void _impl_k_thread_priority_set(k_tid_t tid, int prio)
@@ -502,14 +492,17 @@ void _impl_k_thread_priority_set(k_tid_t tid, int prio)
 }
 
 #ifdef CONFIG_USERSPACE
-u32_t _handler_k_thread_priority_set(u32_t thread, u32_t prio, u32_t arg3,
-				     u32_t arg4, u32_t arg5, u32_t arg6,
-				     void *ssf)
+_SYSCALL_HANDLER2(k_thread_priority_set, thread_p, prio)
 {
-	_SYSCALL_ARG2;
+	struct k_thread *thread = (struct k_thread *)thread_p;
 
-	_SYSCALL_IS_OBJ(thread, K_OBJ_THREAD, 0, ssf);
-	_SYSCALL_VERIFY(_VALID_PRIO(prio, NULL), ssf);
+	_SYSCALL_OBJ(thread, K_OBJ_THREAD);
+	_SYSCALL_VERIFY_MSG(_VALID_PRIO(prio, NULL),
+			    "invalid thread priority %d", (int)prio);
+	_SYSCALL_VERIFY_MSG(prio >= thread->base.prio,
+			    "thread priority may only be downgraded (%d < %d)",
+			    prio, thread->base.prio);
+
 	_impl_k_thread_priority_set((k_tid_t)thread, prio);
 	return 0;
 }
@@ -560,14 +553,7 @@ void _impl_k_yield(void)
 }
 
 #ifdef CONFIG_USERSPACE
-u32_t _handler_k_yield(u32_t arg1, u32_t arg2, u32_t arg3,
-		       u32_t arg4, u32_t arg5, u32_t arg6, void *ssf)
-{
-	_SYSCALL_ARG0;
-
-	_impl_k_yield();
-	return 0;
-}
+_SYSCALL_HANDLER0_SIMPLE_VOID(k_yield);
 #endif
 
 void _impl_k_sleep(s32_t duration)
@@ -601,13 +587,14 @@ void _impl_k_sleep(s32_t duration)
 }
 
 #ifdef CONFIG_USERSPACE
-u32_t _handler_k_sleep(u32_t arg1, u32_t arg2, u32_t arg3,
-		       u32_t arg4, u32_t arg5, u32_t arg6, void *ssf)
+_SYSCALL_HANDLER1(k_sleep, duration)
 {
-	_SYSCALL_ARG1;
-
-	_SYSCALL_VERIFY(arg1 != K_FOREVER, ssf);
-	_impl_k_sleep(arg1);
+	/* FIXME there were some discussions recently on whether we should
+	 * relax this, thread would be unscheduled until k_wakeup issued
+	 */
+	_SYSCALL_VERIFY_MSG(duration != K_FOREVER,
+			    "sleeping forever not allowed");
+	_impl_k_sleep(duration);
 
 	return 0;
 }
@@ -638,15 +625,7 @@ void _impl_k_wakeup(k_tid_t thread)
 }
 
 #ifdef CONFIG_USERSPACE
-u32_t _handler_k_wakeup(u32_t thread, u32_t arg2, u32_t arg3,
-			u32_t arg4, u32_t arg5, u32_t arg6, void *ssf)
-{
-	_SYSCALL_ARG1;
-
-	_SYSCALL_IS_OBJ(thread, K_OBJ_THREAD, 0, ssf);
-	_impl_k_wakeup((k_tid_t)thread);
-	return 0;
-}
+_SYSCALL_HANDLER1_SIMPLE_VOID(k_wakeup, K_OBJ_THREAD, k_tid_t);
 #endif
 
 k_tid_t _impl_k_current_get(void)
@@ -655,13 +634,7 @@ k_tid_t _impl_k_current_get(void)
 }
 
 #ifdef CONFIG_USERSPACE
-u32_t _handler_k_current_get(u32_t arg1, u32_t arg2, u32_t arg3, u32_t arg4,
-			     u32_t arg5, u32_t arg6, void *ssf)
-{
-	_SYSCALL_ARG0;
-
-	return (u32_t)_impl_k_current_get();
-}
+_SYSCALL_HANDLER0_SIMPLE(k_current_get);
 #endif
 
 #ifdef CONFIG_TIMESLICING
@@ -739,12 +712,5 @@ int _impl_k_is_preempt_thread(void)
 }
 
 #ifdef CONFIG_USERSPACE
-u32_t _handler_k_is_preempt_thread(u32_t arg1, u32_t arg2, u32_t arg3,
-				   u32_t arg4, u32_t arg5, u32_t arg6,
-				   void *ssf)
-{
-	_SYSCALL_ARG0;
-
-	return _impl_k_is_preempt_thread();
-}
+_SYSCALL_HANDLER0_SIMPLE(k_is_preempt_thread);
 #endif

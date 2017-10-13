@@ -487,8 +487,13 @@ void ll_reset(void)
 	_radio.packet_release_first = 0;
 	_radio.packet_release_last = 0;
 
+	/* reset FC feature */
+	/* TODO: remove this feature related all code in the future */
+	_radio.fc_ack = _radio.fc_req;
+
 	/* reset whitelist and resolving list */
 	ll_filter_reset(false);
+
 	/* memory allocations */
 	common_init();
 }
@@ -8969,16 +8974,20 @@ static inline u32_t phy_upd_ind(struct radio_pdu_node_rx *radio_pdu_node_rx,
 	if (!((p->m_to_s_phy | p->s_to_m_phy) & 0x07)) {
 		struct radio_le_phy_upd_cmplt *p;
 
-		/* Ignore event generation if not local cmd initiated */
+		/* Not in PHY Update Procedure or PDU in wrong state */
 		if ((conn->llcp_phy.ack == conn->llcp_phy.req) ||
-		    (conn->llcp_phy.state != LLCP_PHY_STATE_RSP_WAIT) ||
-		    (!conn->llcp_phy.cmd)) {
+		    (conn->llcp_phy.state != LLCP_PHY_STATE_RSP_WAIT)) {
 			return 0;
 		}
 
 		/* Procedure complete */
 		conn->llcp_phy.ack = conn->llcp_phy.req;
 		conn->procedure_expire = 0;
+
+		/* Ignore event generation if not local cmd initiated */
+		if (!conn->llcp_phy.cmd) {
+			return 0;
+		}
 
 		/* generate phy update complete event */
 		radio_pdu_node_rx->hdr.type = NODE_RX_TYPE_PHY_UPDATE;

@@ -160,6 +160,8 @@ struct k_mem_partition;
  * function in kernel/userspace.c
  */
 enum k_objects {
+	K_OBJ_ANY,
+
 	/* Core kernel objects */
 	K_OBJ_ALERT,
 	K_OBJ_MSGQ,
@@ -207,28 +209,6 @@ struct _k_object {
 } __packed;
 
 #define K_OBJ_FLAG_INITIALIZED	BIT(0)
-/**
- * Ensure a system object is a valid object of the expected type
- *
- * Searches for the object and ensures that it is indeed an object
- * of the expected type, that the caller has the right permissions on it,
- * and that the object has been initialized.
- *
- * This function is intended to be called on the kernel-side system
- * call handlers to validate kernel object pointers passed in from
- * userspace.
- *
- * @param obj Address of the kernel object
- * @param otype Expected type of the kernel object
- * @param init If true, this is for an init function and we will not error
- *	   out if the object is not initialized
- * @return 0 If the object is valid
- *         -EBADF if not a valid object of the specified type
- *         -EPERM If the caller does not have permissions
- *         -EINVAL Object is not initialized
- */
-int _k_object_validate(void *obj, enum k_objects otype, int init);
-
 
 /**
  * Lookup a kernel object and init its metadata if it exists
@@ -241,15 +221,6 @@ int _k_object_validate(void *obj, enum k_objects otype, int init);
  */
 void _k_object_init(void *obj);
 #else
-static inline int _k_object_validate(void *obj, enum k_objects otype, int init)
-{
-	ARG_UNUSED(obj);
-	ARG_UNUSED(otype);
-	ARG_UNUSED(init);
-
-	return 0;
-}
-
 static inline void _k_object_init(void *obj)
 {
 	ARG_UNUSED(obj);
@@ -1618,7 +1589,7 @@ static inline void *_impl_k_timer_user_data_get(struct k_timer *timer)
  *
  * @return Current uptime.
  */
-extern s64_t k_uptime_get(void);
+__syscall s64_t k_uptime_get(void);
 
 #ifdef CONFIG_TICKLESS_KERNEL
 /**
@@ -2309,7 +2280,7 @@ struct k_stack {
  * @return N/A
  */
 __syscall void k_stack_init(struct k_stack *stack,
-			    u32_t *buffer, int num_entries);
+			    u32_t *buffer, unsigned int num_entries);
 
 /**
  * @brief Push an element onto a stack.
