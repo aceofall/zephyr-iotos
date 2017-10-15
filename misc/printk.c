@@ -242,20 +242,22 @@ still_might_format:
 
 // KID 20170614
 #ifdef CONFIG_USERSPACE
-struct out_context {
+struct buf_out_context {
 	int count;
 	unsigned int buf_count;
 	char buf[CONFIG_PRINTK_BUFFER_SIZE];
 };
 
-static void buf_flush(struct out_context *ctx)
+static void buf_flush(struct buf_out_context *ctx)
 {
 	k_str_out(ctx->buf, ctx->buf_count);
 	ctx->buf_count = 0;
 }
 
-static int char_out(int c, struct out_context *ctx)
+static int buf_char_out(int c, void *ctx_p)
 {
+	struct buf_out_context *ctx = ctx_p;
+
 	ctx->count++;
 	ctx->buf[ctx->buf_count++] = c;
 	if (ctx->buf_count == CONFIG_PRINTK_BUFFER_SIZE) {
@@ -264,15 +266,18 @@ static int char_out(int c, struct out_context *ctx)
 
 	return c;
 }
-#else
+#endif /* CONFIG_USERSPACE */
+
 struct out_context {
 	int count;
 };
 
 // KID 20170614
 // *fmt: '*', ctx: &ctx
-static int char_out(int c, struct out_context *ctx)
+static int char_out(int c, void *ctx_p)
 {
+	struct out_context *ctx = ctx_p;
+
 	// ctx->count: (&ctx)->count: 0
 	ctx->count++;
 	// ctx->count: (&ctx)->count: 1
@@ -280,25 +285,41 @@ static int char_out(int c, struct out_context *ctx)
 	// _char_out: console_out, c: '*'
 	return _char_out(c);
 }
-#endif
 
+#ifdef CONFIG_USERSPACE
 // KID 20170614
 // fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
 int vprintk(const char *fmt, va_list ap)
 {
-	struct out_context ctx = { 0 };
-	// ctx.count: 0
+	if (_is_user_context()) {
+		struct buf_out_context ctx = { 0 };
+    // ctx.count: 0
 
-	// fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
-	_vprintk((out_func_t)char_out, &ctx, fmt, ap);
+    // fmt: "***** " "BOOTING ZEPHYR OS v" "1.8.99" " - %s *****\n", "BUILD: " __DATE__ " " __TIME__
+		_vprintk(buf_char_out, &ctx, fmt, ap);
 
-#ifdef CONFIG_USERSPACE
-	if (ctx.buf_count) {
-		buf_flush(&ctx);
+		if (ctx.buf_count) {
+			buf_flush(&ctx);
+		}
+		return ctx.count;
+	} else {
+		struct out_context ctx = { 0 };
+
+		_vprintk(char_out, &ctx, fmt, ap);
+
+		return ctx.count;
 	}
-#endif
+}
+#else
+int vprintk(const char *fmt, va_list ap)
+{
+	struct out_context ctx = { 0 };
+
+	_vprintk(char_out, &ctx, fmt, ap);
+
 	return ctx.count;
 }
+#endif
 
 void _impl_k_str_out(char *c, size_t n)
 {

@@ -63,6 +63,25 @@ extern void _dump_object_error(int retval, void *obj, struct _k_object *ko,
  */
 extern struct _k_object *_k_object_find(void *obj);
 
+typedef void (*_wordlist_cb_func_t)(struct _k_object *ko, void *context);
+
+/**
+ * Iterate over all the kernel object metadata in the system
+ *
+ * @param func function to run on each struct _k_object
+ * @param context Context pointer to pass to each invocation
+ */
+extern void _k_object_wordlist_foreach(_wordlist_cb_func_t func, void *context);
+
+/**
+ * Copy all kernel object permissions from the parent to the child
+ *
+ * @param parent Parent thread, to get permissions from
+ * @param child Child thread, to copy permissions to
+ */
+extern void _thread_perms_inherit(struct k_thread *parent,
+				  struct k_thread *child);
+
 /**
  * Grant a thread permission to a kernel object
  *
@@ -70,6 +89,14 @@ extern struct _k_object *_k_object_find(void *obj);
  * @param thread The thread to grant permission
  */
 extern void _thread_perms_set(struct _k_object *ko, struct k_thread *thread);
+
+/**
+ * Revoke a thread's permission to a kernel object
+ *
+ * @param ko Kernel object metadata to update
+ * @param thread The thread to grant permission
+ */
+extern void _thread_perms_clear(struct _k_object *ko, struct k_thread *thread);
 
 /**
  * Grant all current and future threads access to a kernel object

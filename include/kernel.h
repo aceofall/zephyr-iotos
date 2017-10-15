@@ -233,6 +233,13 @@ static inline void _impl_k_object_access_grant(void *object,
 	ARG_UNUSED(thread);
 }
 
+static inline void _impl_k_object_access_revoke(void *object,
+						struct k_thread *thread)
+{
+	ARG_UNUSED(object);
+	ARG_UNUSED(thread);
+}
+
 static inline void _impl_k_object_access_all_grant(void *object)
 {
 	ARG_UNUSED(object);
@@ -244,13 +251,24 @@ static inline void _impl_k_object_access_all_grant(void *object)
  *
  * The thread will be granted access to the object if the caller is from
  * supervisor mode, or the caller is from user mode AND has permissions
- * on the object already.
+ * on both the object and the thread whose access is being granted.
  *
  * @param object Address of kernel object
  * @param thread Thread to grant access to the object
  */
 __syscall void k_object_access_grant(void *object, struct k_thread *thread);
 
+/**
+ * grant a thread access to a kernel object
+ *
+ * The thread will lose access to the object if the caller is from
+ * supervisor mode, or the caller is from user mode AND has permissions
+ * on both the object and the thread whose access is being revoked.
+ *
+ * @param object Address of kernel object
+ * @param thread Thread to remove access to the object
+ */
+__syscall void k_object_access_revoke(void *object, struct k_thread *thread);
 
 /**
  * grant all present and future threads access to an object
@@ -528,6 +546,12 @@ extern void k_call_stacks_analyze(void);
  * has additional restrictions
  */
 #define K_USER (1 << 2)
+
+/* Indicates that the thread being created should inherit all kernel object
+ * permissions from the thread that created it. No effect if CONFIG_USERSPACE
+ * is not enabled.
+ */
+#define K_INHERIT_PERMS (1 << 3)
 
 #ifdef CONFIG_X86
 /* x86 Bitmask definitions for threads user options */
