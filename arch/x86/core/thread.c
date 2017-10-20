@@ -81,7 +81,7 @@ struct _x86_initial_frame {
 // KID 20170717
 // new_thread: &(&k_sys_work_q)->thread, stack: sys_work_q_stack, stack_size: 1024, entry: work_q_main,
 // p1: &k_sys_work_q, p2: 0, p3: 0, prio: -1, options: 0
-void _new_thread(struct k_thread *thread, k_thread_stack_t stack,
+void _new_thread(struct k_thread *thread, k_thread_stack_t *stack,
 		 size_t stack_size, k_thread_entry_t entry,
 		 void *parameter1, void *parameter2, void *parameter3,
 		 int priority, unsigned int options)

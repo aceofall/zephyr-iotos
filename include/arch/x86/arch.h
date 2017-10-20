@@ -600,7 +600,7 @@ static inline u32_t _arch_syscall_invoke6(u32_t arg1, u32_t arg2, u32_t arg3,
 			 : "S" (call_id), "a" (arg1), "d" (arg2),
 			   "c" (arg3), "b" (arg4), "D" (arg5),
 			   [arg6] "m" (arg6)
-			 : "memory");
+			 : "memory", "esp");
 	return ret;
 }
 
@@ -741,12 +741,12 @@ static inline int _arch_is_user_context(void)
 #endif /* CONFIG_X86_STACK_PROTECTION */
 
 #define _ARCH_THREAD_STACK_DEFINE(sym, size) \
-	struct _k_thread_stack_element __noinit \
+	struct _k_thread_stack_element __kernel_noinit \
 		__aligned(_STACK_BASE_ALIGN) \
 		sym[(size) + _STACK_GUARD_SIZE]
 
 #define _ARCH_THREAD_STACK_ARRAY_DEFINE(sym, nmemb, size) \
-	struct _k_thread_stack_element __noinit \
+	struct _k_thread_stack_element __kernel_noinit \
 		__aligned(_STACK_BASE_ALIGN) \
 		sym[nmemb][ROUND_UP(size, _STACK_BASE_ALIGN) + \
 			   _STACK_GUARD_SIZE]

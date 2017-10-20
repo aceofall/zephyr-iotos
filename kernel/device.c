@@ -279,8 +279,16 @@ struct device *device_get_binding(const char *name)
 	// SYS_INIT 메크로에 정의된 struct device 의 구조체 값들 중에는 "UART_1" 이름의 장치가 없는 것으로 보임
 
 	for (info = __device_init_start; info != __device_init_end; info++) {
+		if (!info->driver_api) {
+			continue;
+		}
+
 		// name: "UART_1"
-		if (info->driver_api && !strcmp(name, info->config->name)) {
+		if (name == info->config->name) {
+			return info;
+		}
+
+		if (!strcmp(name, info->config->name)) {
 			return info;
 		}
 	}
