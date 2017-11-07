@@ -464,7 +464,7 @@ CROHandlingDone:
 	// _kernel_offset_to_current(%edi): _kernel.current: &(&k_sys_work_q)->thread
 	// _kernel_offset_to_current(%edi): _kernel.current: &_main_thread_s
 
-	/* recover task/fiber stack pointer from k_thread */
+	/* recover thread stack pointer from k_thread */
 
 	// eax: &_main_thread_s, _thread_offset_to_esp(%eax): _main_thread_s.callee_saved.esp: _main_stack + 980
 	// eax: &(&k_sys_work_q)->thread, _thread_offset_to_esp(%eax): _main_thread_s.callee_saved.esp: sys_work_q_stack + 980
@@ -1119,7 +1119,7 @@ time_read_not_needed:
  * jumps to _thread_entry().
  *
  * GDB normally stops unwinding a stack when it detects that it has
- * reached a function called main().  Kernel tasks, however, do not have
+ * reached a function called main().  Kernel threads, however, do not have
  * a main() function, and there does not appear to be a simple way of stopping
  * the unwinding of the stack.
  *

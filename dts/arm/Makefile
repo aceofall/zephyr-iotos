@@ -13,6 +13,7 @@ dtb-$(CONFIG_BOARD_OLIMEXINO_STM32)	=	olimexino_stm32.dts_compiled
 dtb-$(CONFIG_BOARD_96B_CARBON)		=	96b_carbon.dts_compiled
 dtb-$(CONFIG_BOARD_96B_CARBON_NRF51)	=	96b_carbon_nrf51.dts_compiled
 dtb-$(CONFIG_BOARD_NUCLEO_F030R8)	=	nucleo_f030r8.dts_compiled
+dtb-$(CONFIG_BOARD_NUCLEO_F091RC)	=	nucleo_f091rc.dts_compiled
 dtb-$(CONFIG_BOARD_NUCLEO_F103RB)	=	nucleo_f103rb.dts_compiled
 dtb-$(CONFIG_BOARD_NUCLEO_F334R8)	=	nucleo_f334r8.dts_compiled
 dtb-$(CONFIG_BOARD_NUCLEO_F401RE)	=	nucleo_f401re.dts_compiled
@@ -53,6 +54,7 @@ dtb-$(CONFIG_BOARD_STM32F429I_DISC1)	=	stm32f429i_disc1.dts_compiled
 dtb-$(CONFIG_BOARD_EFM32WG_STK3800)	=	efm32wg_stk3800.dts_compiled
 dtb-$(CONFIG_BOARD_96B_NEONKEY)         =       96b_neonkey.dts_compiled
 dtb-$(CONFIG_BOARD_MSP_EXP432P401R_LAUNCHXL) = msp_exp432p401r_launchxl.dts_compiled
+dtb-$(CONFIG_BOARD_STM32F411E_DISCO)	=	stm32f411e_disco.dts_compiled
 
 always	:= $(dtb-y)
 endif

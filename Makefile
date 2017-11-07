@@ -376,6 +376,7 @@ ZEPHYRINCLUDE    = \
 		-I$(srctree)/kernel/include \
 		-I$(srctree)/arch/$(ARCH)/include \
 		-I$(srctree)/arch/$(ARCH)/soc/$(SOC_PATH) \
+		-I$(srctree)/arch/$(ARCH)/soc/$(SOC_FAMILY)/include \
 		-I$(srctree)/boards/$(ARCH)/$(BOARD_NAME) \
 		$(if $(KBUILD_SRC), -I$(srctree)/include) \
 		-I$(srctree)/include \
@@ -1381,15 +1382,9 @@ run:
 endif
 
 ifneq ($(FLASH_SCRIPT),)
-ifeq ($(USE_ZEPHYR_FLASH_DEBUG_SHELL),)
 flash: zephyr
 	@echo "Flashing $(BOARD_NAME)"
 	$(Q)$(srctree)/scripts/support/zephyr_flash_debug.py flash $(srctree)/scripts/support/$(FLASH_SCRIPT)
-else
-flash: zephyr
-	@echo "Flashing $(BOARD_NAME)"
-	$(Q)$(CONFIG_SHELL) $(srctree)/scripts/support/$(FLASH_SCRIPT) flash
-endif
 else
 flash: FORCE
 	@echo Flashing not supported with this board.
@@ -1398,8 +1393,7 @@ endif
 
 ifneq ($(DEBUG_SCRIPT),)
 debug: zephyr
-	$(Q)$(CONFIG_SHELL) $(srctree)/scripts/support/$(DEBUG_SCRIPT) debug
-
+	$(Q)$(srctree)/scripts/support/zephyr_flash_debug.py debug $(srctree)/scripts/support/$(DEBUG_SCRIPT)
 else
 debug: FORCE
 	@echo Debugging not supported with this board.

@@ -37,8 +37,8 @@ static inline void _init_timeout(struct _timeout *t, _timeout_func_t func)
 	// t->delta_ticks_from_prev: (&(&(&_main_thread_s)->base)->timeout)->delta_ticks_from_prev: -1
 
 	/*
-	 * Must be initialized here so that the _fiber_wakeup family of APIs can
-	 * verify the fiber is not on a wait queue before aborting a timeout.
+	 * Must be initialized here so that k_wakeup can
+	 * verify the thread is not on a wait queue before aborting a timeout.
 	 */
 	// t->wait_q: (&(&(&_main_thread_s)->base)->timeout)->wait_q
 	t->wait_q = NULL;
@@ -46,7 +46,7 @@ static inline void _init_timeout(struct _timeout *t, _timeout_func_t func)
 
 	/*
 	 * Must be initialized here, so the _handle_one_timeout()
-	 * routine can check if there is a fiber waiting on this timeout
+	 * routine can check if there is a thread waiting on this timeout
 	 */
 	// t->thread: (&(&(&_main_thread_s)->base)->timeout)->thread
 	t->thread = NULL;

@@ -1,7 +1,7 @@
 subdir-ccflags-y += -I$(srctree)/include/drivers
 
 obj-y = console/
-obj-y += random/
+obj-y += entropy/
 obj-y += serial/
 obj-y += display/
 obj-$(CONFIG_SYS_CLOCK_EXISTS) += timer/
@@ -31,4 +31,5 @@ obj-$(CONFIG_PINMUX) += pinmux/
 obj-$(CONFIG_DMA) += dma/
 obj-$(CONFIG_USB) += usb/
 obj-$(CONFIG_CRYPTO) += crypto/
+obj-$(CONFIG_LED_STRIP) += led_strip/
 obj-y += crc/
