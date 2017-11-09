@@ -78,6 +78,7 @@
  */
 
 #include <kernel.h>
+#include <kernel_structs.h>
 #include <arch/cpu.h>
 #include <zephyr/types.h>
 #include <string.h>
@@ -210,6 +211,23 @@ u32_t loapic_suspend_buf[LOPIC_SUSPEND_BITS_REQD / 32] = {0};
 static u32_t loapic_device_power_state = DEVICE_PM_ACTIVE_STATE;
 #endif
 
+static ALWAYS_INLINE u32_t LOAPIC_READ(mem_addr_t addr)
+{
+#ifndef CONFIG_JAILHOUSE_X2APIC
+	return sys_read32(CONFIG_LOAPIC_BASE_ADDRESS + addr);
+#else
+	return read_x2apic(addr >> 4);
+#endif
+}
+
+static ALWAYS_INLINE void LOAPIC_WRITE(mem_addr_t addr, u32_t data)
+{
+#ifndef CONFIG_JAILHOUSE_X2APIC
+	sys_write32(data, CONFIG_LOAPIC_BASE_ADDRESS + addr);
+#else
+	write_x2apic(addr >> 4, data);
+#endif
+}
 
 /**
  *
@@ -230,85 +248,64 @@ static int _loapic_init(struct device *unused)
 	s32_t loApicMaxLvt; /* local APIC Max LVT */
 
 	/* enable the Local APIC */
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_SVR: 0x0F0, LOAPIC_ENABLE: 0x100
-	// sys_read32(0xFEE000F0): 0x000000FF
-	sys_write32(sys_read32(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR)
-		    | LOAPIC_ENABLE, CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR);
-
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_VER: 0x030, LOAPIC_MAXLVT_MASK: 0x00ff0000
-	loApicMaxLvt = (*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_VER) &
-			LOAPIC_MAXLVT_MASK) >> 16;
+	LOAPIC_WRITE(LOAPIC_SVR, LOAPIC_READ(LOAPIC_SVR) | LOAPIC_ENABLE);
+	loApicMaxLvt = (LOAPIC_READ(LOAPIC_VER) & LOAPIC_MAXLVT_MASK) >> 16;
 
 	/* reset the DFR, TPR, TIMER_CONFIG, and TIMER_ICR */
 
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_DFR: 0x0e0
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_DFR) =
-		(int)0xffffffff;
+	/* Jailhouse does not allow writes to DFR in x2APIC mode */
+#ifndef CONFIG_JAILHOUSE_X2APIC
+	LOAPIC_WRITE(LOAPIC_DFR, 0xffffffff);
+#endif
 
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_TPR: 0x080
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TPR) = (int)0x0;
-
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_TIMER_CONFIG: 0x3e0
-	*(volatile int *) (CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER_CONFIG) =
-		(int)0x0;
-
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_TIMER_ICR: 0x380
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER_ICR) = (int)0x0;
+	LOAPIC_WRITE(LOAPIC_TPR, 0x0);
+	LOAPIC_WRITE(LOAPIC_TIMER_CONFIG, 0x0);
+	LOAPIC_WRITE(LOAPIC_TIMER_ICR, 0x0);
 
 	/* program Local Vector Table for the Virtual Wire Mode */
 
+	/* skip LINT0/LINT1 for Jailhouse guest case, because we won't
+	 * ever be waiting for interrupts on those
+	 */
+#ifndef CONFIG_JAILHOUSE
 	/* set LINT0: extInt, high-polarity, edge-trigger, not-masked */
 
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_LINT0: 0x350
-	// LOAPIC_MODE: 0x00000700, LOAPIC_LOW: 0x00002000, LOAPIC_LEVEL: 0x00008000, LOAPIC_LVT_MASKED: 0x00010000,
-	// LOAPIC_EXT: 0x00000700, LOAPIC_HIGH: 0x00000000, LOAPIC_EDGE 0x00000000
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_LINT0) =
-		(*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_LINT0) &
-		 ~(LOAPIC_MODE | LOAPIC_LOW | LOAPIC_LEVEL | LOAPIC_LVT_MASKED)) |
-		(LOAPIC_EXT | LOAPIC_HIGH | LOAPIC_EDGE);
+	LOAPIC_WRITE(LOAPIC_LINT0, (LOAPIC_READ(LOAPIC_LINT0) &
+		~(LOAPIC_MODE | LOAPIC_LOW |
+		  LOAPIC_LEVEL | LOAPIC_LVT_MASKED)) |
+		(LOAPIC_EXT | LOAPIC_HIGH | LOAPIC_EDGE));
 
 	/* set LINT1: NMI, high-polarity, edge-trigger, not-masked */
 
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_LINT1: 0x360
-	// LOAPIC_MODE: 0x00000700, LOAPIC_LOW: 0x00002000, LOAPIC_LEVEL: 0x00008000, LOAPIC_LVT_MASKED: 0x00010000,
-	// LOAPIC_NMI: 0x00000400, LOAPIC_HIGH: 0x00000000, LOAPIC_EDGE 0x00000000
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_LINT1) =
-		(*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_LINT1) &
-		 ~(LOAPIC_MODE | LOAPIC_LOW | LOAPIC_LEVEL | LOAPIC_LVT_MASKED)) |
-		(LOAPIC_NMI | LOAPIC_HIGH | LOAPIC_EDGE);
+	LOAPIC_WRITE(LOAPIC_LINT1, (LOAPIC_READ(LOAPIC_LINT1) &
+		~(LOAPIC_MODE | LOAPIC_LOW |
+		  LOAPIC_LEVEL | LOAPIC_LVT_MASKED)) |
+		(LOAPIC_NMI | LOAPIC_HIGH | LOAPIC_EDGE));
+#endif
 
 	/* lock the Local APIC interrupts */
 
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_TIMER: 0x320, LOAPIC_LVT_MASKED: 0x00010000
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER) =
-		LOAPIC_LVT_MASKED;
-
-	// CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_ERROR: 0x370, LOAPIC_LVT_MASKED: 0x00010000
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_ERROR) =
-		LOAPIC_LVT_MASKED;
+	LOAPIC_WRITE(LOAPIC_TIMER, LOAPIC_LVT_MASKED);
+	LOAPIC_WRITE(LOAPIC_ERROR, LOAPIC_LVT_MASKED);
 
 	// LOAPIC_LVT_P6: 4
 	if (loApicMaxLvt >= LOAPIC_LVT_P6)
-		*(volatile int *) (CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_PMC) =
-			LOAPIC_LVT_MASKED;
+		LOAPIC_WRITE(LOAPIC_PMC, LOAPIC_LVT_MASKED);
 
 	// LOAPIC_LVT_PENTIUM4: 5
 	if (loApicMaxLvt >= LOAPIC_LVT_PENTIUM4)
-		*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_THERMAL) =
-			LOAPIC_LVT_MASKED;
+		LOAPIC_WRITE(LOAPIC_THERMAL, LOAPIC_LVT_MASKED);
 
-#if CONFIG_LOAPIC_SPURIOUS_VECTOR // CONFIG_LOAPIC_SPURIOUS_VECTOR=n
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR) =
-		(*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_SVR)
-		 & 0xFFFFFF00)
-		| (LOAPIC_SPURIOUS_VECTOR_ID & 0xFF);
+#if CONFIG_LOAPIC_SPURIOUS_VECTOR
+	LOAPIC_WRITE(LOAPIC_SVR, (LOAPIC_READ(LOAPIC_SVR) & 0xFFFFFF00) |
+		     (LOAPIC_SPURIOUS_VECTOR_ID & 0xFF));
 #endif
 
 	/* discard a pending interrupt if any */
 #if CONFIG_EOI_FORWARDING_BUG // CONFIG_EOI_FORWARDING_BUG=y
 	_lakemont_eoi();
 #else
-	*(volatile int *)(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_EOI) = 0;
+	LOAPIC_WRITE(LOAPIC_EOI, 0);
 #endif
 
 	return 0;
@@ -328,7 +325,6 @@ void _loapic_int_vec_set(unsigned int irq, /* IRQ number of the interrupt */
 				  unsigned int vector /* vector to copy into the LVT */
 				  )
 {
-	volatile int *pLvt; /* pointer to local vector table */
 	s32_t oldLevel;   /* previous interrupt lock level */
 
 	/*
@@ -344,13 +340,12 @@ void _loapic_int_vec_set(unsigned int irq, /* IRQ number of the interrupt */
 	 * It's assumed that LVTs are spaced by 0x10 bytes
 	 */
 
-	pLvt = (volatile int *)
-			(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER + (irq * 0x10));
-
 	/* update the 'vector' bits in the LVT */
 
 	oldLevel = irq_lock();
-	*pLvt = (*pLvt & ~LOAPIC_VECTOR) | vector;
+	LOAPIC_WRITE(LOAPIC_TIMER + (irq * 0x10),
+		     (LOAPIC_READ(LOAPIC_TIMER + (irq * 0x10)) &
+		      ~LOAPIC_VECTOR) | vector);
 	irq_unlock(oldLevel);
 }
 
@@ -367,7 +362,6 @@ void _loapic_int_vec_set(unsigned int irq, /* IRQ number of the interrupt */
 
 void _loapic_irq_enable(unsigned int irq)
 {
-	volatile int *pLvt; /* pointer to local vector table */
 	s32_t oldLevel;   /* previous interrupt lock level */
 
 	/*
@@ -375,13 +369,12 @@ void _loapic_irq_enable(unsigned int irq)
 	 * and ths assumption concerning LVT spacing.
 	 */
 
-	pLvt = (volatile int *)
-		(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER + (irq * 0x10));
-
 	/* clear the mask bit in the LVT */
 
 	oldLevel = irq_lock();
-	*pLvt = *pLvt & ~LOAPIC_LVT_MASKED;
+	LOAPIC_WRITE(LOAPIC_TIMER + (irq * 0x10),
+		     LOAPIC_READ(LOAPIC_TIMER + (irq * 0x10)) &
+		     ~LOAPIC_LVT_MASKED);
 	irq_unlock(oldLevel);
 }
 
@@ -398,7 +391,6 @@ void _loapic_irq_enable(unsigned int irq)
 
 void _loapic_irq_disable(unsigned int irq)
 {
-	volatile int *pLvt; /* pointer to local vector table */
 	s32_t oldLevel;   /* previous interrupt lock level */
 
 	/*
@@ -406,13 +398,12 @@ void _loapic_irq_disable(unsigned int irq)
 	 * and ths assumption concerning LVT spacing.
 	 */
 
-	pLvt = (volatile int *)
-		(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER + (irq * 0x10));
-
 	/* set the mask bit in the LVT */
 
 	oldLevel = irq_lock();
-	*pLvt = *pLvt | LOAPIC_LVT_MASKED;
+	LOAPIC_WRITE(LOAPIC_TIMER + (irq * 0x10),
+		     LOAPIC_READ(LOAPIC_TIMER + (irq * 0x10)) |
+		     LOAPIC_LVT_MASKED);
 	irq_unlock(oldLevel);
 }
 
@@ -453,9 +444,7 @@ int __irq_controller_isr_vector_get(void)
 	 * vectors
 	 */
 	for (block = 7; likely(block > 0); block--) {
-		// block: 7, CONFIG_LOAPIC_BASE_ADDRESS: 0xFEE00000, LOAPIC_ISR: 0x100
-		pReg = sys_read32(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_ISR +
-				  (block * 0x10));
+		pReg = LOAPIC_READ(LOAPIC_ISR + (block * 0x10));
 		if (pReg) {
 			return (block * 32) + (find_msb_set(pReg) - 1);
 		}
@@ -467,7 +456,7 @@ int __irq_controller_isr_vector_get(void)
 #ifdef CONFIG_DEVICE_POWER_MANAGEMENT // CONFIG_DEVICE_POWER_MANAGEMENT=n
 static int loapic_suspend(struct device *port)
 {
-	volatile int *pLvt; /* pointer to local vector table */
+	volatile u32_t lvt; /* local vector table entry value */
 	int loapic_irq;
 
 	ARG_UNUSED(port);
@@ -481,11 +470,9 @@ static int loapic_suspend(struct device *port)
 			/* Since vector numbers are already present in RAM/ROM,
 			 * We save only the mask bits here.
 			 */
-			pLvt = (volatile int *)
-				(CONFIG_LOAPIC_BASE_ADDRESS + LOAPIC_TIMER +
-				(loapic_irq * 0x10));
+			lvt = LOAPIC_READ(LOAPIC_TIMER + (loapic_irq * 0x10));
 
-			if ((*pLvt & LOAPIC_LVT_MASKED) == 0) {
+			if ((lvt & LOAPIC_LVT_MASKED) == 0) {
 				sys_bitfield_set_bit((mem_addr_t)loapic_suspend_buf,
 					loapic_irq);
 			}
