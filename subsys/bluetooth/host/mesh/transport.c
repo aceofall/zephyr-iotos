@@ -62,7 +62,6 @@ static struct seg_tx {
 	u64_t                    seq_auth;
 	u16_t                    dst;
 	u8_t                     seg_n:5,       /* Last segment index */
-				 friend_cred:1, /* Use Friendship creds */
 				 new_key:1;     /* New/old key */
 	u8_t                     nack_count;    /* Number of unacked segs */
 	bt_mesh_cb_t             cb;
@@ -103,14 +102,12 @@ static int send_unseg(struct bt_mesh_net_tx *tx, u8_t aid,
 		      struct net_buf_simple *sdu)
 {
 	struct net_buf *buf;
-	u8_t xmit;
 
 	BT_DBG("src 0x%04x dst 0x%04x app_idx 0x%04x sdu_len %u",
 	       tx->src, tx->ctx->addr, tx->ctx->app_idx, sdu->len);
 
-	xmit = bt_mesh_net_transmit_get();
-	buf = bt_mesh_adv_create(BT_MESH_ADV_DATA, TRANSMIT_COUNT(xmit),
-				 TRANSMIT_INT(xmit), BUF_TIMEOUT);
+	buf = bt_mesh_adv_create(BT_MESH_ADV_DATA, TRANSMIT_COUNT(tx->xmit),
+				 TRANSMIT_INT(tx->xmit), BUF_TIMEOUT);
 	if (!buf) {
 		BT_ERR("Out of network buffers");
 		return -ENOBUFS;
@@ -200,11 +197,12 @@ static inline void seg_tx_complete(struct seg_tx *tx, int err)
 	seg_tx_reset(tx);
 }
 
-static void seg_sent(struct net_buf *buf, int err)
+static void seg_sent(struct net_buf *buf, u16_t duration, int err)
 {
 	struct seg_tx *tx = &seg_tx[BT_MESH_ADV(buf)->seg.tx_id];
 
-	k_delayed_work_submit(&tx->retransmit, SEG_RETRANSMIT_TIMEOUT);
+	k_delayed_work_submit(&tx->retransmit,
+			      duration + SEG_RETRANSMIT_TIMEOUT);
 }
 
 static void seg_tx_send_unacked(struct seg_tx *tx)
@@ -231,8 +229,7 @@ static void seg_tx_send_unacked(struct seg_tx *tx)
 
 		BT_DBG("resending %u/%u", i, tx->seg_n);
 
-		err = bt_mesh_net_resend(tx->sub, seg, tx->new_key,
-					 tx->friend_cred, seg_sent);
+		err = bt_mesh_net_resend(tx->sub, seg, tx->new_key, seg_sent);
 		if (err) {
 			BT_ERR("Sending segment failed");
 			seg_tx_complete(tx, -EIO);
@@ -296,7 +293,6 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, u8_t aid,
 	tx->seq_auth = SEQ_AUTH(BT_MESH_NET_IVI_TX, bt_mesh.seq);
 	tx->sub = net_tx->sub;
 	tx->new_key = net_tx->sub->kr_flag;
-	tx->friend_cred = net_tx->ctx->friend_cred;
 
 	seq_zero = tx->seq_auth & 0x1fff;
 
@@ -305,12 +301,12 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, u8_t aid,
 	for (seg_o = 0; sdu->len; seg_o++) {
 		struct net_buf *seg;
 		u16_t len;
-		u8_t xmit;
 		int err;
 
-		xmit = bt_mesh_net_transmit_get();
-		seg = bt_mesh_adv_create(BT_MESH_ADV_DATA, TRANSMIT_COUNT(xmit),
-					 TRANSMIT_INT(xmit), BUF_TIMEOUT);
+		seg = bt_mesh_adv_create(BT_MESH_ADV_DATA,
+					 TRANSMIT_COUNT(net_tx->xmit),
+					 TRANSMIT_INT(net_tx->xmit),
+					 BUF_TIMEOUT);
 		if (!seg) {
 			BT_ERR("Out of segment buffers");
 			seg_tx_reset(tx);
@@ -364,11 +360,6 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, u8_t aid,
 			return err;
 		}
 	}
-
-	/* bt_mesh_net_send() may have modified this if the needed
-	 * Friendship credentials were not found.
-	 */
-	tx->friend_cred = net_tx->ctx->friend_cred;
 
 	if (bt_mesh_lpn_established()) {
 		bt_mesh_lpn_friend_poll();
@@ -447,14 +438,6 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
 				  BT_MESH_NET_IVI_TX);
 	if (err) {
 		return err;
-	}
-
-	/* Communication between LPN & Friend should always be using
-	 * the Friendship Credentials. Any other destination should
-	 * use the Master Credentials.
-	 */
-	if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER)) {
-		tx->ctx->friend_cred = bt_mesh_lpn_match(tx->ctx->addr);
 	}
 
 	if (seg) {
@@ -739,7 +722,7 @@ static int ctl_recv(struct bt_mesh_net_rx *rx, u8_t hdr,
 		return 0;
 	}
 
-	if (IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {
+	if (IS_ENABLED(CONFIG_BT_MESH_FRIEND) && !bt_mesh_lpn_established()) {
 		switch (ctl_op) {
 		case TRANS_CTL_OP_FRIEND_POLL:
 			return bt_mesh_friend_poll(rx, buf);
@@ -747,6 +730,8 @@ static int ctl_recv(struct bt_mesh_net_rx *rx, u8_t hdr,
 			return bt_mesh_friend_req(rx, buf);
 		case TRANS_CTL_OP_FRIEND_CLEAR:
 			return bt_mesh_friend_clear(rx, buf);
+		case TRANS_CTL_OP_FRIEND_CLEAR_CFM:
+			return bt_mesh_friend_clear_cfm(rx, buf);
 		case TRANS_CTL_OP_FRIEND_SUB_ADD:
 			return bt_mesh_friend_sub_add(rx, buf);
 		case TRANS_CTL_OP_FRIEND_SUB_REM:
@@ -764,7 +749,7 @@ static int ctl_recv(struct bt_mesh_net_rx *rx, u8_t hdr,
 			return bt_mesh_lpn_friend_clear_cfm(rx, buf);
 		}
 
-		if (!rx->ctx.friend_cred) {
+		if (!rx->friend_cred) {
 			BT_WARN("Message from friend with wrong credentials");
 			return -EINVAL;
 		}
@@ -837,19 +822,19 @@ int bt_mesh_ctl_send(struct bt_mesh_net_tx *tx, u8_t ctl_op, void *data,
 		     size_t data_len, u64_t *seq_auth, bt_mesh_adv_func_t cb)
 {
 	struct net_buf *buf;
-	u8_t xmit;
 
 	BT_DBG("src 0x%04x dst 0x%04x ttl 0x%02x ctl 0x%02x", tx->src,
 	       tx->ctx->addr, tx->ctx->send_ttl, ctl_op);
 	BT_DBG("len %zu: %s", data_len, bt_hex(data, data_len));
 
-	xmit = bt_mesh_net_transmit_get();
-	buf = bt_mesh_adv_create(BT_MESH_ADV_DATA, TRANSMIT_COUNT(xmit),
-				 TRANSMIT_INT(xmit), BUF_TIMEOUT);
+	buf = bt_mesh_adv_create(BT_MESH_ADV_DATA, TRANSMIT_COUNT(tx->xmit),
+				 TRANSMIT_INT(tx->xmit), BUF_TIMEOUT);
 	if (!buf) {
 		BT_ERR("Out of transport buffers");
 		return -ENOBUFS;
 	}
+
+	BT_MESH_ADV(buf)->addr = tx->ctx->addr;
 
 	net_buf_reserve(buf, BT_MESH_NET_HDR_LEN);
 
@@ -869,14 +854,6 @@ int bt_mesh_ctl_send(struct bt_mesh_net_tx *tx, u8_t ctl_op, void *data,
 		}
 	}
 
-	/* Communication between LPN & Friend should always be using
-	 * the Friendship Credentials. Any other destination should
-	 * use the Master Credentials.
-	 */
-	if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER)) {
-		tx->ctx->friend_cred = bt_mesh_lpn_match(tx->ctx->addr);
-	}
-
 	return bt_mesh_net_send(tx, buf, cb);
 }
 
@@ -893,6 +870,7 @@ static int send_ack(struct bt_mesh_subnet *sub, u16_t src, u16_t dst,
 		.sub = sub,
 		.ctx = &ctx,
 		.src = obo ? bt_mesh_primary_addr() : src,
+		.xmit = bt_mesh_net_transmit_get(),
 	};
 	u16_t seq_zero = *seq_auth & 0x1fff;
 	u8_t buf[6];
@@ -1259,7 +1237,7 @@ int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx)
 	 */
 	if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER) &&
 	    bt_mesh_lpn_established() &&
-	    (!bt_mesh_lpn_waiting_update() || !rx->ctx.friend_cred)) {
+	    (!bt_mesh_lpn_waiting_update() || !rx->friend_cred)) {
 		BT_WARN("Ignoring unexpected message in Low Power mode");
 		return -EAGAIN;
 	}
@@ -1289,12 +1267,17 @@ int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx)
 	 * we still need to go through the actual sending to the bearer and
 	 * wait for ReceiveDelay before transitioning to WAIT_UPDATE state.
 	 *
+	 * Another situation where we want to notify the LPN state machine
+	 * is if it's configured to use an automatic Friendship establishment
+	 * timer, in which case we want to reset the timer at this point.
+	 *
 	 * ENOENT is a special condition that's only used to indicate that
 	 * the Transport OpCode was invalid, in which case we should ignore
 	 * the PDU completely, as per MESH/NODE/FRND/LPN/BI-02-C.
 	 */
 	if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER) && err != -ENOENT &&
-	    bt_mesh_lpn_established() && bt_mesh_lpn_waiting_update()) {
+	    (bt_mesh_lpn_timer() ||
+	     (bt_mesh_lpn_established() && bt_mesh_lpn_waiting_update()))) {
 		bt_mesh_lpn_msg_received(rx);
 	}
 

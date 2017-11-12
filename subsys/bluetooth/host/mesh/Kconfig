@@ -7,14 +7,14 @@
 #
 
 menuconfig BT_MESH
-	bool "Smart Mesh support"
+	bool "Bluetooth Mesh support"
 	select TINYCRYPT
 	select TINYCRYPT_AES
 	select TINYCRYPT_AES_CMAC
 	help
-	  This option enables Smart Mesh support. The specific features
-	  that will be available is dependent on other features that have
-	  been enabled in the stack, such as GATT support.
+	  This option enables Bluetooth Mesh support. The specific
+	  features that are available may depend on other features
+	  that have been enabled in the stack, such as GATT support.
 
 if BT_MESH
 
@@ -186,6 +186,42 @@ config BT_MESH_LOW_POWER
 	  Enable this option to be able to act as a Low Power Node.
 
 if BT_MESH_LOW_POWER
+
+config BT_MESH_LPN_ESTABLISHMENT
+	bool "Perform Friendship establishment using low power"
+	default y
+	help
+	  Perform the Friendship establishment using low power, with
+	  the help of a reduced scan duty cycle. The downside of this
+	  is that the node may miss out on messages intended for it
+	  until it has successfully set up Friendship with a Friend
+	  node.
+
+config BT_MESH_LPN_AUTO
+	bool "Automatically start looking for Friend nodes once provisioned"
+	default y
+	help
+	  Automatically enable LPN functionality once provisioned and start
+	  looking for Friend nodes. If this option is disabled LPN mode
+	  needs to be manually enabled by calling bt_mesh_lpn_set(true).
+
+config BT_MESH_LPN_AUTO_TIMEOUT
+	int "Time from last received message before going to LPN mode"
+	default 15
+	range 0 3600
+	depends on BT_MESH_LPN_AUTO
+	help
+	  Time in seconds from the last received message, that the node
+	  will wait before starting to look for Friend nodes.
+
+config BT_MESH_LPN_RETRY_TIMEOUT
+	int "Retry timeout for Friend requests"
+	default 8
+	range 1 3600
+	help
+	  Time in seconds between Friend Requests, if a previous Friend
+	  Request did not receive any acceptable Friend Offers.
+
 config BT_MESH_LPN_RSSI_FACTOR
 	int "RSSIFactor, used in the Friend Offer Delay calculation"
 	range 0 3
@@ -215,7 +251,7 @@ config BT_MESH_LPN_MIN_QUEUE_SIZE
 config BT_MESH_LPN_RECV_DELAY
 	int "Receive delay requested by the local node"
 	range 10 255
-	default 20
+	default 100
 	help
 	  The ReceiveDelay is the time between the Low Power node
 	  sending a request and listening for a response. This delay
@@ -267,7 +303,7 @@ config BT_MESH_FRIEND_RECV_WIN
 config BT_MESH_FRIEND_QUEUE_SIZE
 	int "Minimum number of buffers supported per Friend Queue"
 	range 2 65536
-	default 4
+	default 16
 	help
 	  Minimum number of buffers available to be stored for each
 	  local Friend Queue.
@@ -283,7 +319,7 @@ config BT_MESH_FRIEND_SUB_LIST_SIZE
 config BT_MESH_FRIEND_LPN_COUNT
 	int "Number of supported LPN nodes"
 	range 1 1000
-	default 1
+	default 2
 	help
 	  Number of Low Power Nodes the Friend can have a Friendship
 	  with simultaneously.
