@@ -229,6 +229,10 @@ static void reset_link(void)
 {
 	prov_clear_tx();
 
+	if (prov->link_close) {
+		prov->link_close();
+	}
+
 	/* Clear everything except the retransmit delayed work config */
 	memset(&link, 0, offsetof(struct prov_link, tx.retransmit));
 
@@ -600,7 +604,9 @@ static int prov_auth(u8_t method, u8_t action, u8_t size)
 			return -EINVAL;
 		}
 
-		memcpy(link.auth, prov->static_val, prov->static_val_len);
+		memcpy(link.auth + 16 - prov->static_val_len,
+		       prov->static_val, prov->static_val_len);
+		memset(link.auth, 0, sizeof(link.auth) - prov->static_val_len);
 		return 0;
 
 	case AUTH_METHOD_OUTPUT:
@@ -618,7 +624,7 @@ static int prov_auth(u8_t method, u8_t action, u8_t size)
 		}
 
 		if (output == BT_MESH_DISPLAY_STRING) {
-			char str[9];
+			unsigned char str[9];
 			u8_t i;
 
 			bt_rand(str, size);
@@ -627,7 +633,7 @@ static int prov_auth(u8_t method, u8_t action, u8_t size)
 			for (i = 0; i < size; i++) {
 				str[i] %= 36;
 				if (str[i] < 10) {
-					str[i] += '\0';
+					str[i] += '0';
 				} else {
 					str[i] += 'A' - 10;
 				}
@@ -635,8 +641,9 @@ static int prov_auth(u8_t method, u8_t action, u8_t size)
 			str[size] = '\0';
 
 			memcpy(link.auth, str, size);
+			memset(link.auth + size, 0, sizeof(link.auth) - size);
 
-			return prov->output_string(str);
+			return prov->output_string((char *)str);
 		} else {
 			u32_t div[8] = { 10, 100, 1000, 10000, 100000,
 					    1000000, 10000000, 100000000 };
@@ -646,6 +653,7 @@ static int prov_auth(u8_t method, u8_t action, u8_t size)
 			num %= div[size - 1];
 
 			sys_put_be32(num, &link.auth[12]);
+			memset(link.auth, 0, 12);
 
 			return prov->output_number(output, num);
 		}
@@ -703,7 +711,8 @@ static void prov_start(const u8_t *data)
 
 	if (prov_auth(data[2], data[3], data[4]) < 0) {
 		BT_ERR("Invalid authentication method: 0x%02x; "
-			"action: 0x%02x; size: 0x%02x", data[2], data[3], data[4]);
+			"action: 0x%02x; size: 0x%02x", data[2], data[3],
+			data[4]);
 		prov_send_fail_msg(PROV_ERR_NVAL_FMT);
 	}
 }
@@ -758,17 +767,29 @@ static void send_confirm(void)
 	link.expect = PROV_RANDOM;
 }
 
+static void send_input_complete(void)
+{
+	struct net_buf_simple *buf = PROV_BUF(1);
+
+	prov_buf_init(buf, PROV_INPUT_COMPLETE);
+	prov_send(buf);
+}
+
 int bt_mesh_input_number(u32_t num)
 {
+	BT_DBG("%u", num);
+
 	if (!atomic_test_and_clear_bit(link.flags, WAIT_NUMBER)) {
 		return -EINVAL;
 	}
 
+	sys_put_be32(num, &link.auth[12]);
+
+	send_input_complete();
+
 	if (!atomic_test_bit(link.flags, HAVE_DHKEY)) {
 		return 0;
 	}
-
-	sys_put_be32(num, &link.auth[12]);
 
 	if (atomic_test_and_clear_bit(link.flags, SEND_CONFIRM)) {
 		send_confirm();
@@ -779,15 +800,19 @@ int bt_mesh_input_number(u32_t num)
 
 int bt_mesh_input_string(const char *str)
 {
+	BT_DBG("%s", str);
+
 	if (!atomic_test_and_clear_bit(link.flags, WAIT_STRING)) {
 		return -EINVAL;
 	}
 
+	strncpy(link.auth, str, prov->input_size);
+
+	send_input_complete();
+
 	if (!atomic_test_bit(link.flags, HAVE_DHKEY)) {
 		return 0;
 	}
-
-	strncpy(link.auth, str, prov->input_size);
 
 	if (atomic_test_and_clear_bit(link.flags, SEND_CONFIRM)) {
 		send_confirm();
@@ -1141,6 +1166,10 @@ static void link_open(struct prov_rx *rx, struct net_buf_simple *buf)
 		return;
 	}
 
+	if (prov->link_open) {
+		prov->link_open();
+	}
+
 	link.id = rx->link_id;
 	atomic_set_bit(link.flags, LINK_ACTIVE);
 	net_buf_simple_init(link.rx.buf, 0);
@@ -1442,6 +1471,10 @@ int bt_mesh_pb_gatt_open(struct bt_conn *conn)
 	link.conn = bt_conn_ref(conn);
 	link.expect = PROV_INVITE;
 
+	if (prov->link_open) {
+		prov->link_open();
+	}
+
 	return 0;
 }
 
@@ -1459,6 +1492,10 @@ int bt_mesh_pb_gatt_close(struct bt_conn *conn)
 	/* Disable Attention Timer if it was set */
 	if (link.conf_inputs[0]) {
 		bt_mesh_attention(NULL, 0);
+	}
+
+	if (prov->link_close) {
+		prov->link_close();
 	}
 
 	bt_conn_unref(link.conn);

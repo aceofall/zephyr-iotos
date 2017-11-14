@@ -72,7 +72,7 @@ static u16_t msg_cache_next;
 
 /* Singleton network context (the implementation only supports one) */
 struct bt_mesh_net bt_mesh = {
-	.local_queue = _K_FIFO_INITIALIZER(bt_mesh.local_queue),
+	.local_queue = SYS_SLIST_STATIC_INIT(&bt_mesh.local_queue),
 	.sub = {
 		[0 ... (CONFIG_BT_MESH_SUBNET_COUNT - 1)] = {
 			.net_idx = BT_MESH_KEY_UNUSED,
@@ -728,7 +728,7 @@ static void bt_mesh_net_local(struct k_work *work)
 {
 	struct net_buf *buf;
 
-	while ((buf = net_buf_get(&bt_mesh.local_queue, K_NO_WAIT))) {
+	while ((buf = net_buf_slist_get(&bt_mesh.local_queue))) {
 		BT_DBG("len %u: %s", buf->len, bt_hex(buf->data, buf->len));
 		bt_mesh_net_recv(&buf->b, 0, BT_MESH_NET_IF_LOCAL);
 		net_buf_unref(buf);
@@ -830,7 +830,7 @@ int bt_mesh_net_send(struct bt_mesh_net_tx *tx, struct net_buf *buf,
 	/* Deliver to local network interface if necessary */
 	if (bt_mesh_fixed_group_match(tx->ctx->addr) ||
 	    bt_mesh_elem_find(tx->ctx->addr)) {
-		net_buf_put(&bt_mesh.local_queue, net_buf_ref(buf));
+		net_buf_slist_put(&bt_mesh.local_queue, net_buf_ref(buf));
 		if (cb) {
 			cb(buf, 0, 0);
 		}
@@ -1174,6 +1174,7 @@ void bt_mesh_net_recv(struct net_buf_simple *data, s8_t rssi,
 {
 	struct net_buf_simple *buf = NET_BUF_SIMPLE(29);
 	struct bt_mesh_net_rx rx = { .rssi = rssi };
+	struct net_buf_simple_state state;
 
 	BT_DBG("rssi %d net_if %u", rssi, net_if);
 
@@ -1184,6 +1185,9 @@ void bt_mesh_net_recv(struct net_buf_simple *data, s8_t rssi,
 	if (bt_mesh_net_decode(data, net_if, &rx, buf)) {
 		return;
 	}
+
+	/* Save the state so the buffer can later be relayed */
+	net_buf_simple_save(buf, &state);
 
 	if (IS_ENABLED(CONFIG_BT_MESH_GATT_PROXY) &&
 	    net_if == BT_MESH_NET_IF_PROXY) {
@@ -1200,6 +1204,7 @@ void bt_mesh_net_recv(struct net_buf_simple *data, s8_t rssi,
 	 */
 	if (!BT_MESH_ADDR_IS_UNICAST(rx.dst) ||
 	    (!rx.local_match && !rx.friend_match)) {
+		net_buf_simple_restore(buf, &state);
 		bt_mesh_net_relay(buf, &rx);
 	}
 }

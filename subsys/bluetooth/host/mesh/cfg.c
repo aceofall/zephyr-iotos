@@ -42,21 +42,6 @@ static struct label {
 	u8_t  uuid[16];
 } labels[CONFIG_BT_MESH_LABEL_COUNT];
 
-static inline void key_idx_unpack(struct net_buf_simple *buf,
-				  u16_t *idx1, u16_t *idx2)
-{
-	*idx1 = sys_get_le16(&buf->data[0]) & 0xfff;
-	*idx2 = sys_get_le16(&buf->data[1]) >> 4;
-	net_buf_simple_pull(buf, 3);
-}
-
-static inline void key_idx_pack(struct net_buf_simple *buf,
-				u16_t idx1, u16_t idx2)
-{
-	net_buf_simple_add_le16(buf, idx1 | ((idx2 & 0x00f) << 12));
-	net_buf_simple_add_u8(buf, idx2 >> 4);
-}
-
 static void hb_send(struct bt_mesh_model *model)
 {
 
@@ -731,7 +716,7 @@ static void default_ttl_set(struct bt_mesh_model *model,
 
 	if (!cfg) {
 		BT_WARN("No Configuration Server context available");
-	} else if (buf->data[0] <= 0x7f && buf->data[0] != 0x01) {
+	} else if (buf->data[0] <= BT_MESH_TTL_MAX && buf->data[0] != 0x01) {
 		cfg->default_ttl = buf->data[0];
 	} else {
 		BT_WARN("Prohibited Default TTL value 0x%02x", buf->data[0]);
@@ -1023,7 +1008,7 @@ static void mod_pub_set(struct bt_mesh_model *model,
 	pub_app_idx &= BIT_MASK(12);
 
 	pub_ttl = net_buf_simple_pull_u8(buf);
-	if (pub_ttl > 0x7f && pub_ttl != BT_MESH_TTL_DEFAULT) {
+	if (pub_ttl > BT_MESH_TTL_MAX && pub_ttl != BT_MESH_TTL_DEFAULT) {
 		BT_ERR("Invalid TTL value 0x%02x", pub_ttl);
 		return;
 	}
@@ -1129,7 +1114,7 @@ static void mod_pub_va_set(struct bt_mesh_model *model,
 	cred_flag = ((pub_app_idx >> 12) & BIT_MASK(1));
 	pub_app_idx &= BIT_MASK(12);
 	pub_ttl = net_buf_simple_pull_u8(buf);
-	if (pub_ttl > 0x7f && pub_ttl != BT_MESH_TTL_DEFAULT) {
+	if (pub_ttl > BT_MESH_TTL_MAX && pub_ttl != BT_MESH_TTL_DEFAULT) {
 		BT_ERR("Invalid TTL value 0x%02x", pub_ttl);
 		return;
 	}
@@ -2748,7 +2733,7 @@ static void heartbeat_pub_set(struct bt_mesh_model *model,
 		goto failed;
 	}
 
-	if (param->ttl > 0x7f && param->ttl != BT_MESH_TTL_DEFAULT) {
+	if (param->ttl > BT_MESH_TTL_MAX && param->ttl != BT_MESH_TTL_DEFAULT) {
 		BT_ERR("Invalid TTL value 0x%02x", param->ttl);
 		return;
 	}
@@ -2897,7 +2882,7 @@ static void heartbeat_sub_set(struct bt_mesh_model *model,
 	} else {
 		cfg->hb_sub.src = sub_src;
 		cfg->hb_sub.dst = sub_dst;
-		cfg->hb_sub.min_hops = 0x7f;
+		cfg->hb_sub.min_hops = BT_MESH_TTL_MAX;
 		cfg->hb_sub.max_hops = 0;
 		cfg->hb_sub.count = 0;
 		period_ms = hb_pwr2(sub_period, 1) * 1000;
@@ -3012,7 +2997,7 @@ static bool conf_is_valid(struct bt_mesh_cfg *cfg)
 		return false;
 	}
 
-	if (cfg->default_ttl > 0x7f) {
+	if (cfg->default_ttl > BT_MESH_TTL_MAX) {
 		return false;
 	}
 

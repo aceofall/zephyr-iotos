@@ -293,6 +293,8 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, u8_t aid,
 	tx->seq_auth = SEQ_AUTH(BT_MESH_NET_IVI_TX, bt_mesh.seq);
 	tx->sub = net_tx->sub;
 	tx->new_key = net_tx->sub->kr_flag;
+	tx->cb = cb;
+	tx->cb_data = cb_data;
 
 	seq_zero = tx->seq_auth & 0x1fff;
 
@@ -1242,8 +1244,8 @@ int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx)
 		return -EAGAIN;
 	}
 
-	/* Save the parsing state so the buffer can later be relayed or
-	 * placed in the Friend Queue.
+	/* Save the app-level state so the buffer can later be placed in
+	 * the Friend Queue.
 	 */
 	net_buf_simple_save(buf, &state);
 
