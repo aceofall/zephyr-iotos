@@ -52,7 +52,7 @@ static void heartbeat(u8_t hops, u16_t feat)
 	board_play("100H");
 }
 
-static struct bt_mesh_cfg cfg_srv = {
+static struct bt_mesh_cfg_srv cfg_srv = {
 #if defined(CONFIG_BOARD_BBC_MICROBIT)
 	.relay = BT_MESH_RELAY_ENABLED,
 	.beacon = BT_MESH_BEACON_DISABLED,
@@ -70,6 +70,9 @@ static struct bt_mesh_cfg cfg_srv = {
 	.hb_sub.func = heartbeat,
 };
 
+static struct bt_mesh_cfg_cli cfg_cli = {
+};
+
 static void attention_on(struct bt_mesh_model *model)
 {
 	printk("attention_on()\n");
@@ -83,13 +86,14 @@ static void attention_off(struct bt_mesh_model *model)
 	board_attention(false);
 }
 
-static struct bt_mesh_health health_srv = {
+static struct bt_mesh_health_srv health_srv = {
 	.attention.on = attention_on,
 	.attention.off = attention_off,
 };
 
 static struct bt_mesh_model root_models[] = {
 	BT_MESH_MODEL_CFG_SRV(&cfg_srv),
+	BT_MESH_MODEL_CFG_CLI(&cfg_cli),
 	BT_MESH_MODEL_HEALTH_SRV(&health_srv),
 };
 
@@ -135,90 +139,62 @@ static const struct bt_mesh_comp comp = {
 	.elem_count = ARRAY_SIZE(elements),
 };
 
-#define OP_APP_KEY_ADD        BT_MESH_MODEL_OP_1(0x00)
-#define OP_MOD_SUB_ADD        BT_MESH_MODEL_OP_2(0x80, 0x1b)
-#define OP_HEARTBEAT_SUB_SET  BT_MESH_MODEL_OP_2(0x80, 0x3b)
-#define OP_MOD_APP_BIND       BT_MESH_MODEL_OP_2(0x80, 0x3d)
-
-static inline void key_idx_pack(struct net_buf_simple *buf,
-				u16_t idx1, u16_t idx2)
-{
-	net_buf_simple_add_le16(buf, idx1 | ((idx2 & 0x00f) << 12));
-	net_buf_simple_add_u8(buf, idx2 >> 4);
-}
-
 static void configure(void)
 {
-	struct net_buf_simple *msg = NET_BUF_SIMPLE(24);
-	struct bt_mesh_msg_ctx ctx = {
-		.net_idx = net_idx,
-		.app_idx = BT_MESH_KEY_DEV,
-		.addr = elements[0].addr,
-	};
-
 	printk("Configuring...\n");
 
-	/* Add App Key */
-	bt_mesh_model_msg_init(msg, OP_APP_KEY_ADD);
-
-	key_idx_pack(msg, net_idx, app_idx);
-	net_buf_simple_add_mem(msg, app_key, sizeof(app_key));
-
-	if (bt_mesh_model_send(&root_models[0], &ctx, msg, NULL, NULL)) {
-		printk("Unable to send App Key Add message\n");
-		return;
-	}
+	/* Add Application Key */
+	bt_mesh_cfg_app_key_add(net_idx, addr, net_idx, app_idx, app_key, NULL);
 
 	/* Bind to vendor model */
-	bt_mesh_model_msg_init(msg, OP_MOD_APP_BIND);
-	net_buf_simple_add_le16(msg, elements[0].addr);
-	net_buf_simple_add_le16(msg, app_idx);
-	net_buf_simple_add_le16(msg, CID_INTEL);
-	net_buf_simple_add_le16(msg, MOD_INTEL);
-
-	if (bt_mesh_model_send(&root_models[0], &ctx, msg, NULL, NULL)) {
-		printk("Unable to send Model App Key Bind message\n");
-		return;
-	}
+	bt_mesh_cfg_mod_app_bind_vnd(net_idx, addr, addr, app_idx,
+				     MOD_INTEL, CID_INTEL, NULL);
 
 	/* Bind to Health model */
-	bt_mesh_model_msg_init(msg, OP_MOD_APP_BIND);
-	net_buf_simple_add_le16(msg, elements[0].addr);
-	net_buf_simple_add_le16(msg, app_idx);
-	net_buf_simple_add_le16(msg, BT_MESH_MODEL_ID_HEALTH_SRV);
+	bt_mesh_cfg_mod_app_bind(net_idx, addr, addr, app_idx,
+				 BT_MESH_MODEL_ID_HEALTH_SRV, NULL);
 
-	if (bt_mesh_model_send(&root_models[0], &ctx, msg, NULL, NULL)) {
-		printk("Unable to send Model App Key Bind message\n");
-		return;
+	/* Add model subscription */
+	bt_mesh_cfg_mod_sub_add_vnd(net_idx, addr, addr, GROUP_ADDR,
+				    MOD_INTEL, CID_INTEL, NULL);
+
+#if defined(NODE_ADDR) && NODE_ADDR == PROV_ADDR
+	{
+		struct bt_mesh_cfg_hb_pub pub = {
+			.dst = GROUP_ADDR,
+			.count = 0xff,
+			.period = 0x05,
+			.ttl = 0x07,
+			.feat = 0,
+			.net_idx = net_idx,
+		};
+
+		bt_mesh_cfg_hb_pub_set(net_idx, addr, &pub, NULL);
+		printk("Publishing heartbeat messages\n");
 	}
+#else
+	{
+		struct bt_mesh_cfg_hb_sub sub = {
+			.src = PROV_ADDR,
+			.dst = GROUP_ADDR,
+			.period = 0x10,
+		};
 
-	/* Bind to Health model */
-	bt_mesh_model_msg_init(msg, OP_MOD_SUB_ADD);
-	net_buf_simple_add_le16(msg, elements[0].addr);
-	net_buf_simple_add_le16(msg, GROUP_ADDR);
-	net_buf_simple_add_le16(msg, CID_INTEL);
-	net_buf_simple_add_le16(msg, MOD_INTEL);
-
-	if (bt_mesh_model_send(&root_models[0], &ctx, msg, NULL, NULL)) {
-		printk("Unable to send Model Subscription Add message\n");
-		return;
+		bt_mesh_cfg_hb_sub_set(net_idx, addr, &sub, NULL);
+		printk("Subscribing to heartbeat messages\n");
 	}
-
-	/* Heartbeat subscription */
-	bt_mesh_model_msg_init(msg, OP_HEARTBEAT_SUB_SET);
-	net_buf_simple_add_le16(msg, PROV_ADDR);
-	net_buf_simple_add_le16(msg, GROUP_ADDR);
-	net_buf_simple_add_u8(msg, 0x10);
-
-	if (bt_mesh_model_send(&root_models[0], &ctx, msg, NULL, NULL)) {
-		printk("Unable to send Model App Key Bind message\n");
-		return;
-	}
+#endif
 
 	printk("Configuration complete\n");
 
 	board_play("100C100D100E100F100G100A100H");
 }
+
+static const u8_t dev_uuid[16] = { 0xdd, 0xdd };
+
+static const struct bt_mesh_prov prov = {
+	.uuid = dev_uuid,
+};
 
 static void bt_ready(int err)
 {
@@ -229,7 +205,7 @@ static void bt_ready(int err)
 
 	printk("Bluetooth initialized\n");
 
-	err = bt_mesh_init(NULL, &comp);
+	err = bt_mesh_init(&prov, &comp);
 	if (err) {
 		printk("Initializing mesh failed (err %d)\n", err);
 		return;

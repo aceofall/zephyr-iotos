@@ -9,6 +9,7 @@
 #include <wait_q.h>
 #include <init.h>
 #include <string.h>
+#include <misc/__assert.h>
 
 /* Linker-defined symbols bound the static pool structs */
 // KID 20170531
@@ -437,7 +438,12 @@ void *k_calloc(size_t nmemb, size_t size)
 	void *ret;
 	size_t bounds;
 
+#ifdef CONFIG_ASSERT
+	__ASSERT(!__builtin_mul_overflow(nmemb, size, &bounds),
+		 "requested size overflow");
+#else
 	bounds = nmemb * size;
+#endif
 	ret = k_malloc(bounds);
 	if (ret) {
 		memset(ret, 0, bounds);

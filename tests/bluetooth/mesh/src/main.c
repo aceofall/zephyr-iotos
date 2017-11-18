@@ -17,7 +17,7 @@
 
 static bool has_reg_fault = true;
 
-static struct bt_mesh_cfg cfg_srv = {
+static struct bt_mesh_cfg_srv cfg_srv = {
 	.relay = BT_MESH_RELAY_DISABLED,
 	.beacon = BT_MESH_BEACON_DISABLED,
 #if defined(CONFIG_BT_MESH_FRIEND)
@@ -103,7 +103,7 @@ static int fault_test(struct bt_mesh_model *model, uint8_t test_id,
 	return 0;
 }
 
-static struct bt_mesh_health health_srv = {
+static struct bt_mesh_health_srv health_srv = {
 	.fault_get_cur = fault_get_cur,
 	.fault_get_reg = fault_get_reg,
 	.fault_clear = fault_clear,
@@ -146,7 +146,7 @@ static const struct bt_mesh_comp comp = {
 };
 
 #if 0
-static int output_number(bt_mesh_output_action action, uint32_t number)
+static int output_number(bt_mesh_output_action_t action, uint32_t number)
 {
 	printk("OOB Number: %u\n", number);
 
@@ -156,9 +156,14 @@ static int output_number(bt_mesh_output_action action, uint32_t number)
 }
 #endif
 
-static void prov_complete(void)
+static void prov_complete(u16_t net_idx, u16_t addr)
 {
 	board_prov_complete();
+}
+
+static void prov_reset(void)
+{
+	bt_mesh_prov_enable(BT_MESH_PROV_ADV | BT_MESH_PROV_GATT);
 }
 
 static const u8_t dev_uuid[16] = { 0xdd, 0xdd };
@@ -171,6 +176,7 @@ static const struct bt_mesh_prov prov = {
 	.output_number = output_number,
 #endif
 	.complete = prov_complete,
+	.reset = prov_reset,
 };
 
 static void bt_ready(int err)
@@ -189,6 +195,8 @@ static void bt_ready(int err)
 		printk("Initializing mesh failed (err %d)\n", err);
 		return;
 	}
+
+	bt_mesh_prov_enable(BT_MESH_PROV_ADV | BT_MESH_PROV_GATT);
 
 	printk("Mesh initialized\n");
 }

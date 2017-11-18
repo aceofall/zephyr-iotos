@@ -76,17 +76,18 @@ int bt_mesh_provision(const u8_t net_key[16], u16_t net_idx,
 		bt_mesh_adv_update();
 	}
 
-	/* If PB-ADV is disabled then scanning will have been disabled */
-	if (!IS_ENABLED(CONFIG_BT_MESH_PB_ADV)) {
-		bt_mesh_scan_enable();
-	}
-
 	if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER)) {
 		bt_mesh_lpn_init();
+	} else {
+		bt_mesh_scan_enable();
 	}
 
 	if (IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {
 		bt_mesh_friend_init();
+	}
+
+	if (IS_ENABLED(CONFIG_BT_MESH_PROV)) {
+		bt_mesh_prov_complete(net_idx, addr);
 	}
 
 	return 0;
@@ -95,7 +96,7 @@ int bt_mesh_provision(const u8_t net_key[16], u16_t net_idx,
 void bt_mesh_reset(void)
 {
 	if (!provisioned) {
-		goto enable_beacon;
+		return;
 	}
 
 	bt_mesh_comp_unprovision();
@@ -112,15 +113,11 @@ void bt_mesh_reset(void)
 	k_delayed_work_cancel(&bt_mesh.ivu_complete);
 
 	if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER)) {
-		bt_mesh_lpn_disable();
+		bt_mesh_lpn_disable(true);
 	}
 
 	if (IS_ENABLED(CONFIG_BT_MESH_GATT_PROXY)) {
 		bt_mesh_proxy_gatt_disable();
-	}
-
-	if (IS_ENABLED(CONFIG_BT_MESH_PB_GATT)) {
-		bt_mesh_proxy_prov_enable();
 	}
 
 	memset(bt_mesh.dev_key, 0, sizeof(bt_mesh.dev_key));
@@ -129,21 +126,61 @@ void bt_mesh_reset(void)
 
 	provisioned = false;
 
-enable_beacon:
-	if (IS_ENABLED(CONFIG_BT_MESH_PB_ADV)) {
-		/* Make sure we're scanning for provisioning inviations */
-		bt_mesh_scan_enable();
-		/* Enable unprovisioned beacon sending */
-		bt_mesh_beacon_enable();
-	} else {
-		bt_mesh_scan_disable();
-		bt_mesh_beacon_disable();
+	bt_mesh_scan_disable();
+	bt_mesh_beacon_disable();
+
+	if (IS_ENABLED(CONFIG_BT_MESH_PROV)) {
+		bt_mesh_prov_reset();
 	}
 }
 
 bool bt_mesh_is_provisioned(void)
 {
 	return provisioned;
+}
+
+int bt_mesh_prov_enable(bt_mesh_prov_bearer_t bearers)
+{
+	if (bt_mesh_is_provisioned()) {
+		return -EALREADY;
+	}
+
+	if (IS_ENABLED(CONFIG_BT_MESH_PB_ADV) &&
+	    (bearers & BT_MESH_PROV_ADV)) {
+		/* Make sure we're scanning for provisioning inviations */
+		bt_mesh_scan_enable();
+		/* Enable unprovisioned beacon sending */
+		bt_mesh_beacon_enable();
+	}
+
+	if (IS_ENABLED(CONFIG_BT_MESH_PB_GATT) &&
+	    (bearers & BT_MESH_PROV_GATT)) {
+		bt_mesh_proxy_prov_enable();
+		bt_mesh_adv_update();
+	}
+
+	return 0;
+}
+
+int bt_mesh_prov_disable(bt_mesh_prov_bearer_t bearers)
+{
+	if (bt_mesh_is_provisioned()) {
+		return -EALREADY;
+	}
+
+	if (IS_ENABLED(CONFIG_BT_MESH_PB_ADV) &&
+	    (bearers & BT_MESH_PROV_ADV)) {
+		bt_mesh_beacon_disable();
+		bt_mesh_scan_disable();
+	}
+
+	if (IS_ENABLED(CONFIG_BT_MESH_PB_GATT) &&
+	    (bearers & BT_MESH_PROV_GATT)) {
+		bt_mesh_proxy_prov_disable();
+		bt_mesh_adv_update();
+	}
+
+	return 0;
 }
 
 int bt_mesh_init(const struct bt_mesh_prov *prov,
@@ -175,17 +212,6 @@ int bt_mesh_init(const struct bt_mesh_prov *prov,
 
 	if (IS_ENABLED(CONFIG_BT_MESH_PROXY)) {
 		bt_mesh_proxy_init();
-	}
-
-	if (IS_ENABLED(CONFIG_BT_MESH_PB_ADV)) {
-		/* Make sure we're scanning for provisioning inviations */
-		bt_mesh_scan_enable();
-		/* Enable unprovisioned beacon sending */
-		bt_mesh_beacon_enable();
-	}
-
-	if (IS_ENABLED(CONFIG_BT_MESH_PB_GATT)) {
-		bt_mesh_proxy_prov_enable();
 	}
 
 	return 0;

@@ -230,7 +230,7 @@ static void reset_link(void)
 	prov_clear_tx();
 
 	if (prov->link_close) {
-		prov->link_close();
+		prov->link_close(BT_MESH_PROV_ADV);
 	}
 
 	/* Clear everything except the retransmit delayed work config */
@@ -552,7 +552,7 @@ static void prov_capabilities(const u8_t *data)
 	BT_DBG("Input OOB Action:  0x%04x", input_action);
 }
 
-static bt_mesh_output_action output_action(u8_t action)
+static bt_mesh_output_action_t output_action(u8_t action)
 {
 	switch (action) {
 	case OUTPUT_OOB_BLINK:
@@ -570,7 +570,7 @@ static bt_mesh_output_action output_action(u8_t action)
 	}
 }
 
-static bt_mesh_input_action input_action(u8_t action)
+static bt_mesh_input_action_t input_action(u8_t action)
 {
 	switch (action) {
 	case INPUT_OOB_PUSH:
@@ -588,8 +588,8 @@ static bt_mesh_input_action input_action(u8_t action)
 
 static int prov_auth(u8_t method, u8_t action, u8_t size)
 {
-	bt_mesh_output_action output;
-	bt_mesh_input_action input;
+	bt_mesh_output_action_t output;
+	bt_mesh_input_action_t input;
 
 	switch (method) {
 	case AUTH_METHOD_NO_OOB:
@@ -1049,10 +1049,6 @@ static void prov_data(const u8_t *data)
 	link.expect = 0;
 
 	bt_mesh_provision(pdu, net_idx, flags, iv_index, 0, addr, dev_key);
-
-	if (prov->complete) {
-		prov->complete();
-	}
 }
 
 static void prov_complete(const u8_t *data)
@@ -1167,7 +1163,7 @@ static void link_open(struct prov_rx *rx, struct net_buf_simple *buf)
 	}
 
 	if (prov->link_open) {
-		prov->link_open();
+		prov->link_open(BT_MESH_PROV_ADV);
 	}
 
 	link.id = rx->link_id;
@@ -1472,7 +1468,7 @@ int bt_mesh_pb_gatt_open(struct bt_conn *conn)
 	link.expect = PROV_INVITE;
 
 	if (prov->link_open) {
-		prov->link_open();
+		prov->link_open(BT_MESH_PROV_GATT);
 	}
 
 	return 0;
@@ -1495,7 +1491,7 @@ int bt_mesh_pb_gatt_close(struct bt_conn *conn)
 	}
 
 	if (prov->link_close) {
-		prov->link_close();
+		prov->link_close(BT_MESH_PROV_GATT);
 	}
 
 	bt_conn_unref(link.conn);
@@ -1523,11 +1519,15 @@ bool bt_prov_active(void)
 
 int bt_mesh_prov_init(const struct bt_mesh_prov *prov_info)
 {
-	int err;
-
 	static struct bt_pub_key_cb pub_key_cb = {
 		.func = pub_key_ready,
 	};
+	int err;
+
+	if (!prov_info) {
+		BT_ERR("No provisioning context provided");
+		return -EINVAL;
+	}
 
 	err = bt_pub_key_gen(&pub_key_cb);
 	if (err) {
@@ -1557,4 +1557,18 @@ int bt_mesh_prov_init(const struct bt_mesh_prov *prov_info)
 	}
 
 	return 0;
+}
+
+void bt_mesh_prov_complete(u16_t net_idx, u16_t addr)
+{
+	if (prov->complete) {
+		prov->complete(net_idx, addr);
+	}
+}
+
+void bt_mesh_prov_reset(void)
+{
+	if (prov->reset) {
+		prov->reset();
+	}
 }
