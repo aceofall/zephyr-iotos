@@ -131,7 +131,10 @@ struct bt_mesh_msg_ctx {
 	u16_t addr;
 
 	/** Received TTL value. Not used for sending. */
-	u8_t  recv_ttl;
+	u8_t  recv_ttl:7;
+
+	/** Force sending reliably by using segment acknowledgement */
+	u8_t  send_rel:1;
 
 	/** TTL, or BT_MESH_TTL_DEFAULT for default TTL. */
 	u8_t  send_ttl;
@@ -219,6 +222,40 @@ struct bt_mesh_model_op {
  */
 #define BT_MESH_TRANSMIT_INT(transmit) ((((transmit) >> 3) + 1) * 10)
 
+/** @def BT_MESH_PUB_TRANSMIT
+ *
+ *  @brief Encode Publish Retransmit count & interval steps.
+ *
+ *  @param count   Number of retransmissions (first transmission is excluded).
+ *  @param int_ms  Interval steps in milliseconds. Must be greater than 0
+ *                 and a multiple of 50.
+ *
+ *  @return Mesh transmit value that can be used e.g. for the default
+ *          values of the configuration model data.
+ */
+#define BT_MESH_PUB_TRANSMIT(count, int_ms) BT_MESH_TRANSMIT(count,           \
+							     (int_ms) / 5)
+
+/** @def BT_MESH_PUB_TRANSMIT_COUNT
+ *
+ *  @brief Decode Pubhlish Retransmit count from a given value.
+ *
+ *  @param transmit Encoded Publish Retransmit count & interval value.
+ *
+ *  @return Retransmission count (actual transmissions is N + 1).
+ */
+#define BT_MESH_PUB_TRANSMIT_COUNT(transmit) BT_MESH_TRANSMIT_COUNT(transmit)
+
+/** @def BT_MESH_PUB_TRANSMIT_INT
+ *
+ *  @brief Decode Publish Retransmit interval from a given value.
+ *
+ *  @param transmit Encoded Publish Retransmit count & interval value.
+ *
+ *  @return Transmission interval in milliseconds.
+ */
+#define BT_MESH_PUB_TRANSMIT_INT(transmit) ((((transmit) >> 3) + 1) * 50)
+
 struct bt_mesh_model_pub {
 	/* Self-reference for easy lookup */
 	struct bt_mesh_model *mod;
@@ -230,7 +267,11 @@ struct bt_mesh_model_pub {
 	u8_t  retransmit;   /* Retransmit Count & Interval Steps */
 	u8_t  period;       /* Publish Period */
 	u8_t  period_div:4, /* Divisor for the Period */
-	      cred:1;       /* Friendship Credentials Flag */
+	      cred:1,       /* Friendship Credentials Flag */
+	      count:3;      /* Retransmissions left */
+
+	/* Buffer containing the publication message */
+	struct net_buf_simple *msg;
 
 	/* Publish callback */
 	void    (*func)(struct bt_mesh_model *mod);
@@ -267,7 +308,10 @@ struct bt_mesh_model {
 	void *user_data;
 };
 
-typedef void (*bt_mesh_cb_t)(int err, void *cb_data);
+struct bt_mesh_send_cb {
+	void (*start)(u16_t duration, int err, void *cb_data);
+	void (*end)(int err, void *cb_data);
+};
 
 void bt_mesh_model_msg_init(struct net_buf_simple *msg, u32_t opcode);
 
@@ -290,19 +334,22 @@ void bt_mesh_model_msg_init(struct net_buf_simple *msg, u32_t opcode);
  */
 int bt_mesh_model_send(struct bt_mesh_model *model,
 		       struct bt_mesh_msg_ctx *ctx,
-		       struct net_buf_simple *msg, bt_mesh_cb_t cb,
+		       struct net_buf_simple *msg,
+		       const struct bt_mesh_send_cb *cb,
 		       void *cb_data);
 
 /**
  * @brief Send a model publication message.
  *
+ * Before calling this function, the user needs to ensure that the model
+ * publication message ('msg' member of struct bt_mesh_model_pub) contains
+ * a valid message to be sent.
+ *
  * @param model  Mesh (client) Model that's publishing the message.
- * @param msg    Access Layer message to publish.
  *
  * @return 0 on success, or (negative) error code on failure.
  */
-int bt_mesh_model_publish(struct bt_mesh_model *model,
-			  struct net_buf_simple *msg);
+int bt_mesh_model_publish(struct bt_mesh_model *model);
 
 /** Node Composition */
 struct bt_mesh_comp {

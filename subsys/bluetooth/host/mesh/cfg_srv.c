@@ -89,7 +89,7 @@ static void hb_send(struct bt_mesh_model *model)
 	BT_DBG("InitTTL %u feat 0x%04x", cfg->hb_pub.ttl, feat);
 
 	bt_mesh_ctl_send(&tx, TRANS_CTL_OP_HEARTBEAT, &hb, sizeof(hb),
-			 NULL, NULL);
+			 NULL, NULL, NULL);
 }
 
 static int comp_add_elem(struct net_buf_simple *buf, struct bt_mesh_elem *elem,
@@ -262,6 +262,7 @@ static u8_t _mod_pub_set(struct bt_mesh_model *model, u16_t pub_addr,
 		model->pub->ttl = 0;
 		model->pub->period = 0;
 		model->pub->retransmit = 0;
+		model->pub->count = 0;
 
 		if (model->pub->func) {
 			k_delayed_work_cancel(&model->pub->timer);
@@ -343,7 +344,7 @@ static u8_t mod_unbind(struct bt_mesh_model *model, u16_t key_idx)
 
 		if (model->pub && model->pub->key == key_idx) {
 			_mod_pub_set(model, BT_MESH_ADDR_UNASSIGNED,
-				     BT_MESH_KEY_UNUSED, 0, 0, 0, 0);
+				     0, 0, 0, 0, 0);
 		}
 
 		return STATUS_SUCCESS;
@@ -1023,8 +1024,8 @@ static void mod_pub_set(struct bt_mesh_model *model,
 	BT_DBG("pub_app_idx 0x%03x, pub_ttl %u pub_period 0x%02x",
 	       pub_app_idx, pub_ttl, pub_period);
 	BT_DBG("retransmit 0x%02x (count %u interval %ums)", retransmit,
-	       BT_MESH_TRANSMIT_COUNT(retransmit),
-	       BT_MESH_TRANSMIT_INT(retransmit));
+	       BT_MESH_PUB_TRANSMIT_COUNT(retransmit),
+	       BT_MESH_PUB_TRANSMIT_INT(retransmit));
 
 	elem = bt_mesh_elem_find(elem_addr);
 	if (!elem) {
@@ -1130,8 +1131,8 @@ static void mod_pub_va_set(struct bt_mesh_model *model,
 	BT_DBG("pub_app_idx 0x%03x, pub_ttl %u pub_period 0x%02x",
 	       pub_app_idx, pub_ttl, pub_period);
 	BT_DBG("retransmit 0x%02x (count %u interval %ums)", retransmit,
-	       BT_MESH_TRANSMIT_COUNT(retransmit),
-	       BT_MESH_TRANSMIT_INT(retransmit));
+	       BT_MESH_PUB_TRANSMIT_COUNT(retransmit),
+	       BT_MESH_PUB_TRANSMIT_INT(retransmit));
 
 	elem = bt_mesh_elem_find(elem_addr);
 	if (!elem) {
