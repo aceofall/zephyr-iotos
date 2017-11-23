@@ -646,18 +646,11 @@ static void clear_timeout(struct k_work *work)
 {
 	struct bt_mesh_friend *frnd = CONTAINER_OF(work, struct bt_mesh_friend,
 						   clear.timer.work);
-	u32_t now, duration;
+	u32_t duration;
 
 	BT_DBG("LPN 0x%04x (old) Friend 0x%04x", frnd->lpn, frnd->clear.frnd);
 
-	now = k_uptime_get_32();
-	/* Handle time wrap-around due to 32-bit limit */
-	if (now < frnd->clear.start) {
-		duration = (UINT32_MAX - frnd->clear.start) + now;
-	} else {
-		duration = now - frnd->clear.start;
-	}
-
+	duration = k_uptime_get_32() - frnd->clear.start;
 	if (duration > 2 * frnd->poll_to) {
 		BT_DBG("Clear Procedure timer expired");
 		frnd->clear.frnd = BT_MESH_ADDR_UNASSIGNED;
@@ -784,7 +777,7 @@ int bt_mesh_friend_req(struct bt_mesh_net_rx *rx, struct net_buf_simple *buf)
 	struct bt_mesh_subnet *sub = rx->sub;
 	struct bt_mesh_friend *frnd = NULL;
 	u16_t old_friend;
-	u16_t poll_to;
+	u32_t poll_to;
 	int i;
 
 	if (buf->len < sizeof(*msg)) {

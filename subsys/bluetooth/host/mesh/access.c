@@ -97,6 +97,29 @@ s32_t bt_mesh_model_pub_period_get(struct bt_mesh_model *mod)
 	return period >> mod->pub->period_div;
 }
 
+static s32_t next_period(struct bt_mesh_model *mod)
+{
+	struct bt_mesh_model_pub *pub = mod->pub;
+	u32_t elapsed, period;
+
+	period = bt_mesh_model_pub_period_get(mod);
+	if (!period) {
+		return 0;
+	}
+
+	elapsed = k_uptime_get_32() - pub->period_start;
+
+	BT_DBG("Publishing took %ums", elapsed);
+
+	if (elapsed > period) {
+		BT_WARN("Publication sending took longer than the period");
+		/* Return smallest positive number since 0 means disabled */
+		return K_MSEC(1);
+	}
+
+	return period - elapsed;
+}
+
 static void publish_sent(int err, void *user_data)
 {
 	struct bt_mesh_model *mod = user_data;
@@ -107,12 +130,13 @@ static void publish_sent(int err, void *user_data)
 	if (mod->pub->count) {
 		delay = BT_MESH_PUB_TRANSMIT_INT(mod->pub->retransmit);
 	} else {
-		delay = bt_mesh_model_pub_period_get(mod);
+		delay = next_period(mod);
 	}
 
-	BT_DBG("Publishing next time in %dms", delay);
-
-	k_delayed_work_submit(&mod->pub->timer, delay);
+	if (delay) {
+		BT_DBG("Publishing next time in %dms", delay);
+		k_delayed_work_submit(&mod->pub->timer, delay);
+	}
 }
 
 static const struct bt_mesh_send_cb pub_sent_cb = {
@@ -159,6 +183,7 @@ static void mod_publish(struct k_work *work)
 						     struct bt_mesh_model_pub,
 						     timer.work);
 	s32_t period_ms;
+	int err;
 
 	BT_DBG("");
 
@@ -166,8 +191,6 @@ static void mod_publish(struct k_work *work)
 	BT_DBG("period %u ms", period_ms);
 
 	if (pub->count) {
-		int err;
-
 		err = publish_retransmit(pub->mod);
 		if (err) {
 			BT_ERR("Failed to retransmit (err %d)", err);
@@ -183,17 +206,28 @@ static void mod_publish(struct k_work *work)
 		return;
 	}
 
-	if (period_ms) {
-		k_delayed_work_submit(&pub->timer, period_ms);
+	if (!period_ms) {
+		return;
 	}
 
-	if (pub->func) {
-		pub->func(pub->mod);
+	__ASSERT_NO_MSG(pub->update != NULL);
 
-		if (pub->count) {
-			/* Retransmissions also control the timer */
-			k_delayed_work_cancel(&pub->timer);
-		}
+	pub->period_start = k_uptime_get_32();
+
+	err = pub->update(pub->mod);
+	if (err) {
+		BT_ERR("Failed to update publication message");
+		return;
+	}
+
+	err = bt_mesh_model_publish(pub->mod);
+	if (err) {
+		BT_ERR("Publishing failed (err %d)", err);
+	}
+
+	if (pub->count) {
+		/* Retransmissions also control the timer */
+		k_delayed_work_cancel(&pub->timer);
 	}
 }
 
@@ -574,14 +608,11 @@ int bt_mesh_model_publish(struct bt_mesh_model *model)
 	struct bt_mesh_model_pub *pub = model->pub;
 	struct bt_mesh_app_key *key;
 	struct bt_mesh_msg_ctx ctx = {
-		.addr = pub->addr,
-		.send_ttl = pub->ttl,
 	};
 	struct bt_mesh_net_tx tx = {
 		.ctx = &ctx,
 		.src = model->elem->addr,
 		.xmit = bt_mesh_net_transmit_get(),
-		.friend_cred = model->pub->cred,
 	};
 	int err;
 
@@ -613,9 +644,12 @@ int bt_mesh_model_publish(struct bt_mesh_model *model)
 	net_buf_simple_init(sdu, 0);
 	net_buf_simple_add_mem(sdu, pub->msg->data, pub->msg->len);
 
+	ctx.addr = pub->addr;
+	ctx.send_ttl = pub->ttl;
 	ctx.net_idx = key->net_idx;
 	ctx.app_idx = key->app_idx;
 
+	tx.friend_cred = pub->cred;
 	tx.sub = bt_mesh_subnet_get(ctx.net_idx),
 
 	pub->count = BT_MESH_PUB_TRANSMIT_COUNT(pub->retransmit);
