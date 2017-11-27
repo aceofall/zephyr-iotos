@@ -63,8 +63,10 @@ static struct bt_mesh_cfg_srv cfg_srv = {
 	.relay_retransmit = BT_MESH_TRANSMIT(2, 20),
 };
 
-static u8_t cur_faults[4];
-static u8_t reg_faults[8];
+#define CUR_FAULTS_MAX 4
+
+static u8_t cur_faults[CUR_FAULTS_MAX];
+static u8_t reg_faults[CUR_FAULTS_MAX * 2];
 
 static void get_faults(u8_t *faults, u8_t faults_size, u8_t *dst, u8_t *count)
 {
@@ -145,7 +147,7 @@ static struct bt_mesh_health_srv health_srv = {
 };
 
 static struct bt_mesh_model_pub health_pub = {
-	.msg = BT_MESH_HEALTH_FAULT_MSG(0),
+	.msg = BT_MESH_HEALTH_FAULT_MSG(CUR_FAULTS_MAX),
 };
 
 static struct bt_mesh_cfg_cli cfg_cli = {
@@ -656,6 +658,39 @@ static int cmd_net_send(int argc, char *argv[])
 	if (err) {
 		printk("Failed to send (err %d)\n", err);
 	}
+
+	return 0;
+}
+
+static int cmd_iv_update(int argc, char *argv[])
+{
+	if (bt_mesh_iv_update()) {
+		printk("Transitioned to IV Update In Progress state\n");
+	} else {
+		printk("Transitioned to IV Update Normal state\n");
+	}
+
+	printk("IV Index is 0x%08x\n", bt_mesh.iv_index);
+
+	return 0;
+}
+
+static int cmd_iv_update_test(int argc, char *argv[])
+{
+	bool enable;
+
+	if (argc < 2) {
+		return -EINVAL;
+	}
+
+	enable = str2bool(argv[1]);
+	if (enable) {
+		printk("Enabling IV Update test mode\n");
+	} else {
+		printk("Disabling IV Update test mode\n");
+	}
+
+	bt_mesh_iv_update_test(enable);
 
 	return 0;
 }
@@ -1715,6 +1750,7 @@ static int cmd_del_fault(int argc, char *argv[])
 	if (argc < 2) {
 		memset(cur_faults, 0, sizeof(cur_faults));
 		printk("All current faults cleared\n");
+		bt_mesh_fault_update(&elements[0]);
 		return 0;
 	}
 
@@ -1760,7 +1796,10 @@ static const struct shell_cmd mesh_commands[] = {
 	{ "netidx", cmd_netidx, "[NetIdx]" },
 	{ "appidx", cmd_appidx, "[AppIdx]" },
 
+	/* Commands which access internal APIs, for testing only */
 	{ "net-send", cmd_net_send, "<hex string>" },
+	{ "iv-update", cmd_iv_update, NULL },
+	{ "iv-update-test", cmd_iv_update_test, "<value: off, on>" },
 
 	/* Configuration Client Model operations */
 	{ "get-comp", cmd_get_comp, "[page]" },
