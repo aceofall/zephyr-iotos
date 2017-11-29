@@ -64,7 +64,7 @@
 #endif
 
 #if FRIEND_CRED_COUNT > 0
-static struct bt_mesh_friend_cred friend_cred[FRIEND_CRED_COUNT];
+static struct friend_cred friend_cred[FRIEND_CRED_COUNT];
 #endif
 
 static u64_t msg_cache[CONFIG_BT_MESH_MSG_CACHE_SIZE];
@@ -208,8 +208,7 @@ int bt_mesh_net_keys_create(struct bt_mesh_subnet_keys *keys,
 
 #if (defined(CONFIG_BT_MESH_LOW_POWER) || \
      defined(CONFIG_BT_MESH_FRIEND))
-int bt_mesh_friend_cred_set(struct bt_mesh_friend_cred *cred, u8_t idx,
-			    const u8_t net_key[16])
+int friend_cred_set(struct friend_cred *cred, u8_t idx, const u8_t net_key[16])
 {
 	u16_t lpn_addr, frnd_addr;
 	int err;
@@ -252,12 +251,12 @@ int bt_mesh_friend_cred_set(struct bt_mesh_friend_cred *cred, u8_t idx,
 	return 0;
 }
 
-void bt_mesh_friend_cred_refresh(u16_t net_idx)
+void friend_cred_refresh(u16_t net_idx)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(friend_cred); i++) {
-		struct bt_mesh_friend_cred *cred = &friend_cred[i];
+		struct friend_cred *cred = &friend_cred[i];
 
 		if (cred->addr != BT_MESH_ADDR_UNASSIGNED &&
 		    cred->net_idx == net_idx) {
@@ -267,21 +266,21 @@ void bt_mesh_friend_cred_refresh(u16_t net_idx)
 	}
 }
 
-int bt_mesh_friend_cred_update(u16_t net_idx, u8_t idx, const u8_t net_key[16])
+int friend_cred_update(struct bt_mesh_subnet *sub)
 {
 	int err, i;
 
-	BT_DBG("net_idx 0x%04x idx %u", net_idx, idx);
+	BT_DBG("net_idx 0x%04x", sub->net_idx);
 
 	for (i = 0; i < ARRAY_SIZE(friend_cred); i++) {
-		struct bt_mesh_friend_cred *cred = &friend_cred[i];
+		struct friend_cred *cred = &friend_cred[i];
 
 		if (cred->addr == BT_MESH_ADDR_UNASSIGNED ||
-		    cred->net_idx != net_idx) {
+		    cred->net_idx != sub->net_idx) {
 			continue;
 		}
 
-		err = bt_mesh_friend_cred_set(cred, idx, net_key);
+		err = friend_cred_set(cred, 1, sub->keys[1].net);
 		if (err) {
 			return err;
 		}
@@ -290,21 +289,18 @@ int bt_mesh_friend_cred_update(u16_t net_idx, u8_t idx, const u8_t net_key[16])
 	return 0;
 }
 
-struct bt_mesh_friend_cred *bt_mesh_friend_cred_add(u16_t net_idx,
-						    const u8_t net_key[16],
-						    u8_t idx, u16_t addr,
-						    u16_t lpn_counter,
-						    u16_t frnd_counter)
+struct friend_cred *friend_cred_create(struct bt_mesh_subnet *sub, u16_t addr,
+				       u16_t lpn_counter, u16_t frnd_counter)
 {
-	struct bt_mesh_friend_cred *cred;
+	struct friend_cred *cred;
 	int i, err;
 
-	BT_DBG("net_idx 0x%04x addr 0x%04x idx %u", net_idx, addr, idx);
+	BT_DBG("net_idx 0x%04x addr 0x%04x", sub->net_idx, addr);
 
 	for (cred = NULL, i = 0; i < ARRAY_SIZE(friend_cred); i++) {
 		if ((friend_cred[i].addr == BT_MESH_ADDR_UNASSIGNED) ||
 		    (friend_cred[i].addr == addr &&
-		     friend_cred[i].net_idx == net_idx)) {
+		     friend_cred[i].net_idx == sub->net_idx)) {
 			cred = &friend_cred[i];
 			break;
 		}
@@ -315,21 +311,29 @@ struct bt_mesh_friend_cred *bt_mesh_friend_cred_add(u16_t net_idx,
 		return NULL;
 	}
 
-	cred->net_idx = net_idx;
+	cred->net_idx = sub->net_idx;
 	cred->addr = addr;
 	cred->lpn_counter = lpn_counter;
 	cred->frnd_counter = frnd_counter;
 
-	err = bt_mesh_friend_cred_set(cred, idx, net_key);
+	err = friend_cred_set(cred, 0, sub->keys[0].net);
 	if (err) {
-		bt_mesh_friend_cred_clear(cred);
+		friend_cred_clear(cred);
 		return NULL;
+	}
+
+	if (sub->kr_flag) {
+		err = friend_cred_set(cred, 1, sub->keys[1].net);
+		if (err) {
+			friend_cred_clear(cred);
+			return NULL;
+		}
 	}
 
 	return cred;
 }
 
-void bt_mesh_friend_cred_clear(struct bt_mesh_friend_cred *cred)
+void friend_cred_clear(struct friend_cred *cred)
 {
 	cred->net_idx = BT_MESH_KEY_UNUSED;
 	cred->addr = BT_MESH_ADDR_UNASSIGNED;
@@ -338,15 +342,15 @@ void bt_mesh_friend_cred_clear(struct bt_mesh_friend_cred *cred)
 	memset(cred->cred, 0, sizeof(cred->cred));
 }
 
-int bt_mesh_friend_cred_del(u16_t net_idx, u16_t addr)
+int friend_cred_del(u16_t net_idx, u16_t addr)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(friend_cred); i++) {
-		struct bt_mesh_friend_cred *cred = &friend_cred[i];
+		struct friend_cred *cred = &friend_cred[i];
 
 		if (cred->addr == addr && cred->net_idx == net_idx) {
-			bt_mesh_friend_cred_clear(cred);
+			friend_cred_clear(cred);
 			return 0;
 		}
 	}
@@ -354,17 +358,17 @@ int bt_mesh_friend_cred_del(u16_t net_idx, u16_t addr)
 	return -ENOENT;
 }
 
-int bt_mesh_friend_cred_get(u16_t net_idx, u16_t addr, u8_t idx,
-			    u8_t *nid, const u8_t **enc, const u8_t **priv)
+int friend_cred_get(struct bt_mesh_subnet *sub, u16_t addr, u8_t *nid,
+		    const u8_t **enc, const u8_t **priv)
 {
 	int i;
 
-	BT_DBG("net_idx 0x%04x addr 0x%04x idx %u", net_idx, addr, idx);
+	BT_DBG("net_idx 0x%04x addr 0x%04x", sub->net_idx, addr);
 
 	for (i = 0; i < ARRAY_SIZE(friend_cred); i++) {
-		struct bt_mesh_friend_cred *cred = &friend_cred[i];
+		struct friend_cred *cred = &friend_cred[i];
 
-		if (cred->net_idx != net_idx) {
+		if (cred->net_idx != sub->net_idx) {
 			continue;
 		}
 
@@ -373,15 +377,15 @@ int bt_mesh_friend_cred_get(u16_t net_idx, u16_t addr, u8_t idx,
 		}
 
 		if (nid) {
-			*nid = cred->cred[idx].nid;
+			*nid = cred->cred[sub->kr_flag].nid;
 		}
 
 		if (enc) {
-			*enc = cred->cred[idx].enc;
+			*enc = cred->cred[sub->kr_flag].enc;
 		}
 
 		if (priv) {
-			*priv = cred->cred[idx].privacy;
+			*priv = cred->cred[sub->kr_flag].privacy;
 		}
 
 		return 0;
@@ -390,8 +394,8 @@ int bt_mesh_friend_cred_get(u16_t net_idx, u16_t addr, u8_t idx,
 	return -ENOENT;
 }
 #else
-int bt_mesh_friend_cred_get(u16_t net_idx, u16_t addr, u8_t idx,
-			    u8_t *nid, const u8_t **enc, const u8_t **priv)
+int friend_cred_get(struct bt_mesh_subnet *sub, u16_t addr, u8_t *nid,
+		    const u8_t **enc, const u8_t **priv)
 {
 	return -ENOENT;
 }
@@ -445,6 +449,9 @@ int bt_mesh_net_create(u16_t idx, u8_t flags, const u8_t key[16],
 		return -EALREADY;
 	}
 
+	memset(msg_cache, 0, sizeof(msg_cache));
+	msg_cache_next = 0;
+
 	sub = &bt_mesh.sub[0];
 
 	sub->kr_flag = BT_MESH_KEY_REFRESH(flags);
@@ -467,6 +474,7 @@ int bt_mesh_net_create(u16_t idx, u8_t flags, const u8_t key[16],
 
 	if (IS_ENABLED(CONFIG_BT_MESH_GATT_PROXY)) {
 		sub->node_id = BT_MESH_NODE_IDENTITY_RUNNING;
+		sub->node_id_start = k_uptime_get_32();
 	} else {
 		sub->node_id = BT_MESH_NODE_IDENTITY_NOT_SUPPORTED;
 	}
@@ -537,7 +545,7 @@ bool bt_mesh_kr_update(struct bt_mesh_subnet *sub, u8_t new_kr, bool new_key)
 			bt_mesh_net_revoke_keys(sub);
 			if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER) ||
 			    IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {
-				bt_mesh_friend_cred_refresh(sub->net_idx);
+				friend_cred_refresh(sub->net_idx);
 			}
 			sub->kr_phase = BT_MESH_KR_NORMAL;
 			return true;
@@ -766,7 +774,7 @@ int bt_mesh_net_encode(struct bt_mesh_net_tx *tx, struct net_buf_simple *buf,
 		       bool proxy)
 {
 	const bool ctl = (tx->ctx->app_idx == BT_MESH_KEY_UNUSED);
-	u8_t nid, idx = (tx->sub->kr_phase == BT_MESH_KR_PHASE_2);
+	u8_t nid;
 	const u8_t *enc, *priv;
 	u8_t *seq;
 	int err;
@@ -797,22 +805,21 @@ int bt_mesh_net_encode(struct bt_mesh_net_tx *tx, struct net_buf_simple *buf,
 	}
 
 	if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER) && tx->friend_cred) {
-		if (bt_mesh_friend_cred_get(tx->sub->net_idx,
-					    BT_MESH_ADDR_UNASSIGNED,
-					    idx, &nid, &enc, &priv)) {
+		if (friend_cred_get(tx->sub, BT_MESH_ADDR_UNASSIGNED,
+				    &nid, &enc, &priv)) {
 			BT_WARN("Falling back to master credentials");
 
 			tx->friend_cred = 0;
 
-			nid = tx->sub->keys[idx].nid;
-			enc = tx->sub->keys[idx].enc;
-			priv = tx->sub->keys[idx].privacy;
+			nid = tx->sub->keys[tx->sub->kr_flag].nid;
+			enc = tx->sub->keys[tx->sub->kr_flag].enc;
+			priv = tx->sub->keys[tx->sub->kr_flag].privacy;
 		}
 	} else {
 		tx->friend_cred = 0;
-		nid = tx->sub->keys[idx].nid;
-		enc = tx->sub->keys[idx].enc;
-		priv = tx->sub->keys[idx].privacy;
+		nid = tx->sub->keys[tx->sub->kr_flag].nid;
+		enc = tx->sub->keys[tx->sub->kr_flag].enc;
+		priv = tx->sub->keys[tx->sub->kr_flag].privacy;
 	}
 
 	net_buf_simple_push_u8(buf, (nid | (BT_MESH_NET_IVI_TX & 1) << 7));
@@ -990,7 +997,7 @@ static int friend_decrypt(struct bt_mesh_subnet *sub, const u8_t *data,
 	BT_DBG("NID 0x%02x net_idx 0x%04x", NID(data), sub->net_idx);
 
 	for (i = 0; i < ARRAY_SIZE(friend_cred); i++) {
-		struct bt_mesh_friend_cred *cred = &friend_cred[i];
+		struct friend_cred *cred = &friend_cred[i];
 
 		if (cred->net_idx != sub->net_idx) {
 			continue;
@@ -1105,15 +1112,9 @@ static void bt_mesh_net_relay(struct net_buf_simple *sbuf,
 
 	net_buf_add_mem(buf, sbuf->data, sbuf->len);
 
-	if (rx->sub->kr_phase == BT_MESH_KR_PHASE_2) {
-		enc = rx->sub->keys[1].enc;
-		priv = rx->sub->keys[1].privacy;
-		nid = rx->sub->keys[1].nid;
-	} else {
-		enc = rx->sub->keys[0].enc;
-		priv = rx->sub->keys[0].privacy;
-		nid = rx->sub->keys[0].nid;
-	}
+	enc = rx->sub->keys[rx->sub->kr_flag].enc;
+	priv = rx->sub->keys[rx->sub->kr_flag].privacy;
+	nid = rx->sub->keys[rx->sub->kr_flag].nid;
 
 	BT_DBG("Relaying packet. TTL is now %u", TTL(buf->data));
 
