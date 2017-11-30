@@ -34,6 +34,14 @@
 #include "foundation.h"
 #include "beacon.h"
 
+/* Minimum valid Mesh Network PDU length. The Network headers
+ * themselves take up 9 bytes. After that there is a minumum of 1 byte
+ * payload for both CTL=1 and CTL=0 PDUs (smallest OpCode is 1 byte). CTL=1
+ * PDUs must use a 64-bit (8 byte) NetMIC, whereas CTL=0 PDUs have at least
+ * a 32-bit (4 byte) NetMIC and AppMIC giving again a total of 8 bytes.
+ */
+#define BT_MESH_NET_MIN_PDU_LEN (BT_MESH_NET_HDR_LEN + 1 + 8)
+
 /* Seq limit after IV Update is triggered */
 #define IV_UPDATE_SEQ_LIMIT 8000000
 
@@ -852,8 +860,12 @@ int bt_mesh_net_send(struct bt_mesh_net_tx *tx, struct net_buf *buf,
 		goto done;
 	}
 
-	/* Deliver to GATT Proxy Clients if necessary */
-	if (IS_ENABLED(CONFIG_BT_MESH_GATT_PROXY)) {
+	/* Deliver to GATT Proxy Clients if necessary. Mesh spec 3.4.5.2:
+	 * "The output filter of the interface connected to advertising or
+	 * GATT bearers shall drop all messages with TTL value set to 1."
+	 */
+	if (IS_ENABLED(CONFIG_BT_MESH_GATT_PROXY) &&
+	    tx->ctx->send_ttl != 1) {
 		if (bt_mesh_proxy_relay(&buf->b, tx->ctx->addr) &&
 		    BT_MESH_ADDR_IS_UNICAST(tx->ctx->addr)) {
 			/* Notify completion if this only went
@@ -885,7 +897,12 @@ int bt_mesh_net_send(struct bt_mesh_net_tx *tx, struct net_buf *buf,
 			cb->end(0, cb_data);
 		}
 		k_work_submit(&bt_mesh.local_work);
-	} else {
+	} else if (tx->ctx->send_ttl != 1) {
+		/* Deliver to to the advertising network interface. Mesh spec
+		 * 3.4.5.2: "The output filter of the interface connected to
+		 * advertising or GATT bearers shall drop all messages with
+		 * TTL value set to 1."
+		 */
 		bt_mesh_adv_send(buf, cb, cb_data);
 	}
 
@@ -1082,8 +1099,20 @@ static void bt_mesh_net_relay(struct net_buf_simple *sbuf,
 	struct net_buf *buf;
 	u8_t nid, transmit;
 
-	if (rx->net_if != BT_MESH_NET_IF_LOCAL && rx->ctx.recv_ttl <= 1) {
-		return;
+	if (rx->net_if == BT_MESH_NET_IF_LOCAL) {
+		/* Locally originated PDUs with TTL=1 will only be delivered
+		 * to local elements as per Mesh Profile 1.0 section 3.4.5.2:
+		 * "The output filter of the interface connected to
+		 * advertising or GATT bearers shall drop all messages with
+		 * TTL value set to 1."
+		 */
+		if (rx->ctx.recv_ttl == 1) {
+			return;
+		}
+	} else {
+		if (rx->ctx.recv_ttl <= 1) {
+			return;
+		}
 	}
 
 	if (rx->net_if == BT_MESH_NET_IF_ADV &&
@@ -1154,7 +1183,7 @@ done:
 int bt_mesh_net_decode(struct net_buf_simple *data, enum bt_mesh_net_if net_if,
 		       struct bt_mesh_net_rx *rx, struct net_buf_simple *buf)
 {
-	if (data->len < 18) {
+	if (data->len < BT_MESH_NET_MIN_PDU_LEN) {
 		BT_WARN("Dropping too short mesh packet (len %u)", data->len);
 		BT_WARN("%s", bt_hex(data->data, data->len));
 		return -EINVAL;

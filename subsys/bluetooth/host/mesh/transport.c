@@ -515,7 +515,8 @@ static bool is_replay(struct bt_mesh_net_rx *rx)
 				return true;
 			}
 
-			if (rpl->seq < rx->seq) {
+			if ((!rx->old_iv && rpl->old_iv) ||
+			    rpl->seq < rx->seq) {
 				rpl->seq = rx->seq;
 				rpl->old_iv = rx->old_iv;
 				return false;
@@ -1371,4 +1372,10 @@ void bt_mesh_trans_init(void)
 	for (i = 0; i < ARRAY_SIZE(seg_rx); i++) {
 		k_delayed_work_init(&seg_rx[i].ack, seg_ack);
 	}
+}
+
+void bt_mesh_rpl_clear(void)
+{
+	BT_DBG("");
+	memset(bt_mesh.rpl, 0, sizeof(bt_mesh.rpl));
 }
