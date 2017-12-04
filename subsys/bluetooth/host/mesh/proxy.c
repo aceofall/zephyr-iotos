@@ -150,7 +150,7 @@ static void filter_add(struct bt_mesh_proxy_client *client, u16_t addr)
 {
 	int i;
 
-	BT_DBG("addr 0x%02x", addr);
+	BT_DBG("addr 0x%04x", addr);
 
 	if (addr == BT_MESH_ADDR_UNASSIGNED) {
 		return;
@@ -174,7 +174,7 @@ static void filter_remove(struct bt_mesh_proxy_client *client, u16_t addr)
 {
 	int i;
 
-	BT_DBG("addr 0x%02x", addr);
+	BT_DBG("addr 0x%04x", addr);
 
 	if (addr == BT_MESH_ADDR_UNASSIGNED) {
 		return;
@@ -318,6 +318,17 @@ static void proxy_send_beacons(struct k_work *work)
 void bt_mesh_proxy_beacon_send(struct bt_mesh_subnet *sub)
 {
 	int i;
+
+	if (!sub) {
+		/* NULL means we send on all subnets */
+		for (i = 0; i < ARRAY_SIZE(bt_mesh.sub); i++) {
+			if (bt_mesh.sub[i].net_idx != BT_MESH_KEY_UNUSED) {
+				bt_mesh_proxy_beacon_send(&bt_mesh.sub[i]);
+			}
+		}
+
+		return;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(clients); i++) {
 		if (clients[i].conn) {

@@ -36,6 +36,8 @@ struct bt_mesh_subnet {
 				   * currently ongoing window.
 				   */
 
+	u8_t  beacon_cache[21];   /* Cached last authenticated beacon */
+
 	u16_t net_idx;            /* NetKeyIndex */
 
 	bool  kr_flag;            /* Key Refresh Flag */
@@ -274,6 +276,8 @@ int bt_mesh_net_beacon_update(struct bt_mesh_subnet *sub);
 void bt_mesh_rpl_reset(void);
 
 bool bt_mesh_net_iv_update(u32_t iv_index, bool iv_update);
+
+void bt_mesh_net_sec_update(struct bt_mesh_subnet *sub);
 
 struct bt_mesh_subnet *bt_mesh_subnet_get(u16_t net_idx);
 
