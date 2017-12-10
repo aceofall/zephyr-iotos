@@ -801,7 +801,6 @@ struct _static_thread_data {
 	u32_t init_options;
 	s32_t init_delay;
 	void (*init_abort)(void);
-	u32_t init_groups;
 };
 
 // KID 20170808
@@ -835,7 +834,6 @@ struct _static_thread_data {
 	.init_options = (options),                               \
 	.init_delay = (delay),                                   \
 	.init_abort = (abort),                                   \
-	.init_groups = (groups),                                 \
 	}
 
 /**
