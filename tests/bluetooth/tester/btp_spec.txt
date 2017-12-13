@@ -1432,6 +1432,65 @@ Commands and responses:
 
 		In case of an error, the error response will be returned.
 
+	Opcode 0x08 - IV Update Test Mode
+		Controller Index:	<controller id>
+		Command parameters:	Toggle (1 octet)
+
+		Valid Toggle values:
+					0x00 = Disable
+					0x01 = Enable
+
+		This command is used to toggle the IV Update test mode.
+
+		In case of an error, the error response will be returned.
+
+	Opcode 0x09 - IV Update toggle state
+		Controller Index:	<controller id>
+		Command parameters:	<none>
+		Response parameters:	Toggle (1 octet)
+
+		Valid Toggle response values:
+					0x00 = Normal State
+					0x01 = IV Update in Progress State
+
+		This command is used to make a IV Update state transition
+		while in IV Update test mode, ignoring the 96 hour limit.
+
+		In case of an error, the error response will be returned.
+
+	Opcode 0x0a - Network Send
+		Controller Index:	<controller id>
+		Command parameters:	TTL (1 octet)
+					SRC (2 octets)
+					DST (2 octets)
+					Payload_Len (1 octet)
+					Payload (variable)
+
+		This command is used to send network layer packet.
+
+		In case of an error, the error response will be returned.
+
+	Opcode 0x0b - Health Generate Faults
+		Controller Index:	<controller id>
+		Command parameters:	<none>
+		Response parameters:	Test_ID (1 octet)
+					Current_Faults_Count (1 octet)
+					Registered_Faults_Count (1 octet)
+					Current_Faults (variable)
+					Registered_Faults (variable)
+
+		This command is used to generate health faults on IUT.
+
+		In case of an error, the error response will be returned.
+
+	Opcode 0x0c - Health Clear Faults
+		Controller Index:	<controller id>
+		Command parameters:	<none>
+
+		This command is used to clear fault arrays on IUT.
+
+		In case of an error, the error response will be returned.
+
 	Opcode 0x0d - Low Power Node
 		Controller Index:	<controller id>
 		Command parameters:	Toggle (1 octet)
@@ -1510,3 +1569,15 @@ Events:
 
 		This event indicates that provisioning link has been closed on
 		given bearer.
+
+	Opcode 0x86 - Network receive Event
+
+		Controller Index:	<controller id>
+		Event parameters:	TTL (1 octet)
+					CTL (1 octet)
+					SRC (2 octets)
+					DST (2 octets)
+					Payload_Len (1 octet)
+					Payload (variable)
+
+		This event indicates reception of network packet.

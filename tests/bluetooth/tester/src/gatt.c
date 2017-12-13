@@ -1727,7 +1727,7 @@ static u8_t get_attrs_rp(const struct bt_gatt_attr *attr, void *user_data)
 	gatt_attr->handle = sys_cpu_to_le16(attr->handle);
 	gatt_attr->permission = attr->perm;
 
-	if (foreach->uuid->type == BT_UUID_TYPE_16) {
+	if (attr->uuid->type == BT_UUID_TYPE_16) {
 		gatt_attr->type_length = 2;
 		net_buf_simple_add_le16(foreach->buf,
 					BT_UUID_16(attr->uuid)->val);
@@ -1756,7 +1756,9 @@ static void get_attrs(u8_t *data, u16_t len)
 	end_handle = sys_le16_to_cpu(cmd->end_handle);
 
 	if (cmd->type_length) {
-		btp2bt_uuid(cmd->type, cmd->type_length, &uuid.uuid);
+		if (btp2bt_uuid(cmd->type, cmd->type_length, &uuid.uuid)) {
+			goto fail;
+		}
 
 		SYS_LOG_DBG("start 0x%04x end 0x%04x, uuid %s", start_handle,
 			    end_handle, bt_uuid_str(&uuid.uuid));
@@ -1780,6 +1782,11 @@ static void get_attrs(u8_t *data, u16_t len)
 
 	tester_send(BTP_SERVICE_ID_GATT, GATT_GET_ATTRIBUTES, CONTROLLER_INDEX,
 		    buf->data, buf->len);
+
+	return;
+fail:
+	tester_rsp(BTP_SERVICE_ID_GATT, GATT_GET_ATTRIBUTES, CONTROLLER_INDEX,
+		   BTP_STATUS_FAILED);
 }
 
 static u8_t err_to_att(int err)
