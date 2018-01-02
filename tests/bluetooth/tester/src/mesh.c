@@ -10,6 +10,7 @@
 
 #include <errno.h>
 #include <bluetooth/mesh.h>
+#include <bluetooth/testing.h>
 #include <misc/byteorder.h>
 #include "bttester.h"
 
@@ -36,6 +37,9 @@ static u8_t input_size;
 /* Configured provisioning data */
 static u8_t dev_uuid[16];
 static u8_t static_auth[16];
+
+/* Vendor Model data */
+#define VND_MODEL_ID_1 0x1234
 
 static struct {
 	u16_t local;
@@ -65,6 +69,9 @@ static void supported_commands(u8_t *data, u16_t len)
 	memset(net_buf_simple_add(buf, 1), 0, 1);
 	tester_set_bit(buf->data, MESH_IVU_TEST_MODE);
 	tester_set_bit(buf->data, MESH_IVU_TOGGLE_STATE);
+	tester_set_bit(buf->data, MESH_NET_SEND);
+	tester_set_bit(buf->data, MESH_HEALTH_GENERATE_FAULTS);
+	tester_set_bit(buf->data, MESH_HEALTH_CLEAR_FAULTS);
 	tester_set_bit(buf->data, MESH_LPN);
 	tester_set_bit(buf->data, MESH_LPN_POLL);
 
@@ -178,8 +185,13 @@ static struct bt_mesh_model root_models[] = {
 	BT_MESH_MODEL_HEALTH_SRV(&health_srv, &health_pub),
 };
 
+static struct bt_mesh_model vnd_models[] = {
+	BT_MESH_MODEL_VND(CID_LOCAL, VND_MODEL_ID_1, BT_MESH_MODEL_NO_OPS, NULL,
+			  NULL),
+};
+
 static struct bt_mesh_elem elements[] = {
-	BT_MESH_ELEM(0, root_models, BT_MESH_MODEL_NONE),
+	BT_MESH_ELEM(0, root_models, vnd_models),
 };
 
 static void link_open(bt_mesh_prov_bearer_t bearer)
@@ -382,6 +394,9 @@ static void init(u8_t *data, u16_t len)
 		}
 	}
 
+	/* Set device key for vendor model */
+	vnd_models[0].keys[0] = BT_MESH_KEY_DEV;
+
 rsp:
 	tester_rsp(BTP_SERVICE_ID_MESH, MESH_INIT, CONTROLLER_INDEX,
 		   status);
@@ -508,6 +523,85 @@ static void lpn_poll(u8_t *data, u16_t len)
 		   err ? BTP_STATUS_FAILED : BTP_STATUS_SUCCESS);
 }
 
+static void net_send(u8_t *data, u16_t len)
+{
+	struct mesh_net_send_cmd *cmd = (void *) data;
+	struct net_buf_simple *msg = NET_BUF_SIMPLE(UINT8_MAX);
+	struct bt_mesh_msg_ctx ctx = {
+		.net_idx = net.net_idx,
+		.app_idx = BT_MESH_KEY_DEV,
+		.addr = sys_le16_to_cpu(cmd->dst),
+		.send_ttl = cmd->ttl,
+	};
+	int err;
+
+	SYS_LOG_DBG("ttl 0x%02x dst 0x%04x payload_len %d", ctx.send_ttl,
+		    ctx.addr, cmd->payload_len);
+
+	net_buf_simple_init(msg, 0);
+
+	net_buf_simple_add_mem(msg, cmd->payload, cmd->payload_len);
+
+	err = bt_mesh_model_send(&vnd_models[0], &ctx, msg, NULL, NULL);
+	if (err) {
+		SYS_LOG_ERR("Failed to send (err %d)", err);
+	}
+
+	tester_rsp(BTP_SERVICE_ID_MESH, MESH_NET_SEND, CONTROLLER_INDEX,
+		   err ? BTP_STATUS_FAILED : BTP_STATUS_SUCCESS);
+}
+
+static void health_generate_faults(u8_t *data, u16_t len)
+{
+	struct mesh_health_generate_faults_rp *rp;
+	struct net_buf_simple *buf = NET_BUF_SIMPLE(sizeof(*rp) +
+						    sizeof(cur_faults) +
+						    sizeof(reg_faults));
+	u8_t some_faults[] = { 0x01, 0x02, 0x03, 0xff, 0x06 };
+	u8_t cur_faults_count, reg_faults_count;
+	int err;
+
+	net_buf_simple_init(buf, 0);
+
+	rp = net_buf_simple_add(buf, sizeof(*rp));
+
+	cur_faults_count = min(sizeof(cur_faults), sizeof(some_faults));
+	memcpy(cur_faults, some_faults, cur_faults_count);
+	net_buf_simple_add_mem(buf, cur_faults, cur_faults_count);
+	rp->cur_faults_count = cur_faults_count;
+
+	reg_faults_count = min(sizeof(reg_faults), sizeof(some_faults));
+	memcpy(reg_faults, some_faults, reg_faults_count);
+	net_buf_simple_add_mem(buf, reg_faults, reg_faults_count);
+	rp->reg_faults_count = reg_faults_count;
+
+	err = bt_mesh_fault_update(&elements[0]);
+	if (err) {
+		SYS_LOG_ERR("Failed to send health publication (err %d)", err);
+
+		tester_rsp(BTP_SERVICE_ID_MESH, MESH_HEALTH_GENERATE_FAULTS,
+			   CONTROLLER_INDEX, BTP_STATUS_FAILED);
+
+		return;
+	}
+
+	tester_send(BTP_SERVICE_ID_MESH, MESH_HEALTH_GENERATE_FAULTS,
+		    CONTROLLER_INDEX, buf->data, buf->len);
+}
+
+static void health_clear_faults(u8_t *data, u16_t len)
+{
+	SYS_LOG_DBG("");
+
+	memset(cur_faults, 0, sizeof(cur_faults));
+	memset(reg_faults, 0, sizeof(reg_faults));
+
+	bt_mesh_fault_update(&elements[0]);
+
+	tester_rsp(BTP_SERVICE_ID_MESH, MESH_HEALTH_CLEAR_FAULTS,
+		   CONTROLLER_INDEX, BTP_STATUS_SUCCESS);
+}
+
 void tester_handle_mesh(u8_t opcode, u8_t index, u8_t *data, u16_t len)
 {
 	switch (opcode) {
@@ -544,6 +638,15 @@ void tester_handle_mesh(u8_t opcode, u8_t index, u8_t *data, u16_t len)
 	case MESH_LPN_POLL:
 		lpn_poll(data, len);
 		break;
+	case MESH_NET_SEND:
+		net_send(data, len);
+		break;
+	case MESH_HEALTH_GENERATE_FAULTS:
+		health_generate_faults(data, len);
+		break;
+	case MESH_HEALTH_CLEAR_FAULTS:
+		health_clear_faults(data, len);
+		break;
 	default:
 		tester_rsp(BTP_SERVICE_ID_MESH, opcode, index,
 			   BTP_STATUS_UNKNOWN_CMD);
@@ -551,7 +654,49 @@ void tester_handle_mesh(u8_t opcode, u8_t index, u8_t *data, u16_t len)
 	}
 }
 
+void net_recv_ev(u8_t ttl, u8_t ctl, u16_t src, u16_t dst, const void *payload,
+		 size_t payload_len)
+{
+	struct net_buf_simple *buf = NET_BUF_SIMPLE(UINT8_MAX);
+	struct mesh_net_recv_ev *ev;
+
+	SYS_LOG_DBG("ttl 0x%02x ctl 0x%02x src 0x%04x dst 0x%04x "
+		    "payload_len %d", ttl, ctl, src, dst, payload_len);
+
+	net_buf_simple_init(buf, 0);
+
+	if (payload_len > net_buf_simple_tailroom(buf)) {
+		SYS_LOG_ERR("Payload size exceeds buffer size");
+
+		return;
+	}
+
+	ev = net_buf_simple_add(buf, sizeof(*ev));
+	ev->ttl = ttl;
+	ev->ctl = ctl;
+	ev->src = sys_cpu_to_le16(src);
+	ev->dst = sys_cpu_to_le16(dst);
+	ev->payload_len = payload_len;
+	net_buf_simple_add_mem(buf, payload, payload_len);
+
+	tester_send(BTP_SERVICE_ID_MESH, MESH_EV_NET_RECV, CONTROLLER_INDEX,
+		    buf->data, buf->len);
+}
+
+static struct bt_test_cb bt_test_cb = {
+	.mesh_net_recv = net_recv_ev,
+};
+
 u8_t tester_init_mesh(void)
+{
+	if (IS_ENABLED(CONFIG_BT_TESTING)) {
+		bt_test_cb_register(&bt_test_cb);
+	}
+
+	return BTP_STATUS_SUCCESS;
+}
+
+u8_t tester_unregister_mesh(void)
 {
 	return BTP_STATUS_SUCCESS;
 }

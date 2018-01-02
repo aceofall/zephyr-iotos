@@ -47,6 +47,28 @@ endif()
 cmake_policy(SET CMP0000 OLD)
 cmake_policy(SET CMP0002 NEW)
 
+define_property(GLOBAL PROPERTY ZEPHYR_LIBS
+    BRIEF_DOCS "Global list of all Zephyr CMake libs that should be linked in"
+    FULL_DOCS  "Global list of all Zephyr CMake libs that should be linked in.
+zephyr_library() appends libs to this list.")
+set_property(GLOBAL PROPERTY ZEPHYR_LIBS "")
+
+define_property(GLOBAL PROPERTY GENERATED_KERNEL_OBJECT_FILES
+  BRIEF_DOCS "Object files that are generated after Zephyr has been linked once."
+  FULL_DOCS "\
+Object files that are generated after Zephyr has been linked once.\
+May include mmu tables, etc."
+  )
+set_property(GLOBAL PROPERTY GENERATED_KERNEL_OBJECT_FILES "")
+
+define_property(GLOBAL PROPERTY GENERATED_KERNEL_SOURCE_FILES
+  BRIEF_DOCS "Source files that are generated after Zephyr has been linked once."
+  FULL_DOCS "\
+Object files that are generated after Zephyr has been linked once.\
+May include isr_tables.c etc."
+  )
+set_property(GLOBAL PROPERTY GENERATED_KERNEL_SOURCE_FILES "")
+
 set(APPLICATION_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Application Source Directory")
 set(APPLICATION_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH "Application Binary Directory")
 
@@ -215,6 +237,7 @@ set(KERNEL_HEX_NAME   ${KERNEL_NAME}.hex)
 set(KERNEL_MAP_NAME   ${KERNEL_NAME}.map)
 set(KERNEL_LST_NAME   ${KERNEL_NAME}.lst)
 set(KERNEL_S19_NAME   ${KERNEL_NAME}.s19)
+set(KERNEL_EXE_NAME   ${KERNEL_NAME}.exe)
 set(KERNEL_STAT_NAME  ${KERNEL_NAME}.stat)
 set(KERNEL_STRIP_NAME ${KERNEL_NAME}.strip)
 
@@ -224,23 +247,3 @@ zephyr_library_named(app)
 
 add_subdirectory($ENV{ZEPHYR_BASE} ${__build_dir})
 
-define_property(GLOBAL PROPERTY ZEPHYR_LIBS
-    BRIEF_DOCS "Global list of all Zephyr CMake libs that should be linked in"
-    FULL_DOCS  "Global list of all Zephyr CMake libs that should be linked in. zephyr_library() appends libs to this list.")
-set_property(GLOBAL PROPERTY ZEPHYR_LIBS "")
-
-define_property(GLOBAL PROPERTY GENERATED_KERNEL_OBJECT_FILES
-  BRIEF_DOCS "Object files that are generated after Zephyr has been linked once."
-  FULL_DOCS "\
-Object files that are generated after Zephyr has been linked once.\
-May include mmu tables, etc."
-  )
-set_property(GLOBAL PROPERTY GENERATED_KERNEL_OBJECT_FILES "")
-
-define_property(GLOBAL PROPERTY GENERATED_KERNEL_SOURCE_FILES
-  BRIEF_DOCS "Source files that are generated after Zephyr has been linked once."
-  FULL_DOCS "\
-Object files that are generated after Zephyr has been linked once.\
-May include isr_tables.c etc."
-  )
-set_property(GLOBAL PROPERTY GENERATED_KERNEL_SOURCE_FILES "")

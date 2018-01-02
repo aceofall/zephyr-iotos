@@ -301,11 +301,17 @@ function(generate_inc_file_for_target
   # targets
 
   # But first create a unique name for the custom target
-  # Replace / with _ (driver/serial => driver_serial) and . with _
-  set(generated_target_name ${generated_file})
+  string(
+    RANDOM
+    LENGTH 8
+    random_chars
+    )
 
-  string(REPLACE "/" "_" generated_target_name ${generated_target_name})
-  string(REPLACE "." "_" generated_target_name ${generated_target_name})
+  get_filename_component(basename ${generated_file} NAME)
+  string(REPLACE "." "_" basename ${basename})
+  string(REPLACE "@" "_" basename ${basename})
+
+  set(generated_target_name "gen_${basename}_${random_chars}")
 
   add_custom_target(${generated_target_name} DEPENDS ${generated_file})
   add_dependencies(${target} ${generated_target_name})
@@ -678,6 +684,12 @@ function(zephyr_cc_option_ifdef feature_toggle)
   endif()
 endfunction()
 
+function(zephyr_ld_option_ifdef feature_toggle)
+  if(${${feature_toggle}})
+    zephyr_ld_options(${ARGN})
+  endif()
+endfunction()
+
 function(zephyr_link_libraries_ifdef feature_toggle)
   if(${${feature_toggle}})
     zephyr_link_libraries(${ARGN})
@@ -831,7 +843,12 @@ endfunction()
 function(target_ld_options target scope)
   foreach(option ${ARGN})
     string(MAKE_C_IDENTIFIER check${option} check)
-    check_c_compiler_flag(${option} ${check})
+
+    set(SAVED_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${option}")
+    check_c_compiler_flag("" ${check})
+    set(CMAKE_REQUIRED_FLAGS ${SAVED_CMAKE_REQUIRED_FLAGS})
+
     target_link_libraries_ifdef(${check} ${target} ${scope} ${option})
   endforeach()
 endfunction()

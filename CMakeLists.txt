@@ -64,7 +64,6 @@ zephyr_include_directories(
   ${STDINCLUDE}
 )
 
-
 zephyr_compile_definitions(
   KERNEL
   __ZEPHYR__=1
@@ -95,9 +94,10 @@ zephyr_compile_options(
   -Wformat
   -Wformat-security
   -Wno-format-zero-length
-  -Wno-main
+  -imacros ${AUTOCONF_H}
   -ffreestanding
-  -include ${AUTOCONF_H}
+  -Wno-main
+  ${NOSTDINC_F}
 )
 
 zephyr_compile_options(
@@ -114,13 +114,15 @@ zephyr_compile_options(
   $<$<COMPILE_LANGUAGE:ASM>:-D_ASMLANGUAGE>
 )
 
+if(NOT CONFIG_NATIVE_APPLICATION)
 zephyr_ld_options(
   -nostartfiles
   -nodefaultlibs
   -nostdlib
   -static
   -no-pie
-  )
+)
+endif()
 
 # ==========================================================================
 #
@@ -231,7 +233,6 @@ endif()
 zephyr_cc_option_ifdef(CONFIG_DEBUG_SECTION_MISMATCH -fno-inline-functions-called-once)
 zephyr_cc_option_ifdef(CONFIG_STACK_USAGE            -fstack-usage)
 
-zephyr_compile_options(-nostdinc)
 zephyr_system_include_directories(${NOSTDINC})
 
 # Force an error when things like SYS_INIT(foo, ...) occur with a missing header.
@@ -248,9 +249,15 @@ if(IS_TEST)
 endif()
 
 set_ifndef(LINKERFLAGPREFIX -Wl)
+
+if(NOT CONFIG_NATIVE_APPLICATION)
 zephyr_ld_options(
   ${LINKERFLAGPREFIX},-X
   ${LINKERFLAGPREFIX},-N
+  )
+endif()
+
+zephyr_ld_options(
   ${LINKERFLAGPREFIX},--gc-sections
   ${LINKERFLAGPREFIX},--build-id=none
   )
@@ -502,7 +509,7 @@ add_custom_command(
   # TODO: Remove duplication
   COMMAND ${CMAKE_C_COMPILER}
   -x assembler-with-cpp
-  -nostdinc
+  ${NOSTDINC_F}
   -undef
   -MD -MF linker.cmd.dep -MT ${BASE_NAME}/linker.cmd
   ${ZEPHYR_INCLUDES}
@@ -519,11 +526,13 @@ add_custom_target(
   offsets_h
 )
 
+get_property(E_KERNEL_ENTRY GLOBAL PROPERTY E_KERNEL_ENTRY)
+
 set(zephyr_lnk
   ${LINKERFLAGPREFIX},-Map=${PROJECT_BINARY_DIR}/${KERNEL_MAP_NAME}
   -u_OffsetAbsSyms
   -u_ConfigAbsSyms
-  -e${CONFIG_KERNEL_ENTRY}
+  ${E_KERNEL_ENTRY}
   ${LINKERFLAGPREFIX},--start-group
   ${LINKERFLAGPREFIX},--whole-archive
   ${ZEPHYR_LIBS_PROPERTY}
@@ -674,11 +683,19 @@ endif()
 get_property(GKOF GLOBAL PROPERTY GENERATED_KERNEL_OBJECT_FILES)
 get_property(GKSF GLOBAL PROPERTY GENERATED_KERNEL_SOURCE_FILES)
 
+get_property(TOPT GLOBAL PROPERTY TOPT)
+set_ifndef(  TOPT -T)
+
 # FIXME: Is there any way to get rid of empty_file.c?
 add_executable(       zephyr_prebuilt misc/empty_file.c)
-target_link_libraries(zephyr_prebuilt -T${PROJECT_BINARY_DIR}/linker.cmd ${zephyr_lnk})
+target_link_libraries(zephyr_prebuilt ${TOPT} ${PROJECT_BINARY_DIR}/linker.cmd ${zephyr_lnk})
 set_property(TARGET   zephyr_prebuilt PROPERTY LINK_DEPENDS ${PROJECT_BINARY_DIR}/linker.cmd)
 add_dependencies(     zephyr_prebuilt linker_script offsets)
+
+
+if(NOT CONFIG_NATIVE_APPLICATION)
+	set(NOSTDINC_F -nostdinc)
+endif()
 
 if(GKOF OR GKSF)
   set(logical_target_for_zephyr_elf kernel_elf)
@@ -692,7 +709,7 @@ if(GKOF OR GKSF)
     ${LINKER_SCRIPT_DEP}
     COMMAND ${CMAKE_C_COMPILER}
     -x assembler-with-cpp
-    -nostdinc
+    ${NOSTDINC_F}
     -undef
     -MD -MF linker_pass2.cmd.dep -MT ${BASE_NAME}/linker_pass2.cmd
     ${ZEPHYR_INCLUDES}
@@ -711,7 +728,7 @@ if(GKOF OR GKSF)
     )
 
   add_executable(       kernel_elf misc/empty_file.c ${GKSF})
-  target_link_libraries(kernel_elf ${GKOF} -T${PROJECT_BINARY_DIR}/linker_pass2.cmd ${zephyr_lnk})
+  target_link_libraries(kernel_elf ${GKOF} ${TOPT} ${PROJECT_BINARY_DIR}/linker_pass2.cmd ${zephyr_lnk})
   set_property(TARGET   kernel_elf PROPERTY LINK_DEPENDS ${PROJECT_BINARY_DIR}/linker_pass2.cmd)
   add_dependencies(     kernel_elf linker_pass2_script)
 else()
@@ -742,6 +759,7 @@ list_append_ifdef(
   post_build_commands
   COMMAND ${CMAKE_OBJCOPY} -S -Obinary -R .comment -R COMMON -R .eh_frame  ${KERNEL_ELF_NAME}    ${KERNEL_BIN_NAME}
   )
+
 list_append_ifdef(
   CONFIG_BUILD_OUTPUT_S19
   post_build_commands
@@ -766,6 +784,12 @@ list_append_ifdef(
   COMMAND ${CMAKE_STRIP}   --strip-all ${KERNEL_ELF_NAME} -o ${KERNEL_STRIP_NAME}
   )
 
+list_append_ifdef(
+  CONFIG_BUILD_OUTPUT_EXE
+  post_build_commands
+  COMMAND ${CMAKE_COMMAND} -E rename ${KERNEL_ELF_NAME}    ${KERNEL_EXE_NAME}
+  )
+
 add_custom_command(
   TARGET ${logical_target_for_zephyr_elf}
   POST_BUILD
@@ -774,7 +798,35 @@ add_custom_command(
   # NB: COMMENT only works for some CMake-Generators
 )
 
-add_subdirectory(cmake/qemu)
+if(CONFIG_OUTPUT_PRINT_MEMORY_USAGE)
+  # Use --print-memory-usage with the first link.
+  #
+  # Don't use this option with the second link because seeing it twice
+  # could confuse users and using it on the second link would suppress
+  # it when the first link has a ram/flash-usage issue.
+  set(option ${LINKERFLAGPREFIX},--print-memory-usage)
+  string(MAKE_C_IDENTIFIER check${option} check)
+
+  set(SAVED_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${option}")
+  check_c_compiler_flag("" ${check})
+  set(CMAKE_REQUIRED_FLAGS ${SAVED_CMAKE_REQUIRED_FLAGS})
+
+  target_link_libraries_ifdef(${check} zephyr_prebuilt ${option})
+endif()
+
+if(EMU_PLATFORM)
+  include($ENV{ZEPHYR_BASE}/cmake/emu/${EMU_PLATFORM}.cmake)
+else()
+  add_custom_target(run
+    COMMAND
+    ${CMAKE_COMMAND} -E echo
+    "==================================================="
+	"Emulation/Simulation not supported with this board."
+    "==================================================="
+    )
+endif()
+
 add_subdirectory(cmake/flash)
 
 add_subdirectory(cmake/usage)
